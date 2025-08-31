@@ -18,4 +18,5 @@ jobs:
 
       - name: Say Hello
         run: echo "Hello from Aladdin App pipeline!"
-
+- name: Say Hello
+      run: echo "Pipeline is working fine ✅"

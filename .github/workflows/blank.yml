@@ -1,24 +1,4 @@
-name: Aladdin App Pipeline
 
-on:
-  push:
-    branches: 
-      - main
-  pull_request:
-    branches: 
-      - main
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Say Hello
-        run: echo "Hello from Aladdin App pipeline!
-  
 name: Aladdin App Pipeline
 
 on:
@@ -39,4 +19,5 @@ jobs:
 
       - name: Say Hello
         run: echo "Pipeline is working fine ✅"
+
 

@@ -1,5 +1,5 @@
 
-import 'package:flutter/material.dart';
+'package:flutter/material.dart';
 
 class WebPage extends StatelessWidget {
   const WebPage({super.key});
@@ -8,29 +8,14 @@ class WebPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Web App Options"),
+        title: const Text("Web Page"),
         backgroundColor: Colors.green,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: const [
-          ListTile(
-            leading: Icon(Icons.language, color: Colors.blue),
-            title: Text("HTML & CSS"),
-          ),
-          ListTile(
-            leading: Icon(Icons.javascript, color: Colors.amber),
-            title: Text("JavaScript"),
-          ),
-          ListTile(
-            leading: Icon(Icons.web, color: Colors.indigo),
-            title: Text("React / Vue / Angular"),
-          ),
-          ListTile(
-            leading: Icon(Icons.api, color: Colors.red),
-            title: Text("Backend APIs"),
-          ),
-        ],
+      body: const Center(
+        child: Text(
+          "This is the Web version of Aladdin App",
+          style: TextStyle(fontSize: 18),
+        ),
       ),
     );
   }

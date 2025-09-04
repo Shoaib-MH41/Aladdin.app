@@ -1,6 +1,5 @@
 
-
-name: Aladdin App Pipeline
+name: Aladdin Flutter Build
 
 on:
   push:
@@ -19,24 +18,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Node.js انسٹال کرنا
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      # JDK انسٹال کرنا
+      - name: Setup JDK
+        uses: actions/setup-java@v3
         with:
-          node-version: 18
+          java-version: '17'
+          distribution: 'temurin'
 
-      # dependencies انسٹال کرنا
+      # Flutter انسٹال کرنا
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'   # تازہ ترین مستحکم ورژن
+
+      # Dependencies انسٹال کرنا
       - name: Install dependencies
-        run: npm install
+        run: flutter pub get
 
-      # Expo web build تیار کرنا
-      - name: Build Expo project
-        run: npx expo export --platform web
+      # APK build کرنا
+      - name: Build APK
+        run: flutter build apk --release
 
-      # GitHub Pages پر deploy کرنا
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # Build کو artifact کے طور پر محفوظ کرنا
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist
+          name: Aladdin-App
+          path: build/app/outputs/flutter-apk/app-release.apk
 

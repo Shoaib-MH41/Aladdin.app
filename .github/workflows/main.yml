@@ -1,5 +1,5 @@
 
-name: "Aladdin Flutter Build"
+name: Aladdin Flutter Build
 
 on:
   push:
@@ -14,28 +14,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ریپوزٹری کلون کرنا
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # JDK انسٹال کرنا
       - name: Setup JDK
         uses: actions/setup-java@v3
         with:
-          java-version: "17"
-          distribution: "temurin"
+          java-version: '17'
+          distribution: 'temurin'
 
+      # Flutter انسٹال کرنا
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.0"
+          flutter-version: '3.22.0'
 
+      # Dependencies انسٹال کرنا
       - name: Install dependencies
         run: flutter pub get
 
+      # Debugging steps
+      - name: Show current directory
+        run: pwd
+
+      - name: List files in current directory
+        run: ls -la
+
+      - name: List files in lib folder
+        run: ls -la lib || echo "lib folder not found!"
+
+      # APK build کرنا
       - name: Build APK
         run: flutter build apk --release
 
+      # Build کو artifact کے طور پر محفوظ کرنا
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Aladdin-App
           path: build/app/outputs/flutter-apk/app-release.apk

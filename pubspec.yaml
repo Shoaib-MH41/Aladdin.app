@@ -1,5 +1,4 @@
-
-name: my_new_app
+name: Aladdin-App
 description: A prompt-based app maker
 version: 1.0.0
 environment:

@@ -1,0 +1,14 @@
+name: my_new_app
+description: A prompt-based app maker
+version: 1.0.0
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  chat_bubbles: ^1.7.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true

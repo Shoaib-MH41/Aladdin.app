@@ -1,1 +1,22 @@
 
+name: aladdin_app
+description: A demo Flutter app to showcase features
+publish_to: 'none' # صرف لوکل/ڈیمو کے لئے
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

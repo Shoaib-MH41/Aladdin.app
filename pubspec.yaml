@@ -1,4 +1,4 @@
-me: aladdin_app
+name: aladdin_app
 description: A demo Flutter app to showcase Aladdin
 publish_to: 'none' # چونکہ یہ صرف GitHub پر ہے، pub.dev پر publish نہیں ہوگا
 

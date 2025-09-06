@@ -1,1 +1,17 @@
 
+
+name: aladdin_app
+description: A simple Flutter counter app for Aladdin project
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.19.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+

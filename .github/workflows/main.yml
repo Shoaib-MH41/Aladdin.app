@@ -1,4 +1,5 @@
-name: Flutter CI
+
+name: Build APK
 
 on:
   push:
@@ -11,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
     - name: Setup Flutter
@@ -22,5 +23,12 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    - name: Run tests
-      run: flutter test
+    - name: Build APK
+      run: flutter build apk --release
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aladdin-release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+

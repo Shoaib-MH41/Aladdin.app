@@ -1,1 +1,32 @@
 
+# Flutter/Dart related
+.dart_tool/
+.packages
+.buildlog/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Android build files
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# iOS build files
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+
+# Generated files
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.generated/
+

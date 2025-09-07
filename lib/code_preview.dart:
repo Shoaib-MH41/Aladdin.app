@@ -1,1 +1,83 @@
 
+import 'package:flutter/material.dart';
+
+class CodePreview extends StatelessWidget {
+  final String prompt;
+
+  CodePreview({required this.prompt});
+
+  @override
+  Widget build(BuildContext context) {
+    // Simulated Generated Code (آج ہم demo text دکھائیں گے)
+    String simulatedCode = '''
+// Generated Flutter Code based on prompt:
+void main() {
+  print("App generated with prompt:");
+  print("$prompt");
+}
+''';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Generated Code Preview'),
+        backgroundColor: Colors.deepPurpleAccent,
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              'Generated Code based on your prompt:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
+
+            Expanded(
+              child: SingleChildScrollView(
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  color: Colors.grey[900],
+                  child: Text(
+                    simulatedCode,
+                    style: TextStyle(
+                      fontFamily: 'Courier',
+                      fontSize: 14,
+                      color: Colors.greenAccent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            SizedBox(height: 20),
+            ElevatedButton(
+              child: Text('APK Generate کریں', style: TextStyle(fontSize: 18)),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50),
+                backgroundColor: Colors.deepPurpleAccent,
+              ),
+              onPressed: () {
+                // Future: GitHub API پر Push → APK بنانا
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: Text('کام کامیاب!'),
+                    content: Text('یہاں سے آپ APK Generate کرنے کی process شروع ہوگی۔'),
+                    actions: [
+                      TextButton(
+                        child: Text('OK'),
+                        onPressed: () => Navigator.pop(context),
+                      )
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+

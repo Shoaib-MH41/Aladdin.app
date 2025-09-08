@@ -1,13 +1,17 @@
-name: Flutter CI
+
+name: Flutter APK Build
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
 
     steps:
@@ -17,10 +21,23 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.10.5'
+        flutter-version: '3.13.6'  # اپنی Flutter version حسب ضرورت رکھیں
 
     - name: Install dependencies
       run: flutter pub get
 
-    - name: Run tests
+    - name: Run Flutter Analyze
+      run: flutter analyze
+
+    - name: Run Flutter Tests
       run: flutter test
+
+    - name: Build APK
+      run: flutter build apk --release
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+

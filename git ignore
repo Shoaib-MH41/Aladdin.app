@@ -16,14 +16,6 @@ android/.gradle/
 android/app/build/
 android/local.properties
 
-# iOS build files
-ios/Pods/
-ios/.symlinks/
-ios/Flutter/Flutter.framework
-ios/Flutter/Flutter.podspec
-ios/Flutter/Generated.xcconfig
-ios/Flutter/ephemeral/
-
 # Generated files
 build/
 .flutter-plugins

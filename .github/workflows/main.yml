@@ -17,10 +17,9 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.13.10'
         channel: 'stable'
         architecture: x64
-        cache: true  # اضافی performance کے لیے
+        cache: true
 
     - name: Clean previous builds
       run: flutter clean

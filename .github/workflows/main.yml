@@ -9,34 +9,46 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        channel: 'stable'
-        architecture: x64
-        cache: true
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: 'x64'
+          cache: true
 
-    - name: Clean previous builds
-      run: flutter clean
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
 
-    - name: Get dependencies
-      run: flutter pub get
+      - name: Accept Android licenses
+        run: sudo flutter doctor --android-licenses
 
-    - name: Analyze code
-      run: flutter analyze
+      - name: Clean previous builds
+        run: flutter clean
 
-    - name: Build APK
-      run: flutter build apk --release
+      - name: Get dependencies
+        run: flutter pub get
 
-    - name: List build output files
-      run: ls -R build/app/outputs/flutter-apk/
+      - name: Analyze code
+        run: flutter analyze
 
-    - name: Upload APK as artifact
-      uses: actions/upload-artifact@v4
-      with:
-  
+      - name: Check Flutter doctor
+        run: flutter doctor -v
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: List build output files
+        run: ls -la build/app/outputs/flutter-apk/
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

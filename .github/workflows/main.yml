@@ -1,3 +1,5 @@
+
+
 name: Flutter APK Build
 
 on:
@@ -10,45 +12,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          architecture: 'x64'
-          cache: true
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        architecture: 'x64'
+        cache: true
 
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
 
-      - name: Accept Android licenses
-        run: sudo flutter doctor --android-licenses
+    - name: Accept Android licenses
+      run: yes | flutter doctor --android-licenses
 
-      - name: Clean previous builds
-        run: flutter clean
+    - name: Clean previous builds
+      run: flutter clean
 
-      - name: Get dependencies
-        run: flutter pub get
+    - name: Get dependencies
+      run: flutter pub get
 
-      - name: Analyze code
-        run: flutter analyze
+    - name: Analyze code
+      run: flutter analyze
 
-      - name: Check Flutter doctor
-        run: flutter doctor -v
+    - name: Check Flutter doctor
+      run: flutter doctor -v
 
-      - name: Build APK
-        run: flutter build apk --release
+    - name: Build APK
+      run: flutter build apk --release
 
-      - name: List build output files
-        run: ls -la build/app/outputs/flutter-apk/
+    - name: List build output files
+      run: ls -la build/app/outputs/flutter-apk/
 
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+    - name: Upload APK as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+```

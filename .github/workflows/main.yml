@@ -1,5 +1,3 @@
-
-
 name: Flutter APK Build
 
 on:
@@ -21,12 +19,6 @@ jobs:
         channel: 'stable'
         architecture: 'x64'
         cache: true
-
-    - name: Set up JDK
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '11'
 
     - name: Accept Android licenses
       run: yes | flutter doctor --android-licenses

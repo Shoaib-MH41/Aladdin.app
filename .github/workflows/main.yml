@@ -20,6 +20,28 @@ jobs:
         architecture: 'x64'
         cache: true
 
+    - name: Fix Gradle Compatibility
+      run: |
+        # Gradle wrapper properties بنائیں یا update کریں
+        mkdir -p android/gradle/wrapper
+        cat > android/gradle/wrapper/gradle-wrapper.properties << EOL
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists
+        EOL
+
+        # Build.gradle میں version تبدیل کریں
+        sed -i 's/classpath.*gradle:7.[0-9.]*/classpath '\''com.android.tools.build:gradle:7.3.0'\''/g' android/build.gradle
+
+    - name: Set version properties
+      run: |
+        cd android
+        echo "flutter.versionCode=1" >> local.properties
+        echo "flutter.versionName=1.0.0" >> local.properties
+        cd ..
+
     - name: Accept Android licenses
       run: yes | flutter doctor --android-licenses
 
@@ -29,11 +51,8 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
 
-    - name: Check Flutter doctor
-      run: flutter doctor -v
-
     - name: Build APK
-      run: flutter build apk --release
+      run: flutter build apk --release --no-android-gradle-daemon
 
     - name: List build output files
       run: ls -la build/app/outputs/flutter-apk/
@@ -43,20 +62,3 @@ jobs:
       with:
         name: app-release-apk
         path: build/app/outputs/flutter-apk/app-release.apk
-- name: Fix Gradle Compatibility
-  run: |
-    # پہلے چیک کریں کہ فائل exists ہے
-    if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
-      sed -i 's/gradle-8.0-all.zip/gradle-7.5-all.zip/g' android/gradle/wrapper/gradle-wrapper.properties
-    else
-      # اگر فائل نہیں ہے تو بنائیں
-      mkdir -p android/gradle/wrapper
-      echo 'distributionBase=GRADLE_USER_HOME' > android/gradle/wrapper/gradle-wrapper.properties
-      echo 'distributionPath=wrapper/dists' >> android/gradle/wrapper/gradle-wrapper.properties
-      echo 'distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip' >> android/gradle/wrapper/gradle-wrapper.properties
-      echo 'zipStoreBase=GRADLE_USER_HOME' >> android/gradle/wrapper/gradle-wrapper.properties
-      echo 'zipStorePath=wrapper/dists' >> android/gradle/wrapper/gradle-wrapper.properties
-    fi
-    
-    # build.gradle update کریں
-    sed -i 's/classpath.*gradle:7.5.1/classpath '\''com.android.tools.build:gradle:7.3.0'\''/g' android/build.gradle

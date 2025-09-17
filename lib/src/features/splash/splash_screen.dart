@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import '../../app_type_selection/app_type_selection_screen.dart'; // اگلی اسکرین کا امپورٹ، بعد میں بنائیں گے
+import '../../app_type_selection/app_type_selection_screen.dart';
 
 class SplashScreen extends StatelessWidget {
   @override
@@ -13,23 +13,29 @@ class SplashScreen extends StatelessWidget {
     });
 
     return Scaffold(
-      backgroundColor: Colors.blue[900], // جادوئی بیک گراؤنڈ
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Lottie.asset('assets/animations/aladdin_lamp.json'), // تمہارا اینیمیشن فائل
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AppTypeSelectionScreen()),
-                );
-              },
-              child: Text('شروع کریں'),
-            ),
-          ],
+      backgroundColor: Colors.blue[900],
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Lottie.asset(
+                'assets/animations/aladdin_lamp.json',
+                width: 200, // اینیمیشن کا سائز کنٹرول
+                height: 200,
+                fit: BoxFit.contain,
+              ),
+              SizedBox(height: 20),
+              Text(
+                'علادین ایپ',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 24,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

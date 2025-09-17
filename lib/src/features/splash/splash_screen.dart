@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
-import '../../app_type_selection/app_type_selection_screen.dart';
+import '../../core/constants/strings.dart';
+import '../../core/utils/navigation.dart';
 
 class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Future.delayed(Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => AppTypeSelectionScreen()),
-      );
+      Navigation.pushReplacement(context, AppTypeSelectionScreen());
     });
 
     return Scaffold(
@@ -19,15 +16,14 @@ class SplashScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Lottie.asset(
-                'assets/animations/aladdin_lamp.json',
-                width: 200, // اینیمیشن کا سائز کنٹرول
-                height: 200,
-                fit: BoxFit.contain,
+              Icon(
+                Icons.lightbulb,
+                size: 100,
+                color: Colors.white,
               ),
               SizedBox(height: 20),
               Text(
-                'علادین ایپ',
+                AppStrings.appName,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 24,

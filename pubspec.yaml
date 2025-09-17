@@ -1,26 +1,28 @@
 name: aladdin_app
 description: AI-based App Builder
-publish_to: 'none' # ایپ ابھی پبلش نہیں ہو رہی
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.12.0 <3.0.0"
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  lottie: ^2.0.0 # اسپلاش اسکرین کے لیے Lottie اینیمیشن
+  lottie: ^2.7.0 # بعد میں اینیمیشن کے لیے
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0 # کوڈ کی کوالٹی چیک کرنے کے لیے
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/animations/aladdin_lamp.json # اسپلاش اسکرین کی اینیمیشن
   fonts:
     - family: Poppins
       fonts:
         - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-Italic.ttf
+          style: italic

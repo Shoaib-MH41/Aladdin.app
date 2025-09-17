@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/strings.dart';
+import '../../models/app_config.dart';
+import '../code_preview/code_preview_screen.dart';
 
 class AppDetailsForm extends StatefulWidget {
   @override
@@ -18,7 +21,7 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
     final language = args?['language'] ?? 'Flutter';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ایپ کی تفصیلات')),
+      appBar: AppBar(title: const Text(AppStrings.appName)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -65,14 +68,21 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('ایپ بنائی جا رہی ہے: $_appName ($appType, $language)'),
-                      ),
+                    final config = AppConfig(
+                      appName: _appName,
+                      appType: appType,
+                      language: language,
+                      theme: _theme,
+                      primaryColor: _primaryColor,
+                    );
+                    Navigator.pushNamed(
+                      context,
+                      '/code_preview',
+                      arguments: config,
                     );
                   }
                 },
-                child: const Text('اگلا'),
+                child: const Text(AppStrings.generateApp),
               ),
             ],
           ),

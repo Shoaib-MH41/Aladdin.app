@@ -1,61 +1,42 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/strings.dart';
-import '../../models/app_config.dart';
+import 'package:url_launcher/url_launcher.dart'; // لنک کھولنے کے لیے
+import 'package:flutter/services.dart'; // Clipboard کے لیے
 
 class CodePreviewScreen extends StatelessWidget {
-  final AppConfig? config;
-
-  const CodePreviewScreen({this.config, super.key});
-
   @override
   Widget build(BuildContext context) {
-    final generatedCode = config != null
-        ? '''
-          // جنریٹ شدہ کوڈ کا نمونہ
-          // ایپ: ${config!.appName}
-          // قسم: ${config!.appType}
-          // لینگویج: ${config!.language}
-          void main() {
-            print('Hello, ${config!.appName} in ${config!.language}!');
-          }
-          '''
-        : 'کوئی کوڈ جنریٹ نہیں ہوا';
+    // فرض کریں یہ لنک GitHub Actions سے ملتا ہے (دستی طور پر سیٹ کرو)
+    const apkLink = 'https://github.com/تمہارا-username/aladdin_app/actions'; // اصل لنک Actions ٹیب سے لے کر اپ ڈیٹ کرو
 
     return Scaffold(
-      appBar: AppBar(title: const Text('کوڈ پریویو')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'جنریٹ شدہ کوڈ:',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  generatedCode,
-                  style: const TextStyle(fontFamily: 'Courier', fontSize: 14),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('کوڈ GitHub پر پش ہوگا')),
-                  );
-                },
-                child: const Text('GitHub پر پش کریں'),
-              ),
-            ],
-          ),
+      appBar: AppBar(title: Text('Code Preview')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Your App is Ready! Download APK from here:'),
+            SizedBox(height: 10),
+            Text(apkLink, style: TextStyle(fontFamily: 'Poppins')),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: apkLink));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Link copied to clipboard!')),
+                );
+              },
+              child: Text('Copy APK Link'),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () async {
+                if (await canLaunch(apkLink)) {
+                  await launch(apkLink); // براؤزر میں لنک کھولے گا
+                }
+              },
+              child: Text('Share APK Link'),
+            ),
+          ],
         ),
       ),
     );

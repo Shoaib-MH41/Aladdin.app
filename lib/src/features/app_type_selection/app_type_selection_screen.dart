@@ -34,9 +34,4 @@ class AppTypeSelectionScreen extends StatelessWidget {
             Icon(icon, size: 50, color: Colors.blue),
             SizedBox(height: 10),
             Text(title, style: TextStyle(fontSize: 18)),
-          ],
-        ),
-      ),
-    );
-  }
-}
+

@@ -1,1 +1,14 @@
-
+# Flutter/Dart
+*.log
+*.iml
+.idea/
+.vscode/
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+*.apk
+*.ap_
+*.aab

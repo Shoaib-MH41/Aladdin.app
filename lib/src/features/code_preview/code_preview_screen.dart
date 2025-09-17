@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/strings.dart';
+import '../../models/app_config.dart';
 
 class CodePreviewScreen extends StatelessWidget {
-  final String generatedCode;
+  final AppConfig? config;
 
-  const CodePreviewScreen({required this.generatedCode, super.key});
+  const CodePreviewScreen({this.config, super.key});
 
   @override
   Widget build(BuildContext context) {
+    final generatedCode = config != null
+        ? '''
+          // جنریٹ شدہ کوڈ کا نمونہ
+          // ایپ: ${config!.appName}
+          // قسم: ${config!.appType}
+          // لینگویج: ${config!.language}
+          void main() {
+            print('Hello, ${config!.appName} in ${config!.language}!');
+          }
+          '''
+        : 'کوئی کوڈ جنریٹ نہیں ہوا';
+
     return Scaffold(
       appBar: AppBar(title: const Text('کوڈ پریویو')),
       body: Padding(
@@ -28,16 +41,13 @@ class CodePreviewScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  generatedCode.isEmpty
-                      ? 'کوئی کوڈ جنریٹ نہیں ہوا'
-                      : generatedCode,
+                  generatedCode,
                   style: const TextStyle(fontFamily: 'Courier', fontSize: 14),
                 ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // بعد میں GitHub پر پش کرنے کا فنکشن
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('کوڈ GitHub پر پش ہوگا')),
                   );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/strings.dart';
+import '../../core/utils/navigation.dart';
 import '../../models/app_config.dart';
-import '../code_preview/code_preview_screen.dart';
 
 class AppDetailsForm extends StatefulWidget {
   @override
@@ -10,79 +9,44 @@ class AppDetailsForm extends StatefulWidget {
 
 class _AppDetailsFormState extends State<AppDetailsForm> {
   final _formKey = GlobalKey<FormState>();
-  String _appName = '';
-  String _theme = 'لائٹ';
-  String _primaryColor = 'نیلا';
+  final _appConfig = AppConfig();
+  String? _apiInput; // Firebase Studio سے کاپی کردہ API تفصیلات
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
-    final appType = args?['appType'] ?? 'mobile';
-    final language = args?['language'] ?? 'Flutter';
-
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.appName)),
+      appBar: AppBar(title: Text('App Details', style: TextStyle(fontFamily: 'Poppins'))),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
               TextFormField(
-                decoration: const InputDecoration(labelText: 'ایپ کا نام'),
-                onChanged: (value) => _appName = value,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'ایپ کا نام درج کریں';
-                  }
-                  return null;
-                },
+                decoration: InputDecoration(labelText: 'App Name', border: OutlineInputBorder()),
+                validator: (value) => value!.isEmpty ? 'Enter app name' : null,
+                onSaved: (value) => _appConfig.appName = value!,
               ),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'تھیم'),
-                value: _theme,
-                items: ['لائٹ', 'ڈارک'].map((String theme) {
-                  return DropdownMenuItem<String>(
-                    value: theme,
-                    child: Text(theme),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() => _theme = value!);
-                },
+              SizedBox(height: 10),
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'Paste API Details/Link (from Firebase Studio)',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., API URL, Key, or Firebase Studio Link',
+                ),
+                onSaved: (value) => _apiInput = value,
+                maxLines: 3,
               ),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'پرائمری رنگ'),
-                value: _primaryColor,
-                items: ['نیلا', 'سبز', 'سرخ'].map((String color) {
-                  return DropdownMenuItem<String>(
-                    value: color,
-                    child: Text(color),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() => _primaryColor = value!);
-                },
-              ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    final config = AppConfig(
-                      appName: _appName,
-                      appType: appType,
-                      language: language,
-                      theme: _theme,
-                      primaryColor: _primaryColor,
-                    );
-                    Navigator.pushNamed(
-                      context,
-                      '/code_preview',
-                      arguments: config,
-                    );
+                    _formKey.currentState!.save();
+                    _appConfig.apiInput = _apiInput; // API تفصیلات محفوظ کرو
+                    Navigation.push(context, CodePreviewScreen());
                   }
                 },
-                child: const Text(AppStrings.generateApp),
+                child: Text('Next', style: TextStyle(fontFamily: 'Poppins')),
               ),
             ],
           ),

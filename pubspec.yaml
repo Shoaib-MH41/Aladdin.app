@@ -9,7 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  lottie: ^2.7.0 # بعد میں اینیمیشن کے لیے
+  lottie: ^2.7.0
+  url_launcher: ^6.1.0
+  http: ^0.13.5
 
 dev_dependencies:
   flutter_test:

@@ -1,0 +1,44 @@
+name: Build APK
+
+on:
+  workflow_dispatch:  # دستی طور پر رن کرنے کے لیے
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Clean project
+        run: |
+          flutter clean
+          cd android
+          ./gradlew clean
+          cd ..
+
+      - name: Build APK
+        run: flutter build apk --release --verbose  # verbose شامل کیا تاکہ ایرر واضح ہو
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

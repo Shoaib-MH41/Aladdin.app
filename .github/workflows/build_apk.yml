@@ -19,26 +19,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Download Gradle Wrapper JAR
-        run: |
-          echo "=== Downloading gradle-wrapper.jar ==="
-          mkdir -p android/gradle/wrapper
-          
-          # Gradle wrapper JAR ڈاؤنلوڈ کریں
-          curl -L https://github.com/gradle/gradle/raw/master/gradle/wrapper/gradle-wrapper.jar -o android/gradle/wrapper/gradle-wrapper.jar
-          
-          # Verify download
-          if [ -f "android/gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "✅ gradle-wrapper.jar downloaded successfully"
-            ls -la android/gradle/wrapper/
-          else
-            echo "❌ Failed to download gradle-wrapper.jar"
-            # Alternative: Generate using Gradle
-            cd android
-            gradle wrapper || ./gradlew wrapper || echo "Wrapper generation failed"
-            cd ..
-          fi
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -46,11 +26,38 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Upgrade Dependencies
+        run: |
+          echo "=== Updating outdated packages ==="
+          flutter pub upgrade --major-versions
+          # یا specific packages update کریں
+          flutter pub upgrade url_launcher http lottie leak_tracker
+
+      - name: Fix Android Embedding
+        run: |
+          echo "=== Ensuring Android v2 embedding ==="
+          # MainActivity.kt کو یقینی بنائیں
+          mkdir -p android/app/src/main/kotlin/com/example/my_new_app/
+          cat > android/app/src/main/kotlin/com/example/my_new_app/MainActivity.kt << 'EOL'
+package com.example.my_new_app
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+}
+EOL
+
+          # AndroidManifest.xml سے پرانی settings ہٹائیں
+          if grep -q "io.flutter.app.android.SplashScreenUntilFirstFrame" android/app/src/main/AndroidManifest.xml; then
+            echo "Removing old v1 embedding settings..."
+            sed -i '/io.flutter.app.android.SplashScreenUntilFirstFrame/d' android/app/src/main/AndroidManifest.xml
+          fi
+
       - name: Build APK
         run: |
           flutter clean
           flutter pub get
-          flutter build apk --release
+          flutter build apk --release --verbose
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

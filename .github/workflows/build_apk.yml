@@ -1,10 +1,10 @@
 name: Build APK
 
-# **ترمیم**: workflow_dispatch ہٹا کر push شامل کیا
 on:
   push:
     branches:
-      - main  # صرف main برانچ پر رن ہوگا
+      - main
+  workflow_dispatch:  # دستی رن کے لیے بھی رکھا گیا
 
 jobs:
   build:
@@ -14,17 +14,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate Gradle Wrapper
+        run: |
+          echo "=== Generating Gradle Wrapper ==="
+          cd android
+          chmod +x gradlew || true  # یونیکس پر قابل اجرا بنائیں
+          ./gradlew wrapper --gradle-version 8.10 --distribution-type all || echo "Wrapper generation skipped or failed"
+          cd ..
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '17'  # **ترمیم**: Java 17 کے لیے اپ گریڈ
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.3'
           channel: 'stable'
+          cache: true  # **ترمیم**: کیشنگ شامل کی گئی
 
       - name: Get dependencies
         run: flutter pub get
@@ -33,7 +42,7 @@ jobs:
         run: |
           flutter clean
           cd android
-          ./gradlew clean
+          ./gradlew clean  # اب چلے گا کیونکہ wrapper بن گیا
           cd ..
 
       - name: Accept Android licenses

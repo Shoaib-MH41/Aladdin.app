@@ -8,13 +8,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4  # **v3 سے v4 پر اپ گریڈ**
+        uses: actions/checkout@v4
 
       - name: Set up Java
-        uses: actions/setup-java@v4  # **v3 سے v4 پر اپ گریڈ**
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
@@ -22,18 +21,35 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3'  # **تازہ Flutter ورژن**
+          flutter-version: '3.24.3'
           channel: 'stable'
+          cache: true
 
-      - name: Get dependencies
-        run: flutter pub get
+      - name: Verify File Locations
+        run: |
+          echo "=== Checking MainActivity.kt ==="
+          ls -la android/app/src/main/kotlin/com/example/aladdin_app/MainActivity.kt || echo "MainActivity.kt not found"
+          
+          echo "=== Checking AndroidManifest.xml ==="
+          ls -la android/app/src/main/AndroidManifest.xml || echo "AndroidManifest.xml not found"
+          
+          echo "=== File Contents ==="
+          cat android/app/src/main/kotlin/com/example/aladdin_app/MainActivity.kt || echo "Cannot read MainActivity.kt"
+          echo "---"
+          cat android/app/src/main/AndroidManifest.xml || echo "Cannot read AndroidManifest.xml"
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Clean and Build
+        run: |
+          flutter clean
+          flutter pub get
+          cd android
+          ./gradlew clean
+          cd ..
+          flutter build apk --release --verbose
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4  # **v3 سے v4 پر اپ گریڈ**
+        uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30  # **v4 کی نئی فیچر، 30 دن تک محفوظ رکھے گا**
+          retention-days: 30

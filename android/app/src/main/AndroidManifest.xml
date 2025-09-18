@@ -1,24 +1,12 @@
 
-package com.example.aladdin_app
-
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity: FlutterActivity()
-
-یہ بالکل صحیح ہے، کچھ بدلنے کی ضرورت نہیں۔
-
-
----
-
-✅ AndroidManifest.xml
-
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.aladdin_app">
 
     <application
         android:name="${applicationName}"
         android:label="aladdin_app"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
@@ -29,9 +17,19 @@ class MainActivity: FlutterActivity()
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- Flutter کی theme attach -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
-            <!-- یہ نئی line V2
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+        </activity>
+
+        <!-- Flutter automatically adds required permissions -->
+
+    </application>
+
+</manifest>

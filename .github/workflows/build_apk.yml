@@ -1,7 +1,10 @@
 name: Build APK
 
+# **ترمیم**: workflow_dispatch ہٹا کر push شامل کیا
 on:
-  workflow_dispatch:  # دستی طور پر رن کرنے کے لیے
+  push:
+    branches:
+      - main  # صرف main برانچ پر رن ہوگا
 
 jobs:
   build:

@@ -15,45 +15,60 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java
-        uses: actions/setup-java@v4  # **ترمیم**: sup-java سے setup-java
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'  # **ترمیم**: Java 17 کے لیے اپ گریڈ
+          java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.3'
           channel: 'stable'
-          cache: true  # کیشنگ کے لیے
+          cache: true
 
       - name: Create Missing Gradle Wrapper
         run: |
           echo "=== Creating Gradle Wrapper Manually ==="
           cd android
 
-          # gradlew فائل بنائیں
+          # gradlew فائل بنائیں (مشروط CLASSPATH کے ساتھ)
           cat > gradlew << 'EOL'
 #!/usr/bin/env bash
-# Gradle Wrapper اسکرپٹ (مختصر ورژن)
-APP_HOME="`dirname \"$0\"`"
+APP_HOME=$(dirname "$0")
 CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
-JAVACMD="java"
-"$JAVACMD" -jar "$CLASSPATH" "$@"
+# چیک کریں کہ .jar فائل موجود ہے
+if [ -f "$CLASSPATH" ]; then
+  JAVACMD="java"
+  "$JAVACMD" -jar "$CLASSPATH" "$@"
+else
+  echo "Error: gradle-wrapper.jar not found, please run './gradlew wrapper' first."
+  exit 1
+fi
 EOL
 
           # gradlew.bat فائل بنائیں
           cat > gradlew.bat << 'EOL'
-@rem Gradle Wrapper اسکرپٹ (مختصر ورژن)
+@rem Gradle Wrapper اسکرپٹ
 @set CLASSPATH=%~dp0gradle\wrapper\gradle-wrapper.jar
+@if not exist %CLASSPATH% (
+  @echo Error: gradle-wrapper.jar not found, please run 'gradlew wrapper' first.
+  @exit /b 1
+)
 @java -jar %CLASSPATH% %*
 EOL
 
           # Execute permission دیں
           chmod +x gradlew
 
-          # Gradle Wrapper جنریٹ کریں (gradle-wrapper.jar بنانے کے لیے)
-          ./gradlew wrapper --gradle-version 8.10 --distribution-type all || echo "Wrapper generation failed, using existing setup"
+          # Gradle Wrapper جنریٹ کریں
+          ./gradlew wrapper --gradle-version 8.10 --distribution-type all || {
+            echo "Wrapper generation failed, attempting to proceed with existing setup."
+            if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+              echo "Error: gradle-wrapper.jar not generated, build may fail."
+              exit 1
+            fi
+          }
 
           cd ..
 
@@ -61,7 +76,7 @@ EOL
         run: |
           flutter clean
           flutter pub get
-          flutter build apk --release --verbose  # verbose شامل کیا
+          flutter build apk --release --verbose
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

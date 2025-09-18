@@ -37,7 +37,7 @@ jobs:
           echo "=== Ensuring Android v2 embedding ==="
           mkdir -p android/app/src/main/kotlin/com/example/aladdin_app/
           cat > android/app/src/main/kotlin/com/example/aladdin_app/MainActivity.kt << 'EOL'
-package.com.example.aladdin.app
+package com.example.aladdin.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -2,7 +2,6 @@
     package="com.example.aladdin_app">
 
     <application
-        android:name="${applicationName}"
         android:label="aladdin_app"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">

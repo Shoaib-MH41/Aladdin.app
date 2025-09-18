@@ -1,17 +1,50 @@
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 class ApiService {
-  // GPT API سے کوڈ جنریٹ کرنے کا فنکشن (بعد میں اپ ڈیٹ کریں گے)
-  Future<String> generateCode({
-    required String appType,
-    required String language,
-    required String appName,
-    required String theme,
-  }) async {
-    // Placeholder: بعد میں GPT API کال ہوگی
-    return '''
-    // جنریٹ شدہ کوڈ کا نمونہ
-    void main() {
-      print('Hello, $appName in $language!');
+  static Future<Map<String, dynamic>> generateApiConfig(String apiInput) async {
+    // سادہ پارسر (Gemini کی طرح AI لوجیک کا مشاہدہ)
+    Map<String, dynamic> config = {};
+    if (apiInput.contains('https://')) {
+      config['url'] = apiInput.split(' ')[0].trim(); // URL نکالو
+      config['method'] = apiInput.contains('POST') ? 'POST' : 'GET'; // میتھڈ کا اندازہ
+      config['key'] = apiInput.contains('key=') ? apiInput.split('key=')[1].split(' ')[0] : null; // کی نکالو
+    } else {
+      throw Exception('Invalid API input');
     }
-    ''';
+    return config;
+  }
+
+  static Future<Map<String, dynamic>> fetchData(Map<String, dynamic> apiConfig) async {
+    final url = apiConfig['url'];
+    final method = apiConfig['method']?.toUpperCase() ?? 'GET';
+    final apiKey = apiConfig['key'];
+
+    try {
+      http.Response response;
+      if (method == 'GET') {
+        var requestUrl = Uri.parse(url!);
+        if (apiKey != null && apiKey.isNotEmpty) {
+          requestUrl = Uri.parse('$url?key=$apiKey');
+        }
+        response = await http.get(requestUrl);
+      } else if (method == 'POST') {
+        response = await http.post(
+          Uri.parse(url!),
+          headers: apiKey != null ? {'Authorization': 'Bearer $apiKey'} : {},
+          body: jsonEncode({'key': apiKey}),
+        );
+      } else {
+        throw Exception('Method $method not supported yet');
+      }
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load data: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
   }
 }

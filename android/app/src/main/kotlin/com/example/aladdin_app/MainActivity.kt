@@ -1,4 +1,4 @@
-package com.example.aladdin.app
+package.com.example.aladdin.app
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine

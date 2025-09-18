@@ -1,17 +1,12 @@
 name: Build APK
 
-on: workflow_dispatch
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+on:
+  workflow_dispatch:  # دستی طور پر رن کرنے کے لیے
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,16 +22,22 @@ jobs:
         with:
           flutter-version: '3.24.3'
           channel: 'stable'
-          cache: true  # ⭐ اضافی کیشنگ for faster builds
-
-      - name: Accept Android licenses
-        run: yes | flutter doctor --android-licenses  # ⭐ لائسنسز قبول کریں
 
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Clean project
+        run: |
+          flutter clean
+          cd android
+          ./gradlew clean
+          cd ..
+
+      - name: Accept Android licenses
+        run: flutter doctor --android-licenses
+
       - name: Build APK
-        run: flutter build apk --release --no-android-gradle-daemon  # ⭐ اضافی flag
+        run: flutter build apk --release --verbose
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -44,4 +45,3 @@ jobs:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
-          if-no-files-found: error  # ⭐ اگر APK نہ ملے تو error دے

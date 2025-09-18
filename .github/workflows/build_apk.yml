@@ -32,11 +32,21 @@ jobs:
           flutter pub upgrade --major-versions
           flutter pub upgrade url_launcher http lottie leak_tracker
 
-      - name: Fix Android Embedding
+      - name: Fix Package Name Consistency
         run: |
-          echo "=== Ensuring Android v2 embedding ==="
-          mkdir -p android/app/src/main/kotlin/com/example/aladdin_app/
-          cat > android/app/src/main/kotlin/com/example/aladdin_app/MainActivity.kt << 'EOL'
+          echo "=== Fixing package name ==="
+          
+          # پہلے AndroidManifest.xml سے package name چیک کریں
+          PACKAGE_NAME=$(grep 'package="' android/app/src/main/AndroidManifest.xml | cut -d'"' -f2)
+          echo "Package name from AndroidManifest: $PACKAGE_NAME"
+          
+          # MainActivity.kt بنائیں صحیح - name: Fix Package Name
+  run: |
+    # manually package name set کریں
+    PACKAGE_NAME="com.example.aladdin.app"
+    mkdir -p android/app/src/main/kotlin/com/example/aladdin/app/
+    
+    cat > android/app/src/main/kotlin/com/example/aladdin/app/MainActivity.kt << 'EOL'
 package com.example.aladdin.app
 
 import io.flutter.embedding.android.FlutterActivity
@@ -45,10 +55,18 @@ class MainActivity: FlutterActivity() {
 }
 EOL
 
-          if grep -q "io.flutter.app.android.SplashScreenUntilFirstFrame" android/app/src/main/AndroidManifest.xml; then
-            echo "Removing old v1 embedding settings..."
-            sed -i '/io.flutter.app.android.SplashScreenUntilFirstFrame/d' android/app/src/main/AndroidManifest.xml
-          fi
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+}
+EOL
+
+      - name: Remove Old Embedding
+        run: |
+          echo "=== Removing v1 embedding ==="
+          # پرانی v1 embedding settings ہٹائیں
+          sed -i '/io.flutter.app.android.SplashScreenUntilFirstFrame/d' android/app/src/main/AndroidManifest.xml
+          sed -i '/android:name="io.flutter.app.FlutterActivity"/d' android/app/src/main/AndroidManifest.xml
 
       - name: Build APK
         run: |

@@ -1,22 +1,20 @@
 name: Build APK
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch:  # دستی طور پر رن کرنے کے لیے
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: '17'
 
       - name: Set up Flutter
@@ -24,43 +22,26 @@ jobs:
         with:
           flutter-version: '3.24.3'
           channel: 'stable'
-          cache: true
 
-      - name: Upgrade Dependencies
-        run: |
-          echo "=== Updating outdated packages ==="
-          flutter pub upgrade --major-versions
-          # یا specific packages update کریں
-          flutter pub upgrade url_launcher http lottie leak_tracker
+      - name: Get dependencies
+        run: flutter pub get
 
-      - name: Fix Android Embedding
-        run: |
-          echo "=== Ensuring Android v2 embedding ==="
-          # MainActivity.kt کو یقینی بنائیں
-          mkdir -p android/app/src/main/kotlin/com/example/my_new_app/
-          cat > android/app/src/main/kotlin/com/example/my_new_app/MainActivity.kt << 'EOL'
-package com.example.aladdin.app
-
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity: FlutterActivity() {
-}
-EOL
-
-          # AndroidManifest.xml سے پرانی settings ہٹائیں
-          if grep -q "io.flutter.app.android.SplashScreenUntilFirstFrame" android/app/src/main/AndroidManifest.xml; then
-            echo "Removing old v1 embedding settings..."
-            sed -i '/io.flutter.app.android.SplashScreenUntilFirstFrame/d' android/app/src/main/AndroidManifest.xml
-          fi
-
-      - name: Build APK
+      - name: Clean project
         run: |
           flutter clean
-          flutter pub get
-          flutter build apk --release --verbose
+          cd android
+          ./gradlew clean
+          cd ..
 
-      - name: Upload APK
+      - name: Accept Android licenses
+        run: flutter doctor --android-licenses  # licenses قبول کرنے کے لیے
+
+      - name: Build APK
+        run: flutter build apk --release --verbose  # --no-android-gradle-daemon ہٹایا
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

@@ -1,28 +1,14 @@
-- name: Fix Package Structure
-  run: |
-    echo "=== Auto-fixing Package Structure ==="
-    
-    # پہلے existing package name چیک کریں
-    if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
-      PACKAGE_NAME=$(grep 'package="' android/app/src/main/AndroidManifest.xml | head -1 | cut -d'"' -f2)
-      echo "Using package from AndroidManifest: $PACKAGE_NAME"
-    else
-      PACKAGE_NAME="com.example.aladdin_app"  # ✅ closing quote added
-      echo "Using default package: $PACKAGE_NAME"
-    fi
-    
-    # Directory structure بنائیں
-    PACKAGE_PATH=$(echo $PACKAGE_NAME | sed 's/\./\//g')
-    mkdir -p android/app/src/main/kotlin/$PACKAGE_PATH/
-    
-    # MainActivity.kt بنائیں
-    cat > android/app/src/main/kotlin/$PACKAGE_PATH/MainActivity.kt << 'EOL'
-package %PACKAGE_NAME%
-
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity: FlutterActivity() {
-}
-EOL
-    # Package name replace کریں
-    sed -i "s/%PACKAGE_NAME%/$PACKAGE_NAME/g" android/app/src/main/kotlin/$PACKAGE_PATH/MainActivity.kt
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: 'temurin', java-version: '17'}
+      - uses: subosito/flutter-action@v2
+        with: {flutter-version: '3.24.3', channel: 'stable'}
+      - run: flutter clean && flutter pub get && flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with: {name: app-release-apk, path: build/app/outputs/flutter-apk/app-release.apk}

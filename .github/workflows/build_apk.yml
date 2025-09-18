@@ -39,7 +39,7 @@ jobs:
           # MainActivity.kt کو یقینی بنائیں
           mkdir -p android/app/src/main/kotlin/com/example/my_new_app/
           cat > android/app/src/main/kotlin/com/example/my_new_app/MainActivity.kt << 'EOL'
-package com.example.my_new_app
+package com.example.my_aladdin_app
 
 import io.flutter.embedding.android.FlutterActivity
 

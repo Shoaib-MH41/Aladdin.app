@@ -34,7 +34,7 @@ jobs:
           cd ..
 
       - name: Build APK
-        run: flutter build apk --release --verbose  # verbose شامل کیا تاکہ ایرر واضح ہو
+        run: flutter build apk --release --verbose
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -1,3 +1,30 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
 android {
     compileSdkVersion 34  // ✅ واضح طور پر ورژن سیٹ کریں
     ndkVersion flutter.ndkVersion
@@ -16,16 +43,29 @@ android {
     }  
 
     defaultConfig {  
-        applicationId "com.example.aladdin.app"  // ✅ `aladdin_app` کو `aladdin.app` سے ہم آہنگ کیا
-        minSdkVersion 21  // ✅ 21 یا اس سے زیادہ  
-        targetSdkVersion 34  // ✅ واضح طور پر ورژن سیٹ کریں  
+        applicationId "com.example.aladdin.app"  
+        minSdkVersion 21  
+        targetSdkVersion 34  
         versionCode flutterVersionCode.toInteger()  
         versionName flutterVersionName  
     }  
 
     buildTypes {  
         release {  
-            signingConfig signingConfigs.debug  
-        }  
+            // signingConfig signingConfigs.debug  // ہٹایا گیا، کیونکہ ریلیز کے لیے ڈیبگ سگننگ مناسب نہیں
+            minifyEnabled false
+            shrinkResources false
+        }
+        debug {
+            signingConfig signingConfigs.debug
+        }
     }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }

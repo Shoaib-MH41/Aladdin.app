@@ -1,5 +1,9 @@
+name: Build APK
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -34,8 +38,8 @@ jobs:
           echo "=== Updating outdated packages ==="
           flutter pub upgrade
 
-      - name: Run Flutter Analyze (skip for now)
-  run: echo "Skipping analysis for now" || true
+      - name: Run Flutter Analyze
+        run: flutter analyze
 
       - name: Run Tests
         run: flutter test

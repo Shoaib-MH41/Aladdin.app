@@ -1,14 +1,66 @@
 name: Build APK
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: {distribution: 'temurin', java-version: '17'}
-      - uses: subosito/flutter-action@v2
-        with: {flutter-version: '3.24.3', channel: 'stable'}
-      - run: flutter clean && flutter pub get && flutter build apk --release
-      - uses: actions/upload-artifact@v4
-        with: {name: app-release-apk, path: build/app/outputs/flutter-apk/app-release.apk}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Analyze AndroidManifest
+        run: |
+          echo "=== Analyzing AndroidManifest.xml ==="
+          
+          # فائل exists ہے کہ نہیں
+          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
+            echo "❌ ERROR: AndroidManifest.xml not found!"
+            exit 1
+          fi
+          
+          # فائل کا size چیک کریں
+          echo "File size: $(wc -l < android/app/src/main/AndroidManifest.xml) lines"
+          
+          # XML syntax چیک کریں
+          if ! xmllint --noout android/app/src/main/AndroidManifest.xml 2> xml_error.txt; then
+            echo "❌ XML Syntax Error Found:"
+            cat xml_error.txt
+            echo ""
+            echo "=== Problematic lines ==="
+            # Error والی لائن نمبر نکالیں
+            LINE_NUM=$(grep -o "line [0-9]*" xml_error.txt | head -1 | cut -d' ' -f2)
+            if [ ! -z "$LINE_NUM" ]; then
+              echo "Error at line $LINE_NUM:"
+              sed -n "${LINE_NUM}p" android/app/src/main/AndroidManifest.xml
+            fi
+            exit 1
+          else
+            echo "✅ XML syntax is valid"
+          fi
+          
+          # فائل کا content دیکھیں
+          echo "=== Full AndroidManifest content ==="
+          cat android/app/src/main/AndroidManifest.xml
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+
+      - name: Build APK
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build apk --release --verbose

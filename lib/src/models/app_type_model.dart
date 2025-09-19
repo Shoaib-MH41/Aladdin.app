@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class AppTypeModel {
   final String id;
   final String name;
@@ -13,7 +15,7 @@ class AppTypeModel {
     required this.color,
   });
 
-  // JSON سے Object بنانے کے لیے
+  /// JSON سے Object بنانے کے لیے
   factory AppTypeModel.fromJson(Map<String, dynamic> json) {
     return AppTypeModel(
       id: json['id'] as String,
@@ -24,34 +26,59 @@ class AppTypeModel {
     );
   }
 
-  // Object کو JSON میں تبدیل کرنے کے لیے
+  /// Object کو JSON میں تبدیل کرنے کے لیے
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'description': description,
-      'icon': icon.codePoint,
-      'color': color.value,
+      'icon': _getIconName(icon),
+      'color': _getColorName(color),
     };
   }
 
-  // Helper methods
+  /// Helper methods - String → IconData
   static IconData _getIconFromString(String iconName) {
     switch (iconName) {
-      case 'person': return Icons.person;
-      case 'admin': return Icons.admin_panel_settings;
-      case 'delivery': return Icons.delivery_dining;
-      default: return Icons.help;
+      case 'person':
+        return Icons.person;
+      case 'admin':
+        return Icons.admin_panel_settings;
+      case 'delivery':
+        return Icons.delivery_dining;
+      default:
+        return Icons.help;
     }
   }
 
+  /// Helper methods - IconData → String
+  static String _getIconName(IconData icon) {
+    if (icon == Icons.person) return 'person';
+    if (icon == Icons.admin_panel_settings) return 'admin';
+    if (icon == Icons.delivery_dining) return 'delivery';
+    return 'help';
+  }
+
+  /// Helper methods - String → Color
   static Color _getColorFromString(String colorName) {
     switch (colorName) {
-      case 'blue': return Colors.blue;
-      case 'green': return Colors.green;
-      case 'orange': return Colors.orange;
-      default: return Colors.grey;
+      case 'blue':
+        return Colors.blue;
+      case 'green':
+        return Colors.green;
+      case 'orange':
+        return Colors.orange;
+      default:
+        return Colors.grey;
     }
+  }
+
+  /// Helper methods - Color → String
+  static String _getColorName(Color color) {
+    if (color == Colors.blue) return 'blue';
+    if (color == Colors.green) return 'green';
+    if (color == Colors.orange) return 'orange';
+    return 'grey';
   }
 
   @override
@@ -65,6 +92,6 @@ class AppTypeModel {
 
   @override
   String toString() {
-    return 'AppTypeModel(id: $id, name: $name)';
+    return 'AppTypeModel(id: $id, name: $name, description: $description)';
   }
 }

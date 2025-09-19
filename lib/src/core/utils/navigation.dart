@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 class Navigation {
-  static void push(BuildContext context, Widget screen) {
-    Navigator.push(
+  static void push<T>(BuildContext context, Widget screen) {
+    Navigator.push<T>(
       context,
       MaterialPageRoute(builder: (context) => screen),
     );
   }
 
-  static void pushReplacement(BuildContext context, Widget screen) {
-    Navigator.pushReplacement(
+  static void pushReplacement<T>(BuildContext context, Widget screen) {
+    Navigator.pushReplacement<T>(
       context,
       MaterialPageRoute(builder: (context) => screen),
     );

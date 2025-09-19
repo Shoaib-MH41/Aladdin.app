@@ -46,12 +46,18 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
           _appConfig = _appConfig;
         });
         final data = await ApiService.fetchData(apiConfig);
-        setState(() => apiData = data);
+        if (mounted) {
+          setState(() => apiData = data);
+        }
       } else {
-        setState(() => errorMessage = 'No valid API input.');
+        if (mounted) {
+          setState(() => errorMessage = 'No valid API input.');
+        }
       }
     } catch (e) {
-      setState(() => errorMessage = 'Error: $e');
+      if (mounted) {
+        setState(() => errorMessage = 'Error: $e');
+      }
     }
   }
 
@@ -80,14 +86,18 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
               );
               if (!mounted) return;
               if (response.statusCode == 204) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Project deleted successfully!')),
-                );
-                Navigation.pushReplacement(context, const SplashScreen());
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Project deleted successfully!')),
+                  );
+                  Navigation.pushReplacement(context, const SplashScreen());
+                }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Delete failed: ${response.statusCode}')),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Delete failed: ${response.statusCode}')),
+                  );
+                }
               }
             },
             child: const Text('Delete'),

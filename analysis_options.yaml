@@ -2,12 +2,12 @@ include: package:flutter_lints/flutter.yaml
 
 linter:
   rules:
-    # موجودہ rules
+    # بنیادی rules
     - avoid_print
     - prefer_single_quotes
     - unnecessary_new
     
-    # اضافی مفید rules (اختیاری)
+    # اضافی مفید rules
     - always_use_package_imports
     - use_key_in_widget_constructors
     - prefer_const_constructors
@@ -24,7 +24,7 @@ analyzer:
   errors:
     # مخصوص غلطیوں کے لیے درجہ بندی
     missing_required_param: error
-    invalid_required_param: error
+    # ❌ 'invalid_required_param' کو ہٹا دیں یا درست کریں
     
   language:
     strict-casts: true

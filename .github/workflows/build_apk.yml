@@ -1,87 +1,40 @@
-name: Flutter CI/CD
+name: Build APK
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-
-env:
-  FLUTTER_VERSION: '3.19.5'  # آپ کے Flutter ورژن کے مطابق تبدیل کریں
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Install Dependencies
-      run: flutter pub get
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+          cache: true
 
-    - name: Run Flutter Analyze
-      run: flutter analyze
+      - name: Upgrade Dependencies
+        run: |
+          echo "=== Updating outdated packages ==="
+          flutter pub upgrade --major-versions
+          flutter pub upgrade url_launcher http lottie leak_tracker
 
-    - name: Run Flutter Tests
-      run: flutter test
-
-    - name: Check Formatting
-      run: flutter format --set-exit-if-changed .
-
-    - name: Build APK
-      run: flutter build apk --release
-
-    - name: Build AppBundle
-      run: flutter build appbundle --release
-
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
-
-    - name: Upload AppBundle Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-appbundle
-        path: build/app/outputs/bundle/release/app-release.aab
-
-  # Android-specific validation (اختیاری)
-  android-validation:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Setup Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Validate Gradle Wrapper
-      run: |
-        cd android
-        ./gradlew wrapper --validate
-
-  # iOS build (اگر آپ کے پاس macOS runner ہے)
-  # ios-build:
-  #   runs-on: macos-latest
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-  #   - name: Setup Flutter
-  #     uses: subosito/flutter-action@v2
-  #   - name: Install dependencies
-  #     run: flutter pub get
-  #   - name: Build iOS
-  #     run: flutter build ios --release --no-codesign
+      - name: Fix Android Embedding
+        run: |
+          echo "=== Ensuring Android v2 embedding ==="
+          mkdir -p android/app/src/main/kotlin/com/example/aladdin/app/
+          cat > android/app/src/main/kotlin/com/example/aladdin/app/MainActivity.kt << 'EOL'

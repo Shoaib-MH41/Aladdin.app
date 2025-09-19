@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:aladdin_app/src/core/constants/strings.dart'; // ✅ درست راستہ
-import 'package:aladdin_app/src/models/app_config.dart'; // ✅ درست راستہ
-import 'package:aladdin_app/src/features/code_preview/code_preview_screen.dart'; // ✅ درست راستہ
+import 'package:aladdin_app/src/core/constants/strings.dart';
+import 'package:aladdin_app/src/models/app_config.dart';
+import 'package:aladdin_app/src/features/code_preview/code_preview_screen.dart';
 
 class AppDetailsForm extends StatefulWidget {
   const AppDetailsForm({super.key});
 
   @override
-  _AppDetailsFormState createState() => _AppDetailsFormState();
+  AppDetailsFormState createState() => AppDetailsFormState();
 }
 
-class _AppDetailsFormState extends State<AppDetailsForm> {
+class AppDetailsFormState extends State<AppDetailsForm> {
   final _formKey = GlobalKey<FormState>();
   String _appName = '';
   String? _apiInput;
@@ -26,7 +26,7 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          AppStrings.appName, // ✅ AppStrings استعمال کریں
+          AppStrings.appName,
           style: TextStyle(fontFamily: 'Poppins'),
         ),
       ),
@@ -102,7 +102,7 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
                     );
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      MaterialPageRoute<void>(
                         builder: (context) => const CodePreviewScreen(),
                         settings: RouteSettings(arguments: config),
                       ),
@@ -110,7 +110,7 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
                   }
                 },
                 child: const Text(
-                  AppStrings.generateApp, // ✅ AppStrings استعمال کریں
+                  AppStrings.generateApp,
                   style: TextStyle(fontFamily: 'Poppins'),
                 ),
               ),

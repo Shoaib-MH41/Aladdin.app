@@ -5,6 +5,7 @@ class GitHubService {
     required String code,
   }) async {
     // Placeholder: بعد میں GitHub API کال ہوگی
-    print('Repository $repoName بنائی گئی۔ کوڈ: $code');
+import 'dart:developer' as developer;
+developer.log('Some message', name: 'GithubService');
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:aladdin_app/core/constants/strings.dart'; // ایڈجسٹ کریں اگر نام مختلف ہو
-import 'package:aladdin_app/models/app_config.dart'; // ایڈجسٹ کریں اگر ڈائرکٹری مختلف ہو
-import 'package:aladdin_app/features/code_preview/code_preview_screen.dart'; // ایڈجسٹ کریں
+import 'package:aladdin_app/src/core/constants/strings.dart'; // ✅ درست راستہ
+import 'package:aladdin_app/src/models/app_config.dart'; // ✅ درست راستہ
+import 'package:aladdin_app/src/features/code_preview/code_preview_screen.dart'; // ✅ درست راستہ
 
 class AppDetailsForm extends StatefulWidget {
   const AppDetailsForm({super.key});
@@ -26,7 +26,7 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          AppStrings.appName,
+          'App Details', // ✅ براہ راست text استعمال کریں
           style: TextStyle(fontFamily: 'Poppins'),
         ),
       ),
@@ -100,15 +100,17 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
                       primaryColor: _primaryColor,
                       apiInput: _apiInput,
                     );
-                    Navigator.pushNamed(
+                    Navigator.push(
                       context,
-                      '/code_preview',
-                      arguments: config,
+                      MaterialPageRoute(
+                        builder: (context) => const CodePreviewScreen(),
+                        settings: RouteSettings(arguments: config),
+                      ),
                     );
                   }
                 },
                 child: const Text(
-                  AppStrings.generateApp,
+                  'ایپ بنائیں', // ✅ براہ راست text استعمال کریں
                   style: TextStyle(fontFamily: 'Poppins'),
                 ),
               ),

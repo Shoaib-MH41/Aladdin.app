@@ -1,10 +1,11 @@
-
 import 'package:flutter/material.dart';
-import '../../core/constants/strings.dart';
-import '../../models/app_config.dart';
-import '../code_preview/code_preview_screen.dart';
+import 'package:aladdin_app/core/constants/strings.dart'; // ایڈجسٹ کریں اگر نام مختلف ہو
+import 'package:aladdin_app/models/app_config.dart'; // ایڈجسٹ کریں اگر ڈائرکٹری مختلف ہو
+import 'package:aladdin_app/features/code_preview/code_preview_screen.dart'; // ایڈجسٹ کریں
 
 class AppDetailsForm extends StatefulWidget {
+  const AppDetailsForm({super.key});
+
   @override
   _AppDetailsFormState createState() => _AppDetailsFormState();
 }
@@ -18,9 +19,9 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, String>?;
-    final appType = args?['appType'] ?? 'mobile';
-    final language = args?['language'] ?? 'Flutter';
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, String>? ?? {};
+    final appType = args['appType'] ?? 'mobile';
+    final language = args['language'] ?? 'Flutter';
 
     return Scaffold(
       appBar: AppBar(
@@ -118,4 +119,3 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
     );
   }
 }
-

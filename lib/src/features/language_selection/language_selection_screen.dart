@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:aladdin_app/src/models/language_model.dart'; // درست درآمد
+import 'package:aladdin_app/src/models/language_model.dart';
+import 'package:aladdin_app/src/core/utils/navigation.dart'; // ✅ Navigation import
 
 class LanguageSelectionScreen extends StatefulWidget {
-  final String appType; // ✅ نئے parameter کو شامل کریں
+  final String appType;
 
-  const LanguageSelectionScreen({
-    Key? key,
-    required this.appType, // ✅ required parameter
-  }) : super(key: key);
+  const LanguageSelectionScreen({super.key, required this.appType});
 
   @override
   State<LanguageSelectionScreen> createState() => _LanguageSelectionScreenState();
@@ -42,17 +40,14 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       setState(() {
         _selectedLanguage = language;
       });
-      // زبان منتخب کرنے کے بعد اگلا screen
       _navigateToNextScreen();
     }
   }
 
   void _navigateToNextScreen() {
-    print('منتخب زبان: ${_selectedLanguage?.name}');
-    print('ایپ کی قسم: ${widget.appType}');
     Navigation.pushNamed(
       context,
-      '/app_details', // اپنی ضرورت کے مطابق روٹ تبدیل کریں
+      '/app_details',
       arguments: {'language': _selectedLanguage, 'appType': widget.appType},
     );
   }
@@ -61,7 +56,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('زبان منتخب کریں - ${widget.appType}'), // ✅ appType دکھائیں
+        title: Text('زبان منتخب کریں - ${widget.appType}'),
       ),
       body: Center(
         child: Padding(
@@ -91,9 +86,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _selectedLanguage == null
-                    ? null
-                    : _navigateToNextScreen,
+                onPressed: _selectedLanguage == null ? null : _navigateToNextScreen,
                 child: const Text('جاری رکھیں'),
               ),
             ],

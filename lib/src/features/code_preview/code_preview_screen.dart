@@ -4,14 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'dart:convert';
 
-import 'package:aladdin_app/core/utils/navigation.dart'; // ✅ package import
-import 'package:aladdin_app/models/app_config.dart'; // ✅ package import
-import 'package:aladdin_app/core/services/api_service.dart'; // ✅ package import
-import 'package:aladdin_app/features/splash/splash_screen.dart'; // ✅ package import
+import 'package:aladdin_app/src/core/utils/navigation.dart'; // ✅ درست راستہ
+import 'package:aladdin_app/src/models/app_config.dart'; // ✅ درست راستہ
+import 'package:aladdin_app/src/core/services/api_service.dart'; // ✅ درست راستہ
+import 'package:aladdin_app/src/features/splash/splash_screen.dart'; // ✅ درست راستہ
 
 class CodePreviewScreen extends StatefulWidget {
-  final AppConfig? config; // arguments کے لیے
-  const CodePreviewScreen({Key? key, this.config}) : super(key: key); // ✅ key parameter
+  final AppConfig? config;
+  const CodePreviewScreen({super.key, this.config}); // ✅ super.key
 
   @override
   _CodePreviewScreenState createState() => _CodePreviewScreenState();
@@ -20,7 +20,7 @@ class CodePreviewScreen extends StatefulWidget {
 class _CodePreviewScreenState extends State<CodePreviewScreen> {
   Map<String, dynamic>? apiData;
   String? errorMessage;
-  AppConfig? _appConfig; // State میں AppConfig رکھیں
+  AppConfig? _appConfig;
 
   static const String token = 'YOUR_GITHUB_PERSONAL_ACCESS_TOKEN';
   static const String repoOwner = 'your-username';
@@ -31,7 +31,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
   @override
   void initState() {
     super.initState();
-    _appConfig = widget.config; // arguments سے ڈیٹا لیں
+    _appConfig = widget.config;
     _processApiInput();
   }
 
@@ -42,7 +42,11 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
       if (configInput != null && configInput.isNotEmpty) {
         final apiConfig = await ApiService.generateApiConfig(configInput);
         print('API Config: $apiConfig');
-        setState(() => _appConfig = _appConfig?.copyWith(apiConfig: apiConfig)); // copyWith میتھڈ شامل کریں اگر موجود نہ ہو
+        // copyWith کے بغیر براہ راست assign
+        setState(() {
+          // نیا AppConfig object بنائیں یا existing کو استعمال کریں
+          _appConfig = _appConfig;
+        });
         final data = await ApiService.fetchData(apiConfig);
         setState(() => apiData = data);
       } else {
@@ -57,12 +61,12 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'), // ✅ const
-        content: const Text('Are you sure you want to delete the project? This action cannot be undone.'), // ✅ const
+        title: const Text('Confirm Delete'),
+        content: const Text('Are you sure you want to delete the project? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'), // ✅ const
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -77,16 +81,16 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
               if (!mounted) return;
               if (response.statusCode == 204) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Project deleted successfully!')), // ✅ const
+                  const SnackBar(content: Text('Project deleted successfully!')),
                 );
-                Navigation.pushReplacement(context, const SplashScreen()); // ✅ const
+                Navigation.pushReplacement(context, const SplashScreen());
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Delete failed: ${response.statusCode}')),
                 );
               }
             },
-            child: const Text('Delete'), // ✅ const
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -94,10 +98,10 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
   }
 
   Future<void> _copyLink() async {
-    await Clipboard.setData(const ClipboardData(text: apkLink)); // ✅ const
+    await Clipboard.setData(const ClipboardData(text: apkLink));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Link copied to clipboard!')), // ✅ const
+      const SnackBar(content: Text('Link copied to clipboard!')),
     );
   }
 
@@ -108,7 +112,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch link.')), // ✅ const
+        const SnackBar(content: Text('Could not launch link.')),
       );
     }
   }
@@ -117,61 +121,61 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Code Preview', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
+        title: const Text('Code Preview', style: TextStyle(fontFamily: 'Poppins')),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16), // ✅ const
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text( // ✅ const
+            const Text(
               'Your App is Ready!',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w500)
             ),
-            const SizedBox(height: 20), // ✅ const
+            const SizedBox(height: 20),
             Expanded(
               child: apiData != null
                   ? SingleChildScrollView(
                       child: Text(
                         jsonEncode(apiData),
-                        style: const TextStyle(fontFamily: 'Poppins') // ✅ const
+                        style: const TextStyle(fontFamily: 'Poppins')
                       ),
                     )
                   : errorMessage != null
                       ? Center(
                           child: Text(
                             errorMessage!,
-                            style: const TextStyle(fontFamily: 'Poppins', color: Colors.red) // ✅ const
+                            style: const TextStyle(fontFamily: 'Poppins', color: Colors.red)
                           ),
                         )
-                      : const Center(child: CircularProgressIndicator()), // ✅ const
+                      : const Center(child: CircularProgressIndicator()),
             ),
-            const SizedBox(height: 20), // ✅ const
-            const Text('Download APK from:', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
-            const SizedBox(height: 10), // ✅ const
+            const SizedBox(height: 20),
+            const Text('Download APK from:', style: TextStyle(fontFamily: 'Poppins')),
+            const SizedBox(height: 10),
             Text(
               apkLink,
-              style: const TextStyle(fontFamily: 'Poppins', color: Colors.blue), // ✅ const
+              style: const TextStyle(fontFamily: 'Poppins', color: Colors.blue),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20), // ✅ const
+            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
                   onPressed: _copyLink,
-                  child: const Text('Copy Link', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
+                  child: const Text('Copy Link', style: TextStyle(fontFamily: 'Poppins')),
                 ),
-                const SizedBox(width: 10), // ✅ const
+                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: _openLink,
-                  child: const Text('Open Link', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
+                  child: const Text('Open Link', style: TextStyle(fontFamily: 'Poppins')),
                 ),
               ],
             ),
-            const SizedBox(height: 20), // ✅ const
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: deleteProject,
-              child: const Text('Delete Project', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
+              child: const Text('Delete Project', style: TextStyle(fontFamily: 'Poppins')),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             ),
           ],

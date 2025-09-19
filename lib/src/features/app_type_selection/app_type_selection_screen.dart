@@ -1,35 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:aladdin_app/src/features/language_selection/language_selection_screen.dart'; // ✅ package import
+import 'package:aladdin_app/src/features/language_selection/language_selection_screen.dart';
 
 class AppTypeSelectionScreen extends StatelessWidget {
-  const AppTypeSelectionScreen({Key? key}) : super(key: key); // ✅ key parameter
+  const AppTypeSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ایپ کی قسم منتخب کریں'), // ✅ const
+        title: const Text('ایپ کی قسم منتخب کریں'),
       ),
       body: GridView.count(
         crossAxisCount: 2,
-        padding: const EdgeInsets.all(16), // ✅ const
-        children: const <Widget>[ // ✅ const شامل کیا
-          _buildCard('ویب ایپ', Icons.web, 'web'),
-          _buildCard('موبائل ایپ', Icons.phone_android, 'mobile'),
-          _buildCard('PWA', Icons.public, 'pwa'),
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildCard(context, 'ویب ایپ', Icons.web, 'web'),
+          _buildCard(context, 'موبائل ایپ', Icons.phone_android, 'mobile'),
+          _buildCard(context, 'PWA', Icons.public, 'pwa'),
         ],
       ),
     );
   }
 
-  Widget _buildCard(String title, IconData icon, String type) {
+  Widget _buildCard(BuildContext context, String title, IconData icon, String type) {
     return Card(
       elevation: 4,
       child: InkWell(
         onTap: () {
-          Navigator.push<Widget>(
+          Navigator.push(
             context,
-            MaterialPageRoute<Widget>(
+            MaterialPageRoute(
               builder: (context) => LanguageSelectionScreen(appType: type),
             ),
           );
@@ -38,11 +38,12 @@ class AppTypeSelectionScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 50, color: Colors.blue),
-            const SizedBox(height: 10), // ✅ const
-            Text(title, style: const TextStyle(fontSize: 18)), // ✅ const
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(fontSize: 18)),
           ],
         ),
       ),
     );
   }
 }
+

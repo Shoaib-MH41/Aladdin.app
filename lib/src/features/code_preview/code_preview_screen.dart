@@ -97,7 +97,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Delete failed: ${response.statusCode}')),
+                    const SnackBar(content: Text('Delete failed: ${response.statusCode}')),
                   );
                 }
               }
@@ -112,11 +112,9 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
   Future<void> _copyLink() async {
     await Clipboard.setData(const ClipboardData(text: apkLink));
     if (!mounted) return;
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Link copied to clipboard!')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Link copied to clipboard!')),
+    );
   }
 
   Future<void> _openLink() async {
@@ -125,11 +123,9 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
       await launchUrl(uri);
     } else {
       if (!mounted) return;
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch link.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch link.')),
+      );
     }
   }
 

@@ -11,7 +11,7 @@ import 'package:aladdin_app/src/features/splash/splash_screen.dart';
 
 class CodePreviewScreen extends StatefulWidget {
   final AppConfig? config;
-  const CodePreviewScreen({super.key, this.config}); // Added 'const' here
+  const CodePreviewScreen({super.key, this.config});
 
   @override
   CodePreviewScreenState createState() => CodePreviewScreenState();
@@ -42,7 +42,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
       if (configInput != null && configInput.isNotEmpty) {
         final apiConfig = await ApiService.generateApiConfig(configInput);
         debugPrint('API Config: $apiConfig');
-        if (!mounted) return; 
+        if (!mounted) return;
         setState(() {
           _appConfig = _appConfig;
         });
@@ -61,17 +61,13 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
 
   Future<void> deleteProject() async {
     if (!mounted) return;
-
-    // Store context before async operation
     final currentContext = context;
 
     await showDialog<void>(
       context: currentContext,
       builder: (BuildContext dialogContext) => AlertDialog(
         title: const Text('Confirm Delete'),
-        content: const Text(
-          'Are you sure you want to delete the project? This action cannot be undone.',
-        ),
+        content: const Text('Are you sure you want to delete the project? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -80,7 +76,6 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-
               final response = await http.delete(
                 Uri.parse(apiUrl),
                 headers: {
@@ -88,19 +83,13 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                   'Accept': 'application/vnd.github.v3+json'
                 },
               );
-
-              // ✅ check mounted again after async gap
               if (!mounted) return;
-
               if (response.statusCode == 204) {
                 ScaffoldMessenger.of(currentContext).showSnackBar(
                   const SnackBar(content: Text('Project deleted successfully!')),
                 );
                 if (!mounted) return;
-                Navigation.pushReplacement(
-                  currentContext,
-                  const SplashScreen(),
-                );
+                Navigation.pushReplacement(currentContext, const SplashScreen());
               } else {
                 ScaffoldMessenger.of(currentContext).showSnackBar(
                   SnackBar(content: Text('Delete failed: ${response.statusCode}')),
@@ -117,9 +106,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
   Future<void> _copyLink() async {
     await Clipboard.setData(const ClipboardData(text: apkLink));
     if (!mounted) return;
-
     final currentContext = context;
-    if (!mounted) return;
     ScaffoldMessenger.of(currentContext).showSnackBar(
       const SnackBar(content: Text('Link copied to clipboard!')),
     );
@@ -132,7 +119,6 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
     } else {
       if (!mounted) return;
       final currentContext = context;
-      if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text('Could not launch link.')),
       );
@@ -151,11 +137,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
           children: [
             const Text(
               'Your App is Ready!',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -170,10 +152,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                       ? Center(
                           child: Text(
                             errorMessage!,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              color: Colors.red,
-                            ),
+                            style: const TextStyle(fontFamily: 'Poppins', color: Colors.red),
                           ),
                         )
                       : const Center(child: CircularProgressIndicator()),

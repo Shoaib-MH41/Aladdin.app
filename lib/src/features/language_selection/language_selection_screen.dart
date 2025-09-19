@@ -1,4 +1,3 @@
-// lib/src/features/language_selection/language_selection_screen.dart
 import 'package:flutter/material.dart';
 import 'package:aladdin_app/src/models/language_model.dart'; // درست درآمد
 
@@ -103,19 +102,4 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       ),
     );
   }
-}
-
-// lib/src/models/language_model.dart (نیا فائل)
-class LanguageModel {
-  final String code;
-  final String name;
-  final String nativeName;
-  final String flagEmoji;
-
-  const LanguageModel({
-    required this.code,
-    required this.name,
-    required this.nativeName,
-    required this.flagEmoji,
-  });
 }

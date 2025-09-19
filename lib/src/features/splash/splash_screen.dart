@@ -4,8 +4,8 @@ import 'package:aladdin_app/src/features/app_type_selection/app_type_selection_s
 import 'package:aladdin_app/src/models/app_config.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
 
+const SplashScreen({super.key});
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }

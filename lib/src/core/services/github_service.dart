@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 class GitHubService {
   // GitHub پر repository بنانے کا فنکشن (مستقبل کے لیے placeholder)
   Future<void> createRepository({
@@ -16,8 +18,8 @@ class GitHubService {
     // یہاں آپ local processing کر سکتے ہیں
     // جیسے ڈیٹا save کرنا، analyze کرنا، etc.
     
-    print('Repository Name: $repoName');
-    print('Code Length: ${code.length} characters');
+    developer.log('Repository Name: $repoName', name: 'GitHubService');
+    developer.log('Code Length: ${code.length} characters', name: 'GitHubService');
     
     // Future API call کے لیے ڈیٹا تیار کرنا
     _prepareForFutureApi(repoName, code);
@@ -39,6 +41,6 @@ class GitHubService {
   // Local storage میں ڈیٹا save کرنا (optional)
   void _saveLocalData(Map<String, dynamic> data) {
     // یہاں آپ shared_preferences یا local database use کر سکتے ہیں
-    print('Local data prepared for future API integration: $data');
+    developer.log('Local data prepared for future API integration: $data', name: 'GitHubService');
   }
 }

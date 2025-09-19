@@ -4,20 +4,20 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'dart:convert';
 
-import 'package:aladdin_app/src/core/utils/navigation.dart'; // ✅ درست راستہ
-import 'package:aladdin_app/src/models/app_config.dart'; // ✅ درست راستہ
-import 'package:aladdin_app/src/core/services/api_service.dart'; // ✅ درست راستہ
-import 'package:aladdin_app/src/features/splash/splash_screen.dart'; // ✅ درست راستہ
+import 'package:aladdin_app/src/core/utils/navigation.dart';
+import 'package:aladdin_app/src/models/app_config.dart';
+import 'package:aladdin_app/src/core/services/api_service.dart';
+import 'package:aladdin_app/src/features/splash/splash_screen.dart';
 
 class CodePreviewScreen extends StatefulWidget {
   final AppConfig? config;
-  const CodePreviewScreen({super.key, this.config}); // ✅ super.key
+  const CodePreviewScreen({super.key, this.config});
 
   @override
-  _CodePreviewScreenState createState() => _CodePreviewScreenState();
+  CodePreviewScreenState createState() => CodePreviewScreenState();
 }
 
-class _CodePreviewScreenState extends State<CodePreviewScreen> {
+class CodePreviewScreenState extends State<CodePreviewScreen> {
   Map<String, dynamic>? apiData;
   String? errorMessage;
   AppConfig? _appConfig;
@@ -38,13 +38,11 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
   Future<void> _processApiInput() async {
     try {
       final configInput = _appConfig?.apiInput;
-      print('Config Input: $configInput');
+      debugPrint('Config Input: $configInput');
       if (configInput != null && configInput.isNotEmpty) {
         final apiConfig = await ApiService.generateApiConfig(configInput);
-        print('API Config: $apiConfig');
-        // copyWith کے بغیر براہ راست assign
+        debugPrint('API Config: $apiConfig');
         setState(() {
-          // نیا AppConfig object بنائیں یا existing کو استعمال کریں
           _appConfig = _appConfig;
         });
         final data = await ApiService.fetchData(apiConfig);
@@ -58,7 +56,8 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
   }
 
   Future<void> deleteProject() async {
-    showDialog(
+    if (!mounted) return;
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Delete'),
@@ -129,7 +128,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
           children: [
             const Text(
               'Your App is Ready!',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w500)
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -137,14 +136,14 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
                   ? SingleChildScrollView(
                       child: Text(
                         jsonEncode(apiData),
-                        style: const TextStyle(fontFamily: 'Poppins')
+                        style: const TextStyle(fontFamily: 'Poppins'),
                       ),
                     )
                   : errorMessage != null
                       ? Center(
                           child: Text(
                             errorMessage!,
-                            style: const TextStyle(fontFamily: 'Poppins', color: Colors.red)
+                            style: const TextStyle(fontFamily: 'Poppins', color: Colors.red),
                           ),
                         )
                       : const Center(child: CircularProgressIndicator()),
@@ -175,8 +174,8 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: deleteProject,
-              child: const Text('Delete Project', style: TextStyle(fontFamily: 'Poppins')),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete Project', style: TextStyle(fontFamily: 'Poppins')),
             ),
           ],
         ),

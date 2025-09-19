@@ -27,10 +27,10 @@ class AppTypeSelectionScreen extends StatelessWidget {
       elevation: 4,
       child: InkWell(
         onTap: () {
-          Navigator.push(
+          Navigator.push<Widget>(
             context,
-            MaterialPageRoute(
-              builder: (context) => const LanguageSelectionScreen(), // ✅ const
+            MaterialPageRoute<Widget>(
+              builder: (context) => LanguageSelectionScreen(appType: type),
             ),
           );
         },

@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:aladdin_app/src/features/splash/splash_screen.dart'; // ✅ package import
+import 'package:aladdin_app/src/features/splash/splash_screen.dart'; // splash screen import
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key); // ✅ key parameter with super
+  const MyApp({super.key}); // key → super.key
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp( // ✅ const
+    return MaterialApp(
       title: 'Aladdin App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue, // اختیاری: تھیم شامل کی
+        primarySwatch: Colors.blue,
       ),
-      home: SplashScreen(), // ✅ const
+      home: const SplashScreen(), // const لگایا
     );
   }
 }

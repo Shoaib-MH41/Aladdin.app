@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../language_selection/language_selection_screen.dart'; // اگلی اسکرین
+import 'package:aladdin_app/src/features/language_selection/language_selection_screen.dart'; // ✅ package import
 
 class AppTypeSelectionScreen extends StatelessWidget {
+  const AppTypeSelectionScreen({Key? key}) : super(key: key); // ✅ key parameter
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('ایپ کی قسم منتخب کریں')),
+      appBar: AppBar(
+        title: const Text('ایپ کی قسم منتخب کریں'), // ✅ const
+      ),
       body: GridView.count(
         crossAxisCount: 2,
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16), // ✅ const
         children: [
           _buildCard(context, 'ویب ایپ', Icons.web, 'web'),
           _buildCard(context, 'موبائل ایپ', Icons.phone_android, 'mobile'),
@@ -25,13 +29,20 @@ class AppTypeSelectionScreen extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => LanguageSelectionScreen(appType: type)),
+            MaterialPageRoute(
+              builder: (context) => const LanguageSelectionScreen(), // ✅ const
+            ),
           );
         },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 50, color: Colors.blue),
-            SizedBox(height: 10),
-            Text(title, style: TextStyle(fontSize: 18)),
-
+            const SizedBox(height: 10), // ✅ const
+            Text(title, style: const TextStyle(fontSize: 18)), // ✅ const
+          ],
+        ),
+      ),
+    );
+  }
+}

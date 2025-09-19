@@ -57,9 +57,10 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
 
   Future<void> deleteProject() async {
     if (!mounted) return;
-    showDialog<void>(
+    
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (BuildContext context) => AlertDialog(
         title: const Text('Confirm Delete'),
         content: const Text('Are you sure you want to delete the project? This action cannot be undone.'),
         actions: [

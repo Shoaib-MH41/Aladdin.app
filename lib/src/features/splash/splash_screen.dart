@@ -1,11 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:aladdin_app/src/features/app_type_selection/app_type_selection_screen.dart';
-import 'package:aladdin_app/src/models/app_config.dart';
+// app_config.dart کا import ہٹا دیں کیونکہ استعمال نہیں ہو رہا
 
 class SplashScreen extends StatefulWidget {
-
-const SplashScreen({super.key});
+  const SplashScreen({super.key});
+  
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -18,13 +17,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigateToNextScreen() async {
-    await 
-  
-Future<void>.delayed(Duration(seconds: 2), () {});
+    await Future<void>.delayed(const Duration(seconds: 2));
+    
     if (mounted) {
       Navigator.of(context).pushReplacement(
-      
-MaterialPageRoute<void>(builder: (context) => NextScreen()); => const AppTypeSelectionScreen(),
+        MaterialPageRoute<void>(
+          builder: (context) => const AppTypeSelectionScreen(),
         ),
       );
     }

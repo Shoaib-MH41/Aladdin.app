@@ -10,7 +10,8 @@ import 'package:aladdin_app/core/services/api_service.dart'; // ✅ package impo
 import 'package:aladdin_app/features/splash/splash_screen.dart'; // ✅ package import
 
 class CodePreviewScreen extends StatefulWidget {
-  const CodePreviewScreen({Key? key}) : super(key: key); // ✅ key parameter
+  final AppConfig? config; // arguments کے لیے
+  const CodePreviewScreen({Key? key, this.config}) : super(key: key); // ✅ key parameter
 
   @override
   _CodePreviewScreenState createState() => _CodePreviewScreenState();
@@ -19,6 +20,7 @@ class CodePreviewScreen extends StatefulWidget {
 class _CodePreviewScreenState extends State<CodePreviewScreen> {
   Map<String, dynamic>? apiData;
   String? errorMessage;
+  AppConfig? _appConfig; // State میں AppConfig رکھیں
 
   static const String token = 'YOUR_GITHUB_PERSONAL_ACCESS_TOKEN';
   static const String repoOwner = 'your-username';
@@ -29,17 +31,18 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
   @override
   void initState() {
     super.initState();
+    _appConfig = widget.config; // arguments سے ڈیٹا لیں
     _processApiInput();
   }
 
   Future<void> _processApiInput() async {
     try {
-      final configInput = AppConfig().apiInput;
+      final configInput = _appConfig?.apiInput;
       print('Config Input: $configInput');
       if (configInput != null && configInput.isNotEmpty) {
         final apiConfig = await ApiService.generateApiConfig(configInput);
         print('API Config: $apiConfig');
-        AppConfig().apiConfig = apiConfig;
+        setState(() => _appConfig = _appConfig?.copyWith(apiConfig: apiConfig)); // copyWith میتھڈ شامل کریں اگر موجود نہ ہو
         final data = await ApiService.fetchData(apiConfig);
         setState(() => apiData = data);
       } else {
@@ -58,7 +61,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
         content: const Text('Are you sure you want to delete the project? This action cannot be undone.'), // ✅ const
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context), 
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'), // ✅ const
           ),
           TextButton(
@@ -71,6 +74,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
                   'Accept': 'application/vnd.github.v3+json'
                 },
               );
+              if (!mounted) return;
               if (response.statusCode == 204) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Project deleted successfully!')), // ✅ const
@@ -91,6 +95,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
 
   Future<void> _copyLink() async {
     await Clipboard.setData(const ClipboardData(text: apkLink)); // ✅ const
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Link copied to clipboard!')), // ✅ const
     );
@@ -101,6 +106,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not launch link.')), // ✅ const
       );
@@ -118,7 +124,7 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
         child: Column(
           children: [
             const Text( // ✅ const
-              'Your App is Ready!', 
+              'Your App is Ready!',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w500)
             ),
             const SizedBox(height: 20), // ✅ const
@@ -126,14 +132,14 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
               child: apiData != null
                   ? SingleChildScrollView(
                       child: Text(
-                        jsonEncode(apiData), 
+                        jsonEncode(apiData),
                         style: const TextStyle(fontFamily: 'Poppins') // ✅ const
                       ),
                     )
                   : errorMessage != null
                       ? Center(
                           child: Text(
-                            errorMessage!, 
+                            errorMessage!,
                             style: const TextStyle(fontFamily: 'Poppins', color: Colors.red) // ✅ const
                           ),
                         )
@@ -143,21 +149,21 @@ class _CodePreviewScreenState extends State<CodePreviewScreen> {
             const Text('Download APK from:', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
             const SizedBox(height: 10), // ✅ const
             Text(
-              apkLink, 
+              apkLink,
               style: const TextStyle(fontFamily: 'Poppins', color: Colors.blue), // ✅ const
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20), // ✅ const
             Row(
-              mainAxisAlignment: MainAxisAlignment.center, 
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                  onPressed: _copyLink, 
+                  onPressed: _copyLink,
                   child: const Text('Copy Link', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
                 ),
                 const SizedBox(width: 10), // ✅ const
                 ElevatedButton(
-                  onPressed: _openLink, 
+                  onPressed: _openLink,
                   child: const Text('Open Link', style: TextStyle(fontFamily: 'Poppins')), // ✅ const
                 ),
               ],

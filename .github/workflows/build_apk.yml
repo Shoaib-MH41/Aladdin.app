@@ -13,39 +13,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Analyze AndroidManifest
+      - name: Fix AndroidManifest
         run: |
-          echo "=== Analyzing AndroidManifest.xml ==="
-          
-          # فائل exists ہے کہ نہیں
-          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
-            echo "❌ ERROR: AndroidManifest.xml not found!"
-            exit 1
-          fi
-          
-          # فائل کا size چیک کریں
-          echo "File size: $(wc -l < android/app/src/main/AndroidManifest.xml) lines"
-          
-          # XML syntax چیک کریں
-          if ! xmllint --noout android/app/src/main/AndroidManifest.xml 2> xml_error.txt; then
-            echo "❌ XML Syntax Error Found:"
-            cat xml_error.txt
-            echo ""
-            echo "=== Problematic lines ==="
-            # Error والی لائن نمبر نکالیں
-            LINE_NUM=$(grep -o "line [0-9]*" xml_error.txt | head -1 | cut -d' ' -f2)
-            if [ ! -z "$LINE_NUM" ]; then
-              echo "Error at line $LINE_NUM:"
-              sed -n "${LINE_NUM}p" android/app/src/main/AndroidManifest.xml
-            fi
-            exit 1
-          else
-            echo "✅ XML syntax is valid"
-          fi
-          
-          # فائل کا content دیکھیں
-          echo "=== Full AndroidManifest content ==="
-          cat android/app/src/main/AndroidManifest.xml
+          echo "=== Fixing AndroidManifest.xml ==="
+          cat > android/app/src/main/AndroidManifest.xml << 'EOL'
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.aladdin.app">
+
+    <application
+        android:label="علادین ایپ"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+EOL
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -64,3 +56,9 @@ jobs:
           flutter clean
           flutter pub get
           flutter build apk --release --verbose
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

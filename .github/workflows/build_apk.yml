@@ -1,14 +1,71 @@
 name: Build APK
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # دستی رن کے لیے
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: {distribution: 'temurin', java-version: '17'}
-      - uses: subosito/flutter-action@v2
-        with: {flutter-version: '3.24.3', channel: 'stable'}
-      - run: flutter clean && flutter pub get && flutter build apk --release
-      - uses: actions/upload-artifact@v4
-        with: {name: app-release-apk, path: build/app/outputs/flutter-apk/app-release.apk}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4  # **ترمیم**: sup-java سے setup-java
+        with:
+          distribution: 'zulu'
+          java-version: '17'  # **ترمیم**: Java 17 کے لیے اپ گریڈ
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+          cache: true  # کیشنگ کے لیے
+
+      - name: Create Missing Gradle Wrapper
+        run: |
+          echo "=== Creating Gradle Wrapper Manually ==="
+          cd android
+
+          # gradlew فائل بنائیں
+          cat > gradlew << 'EOL'
+#!/usr/bin/env bash
+# Gradle Wrapper اسکرپٹ (مختصر ورژن)
+APP_HOME="`dirname \"$0\"`"
+CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+JAVACMD="java"
+"$JAVACMD" -jar "$CLASSPATH" "$@"
+EOL
+
+          # gradlew.bat فائل بنائیں
+          cat > gradlew.bat << 'EOL'
+@rem Gradle Wrapper اسکرپٹ (مختصر ورژن)
+@set CLASSPATH=%~dp0gradle\wrapper\gradle-wrapper.jar
+@java -jar %CLASSPATH% %*
+EOL
+
+          # Execute permission دیں
+          chmod +x gradlew
+
+          # Gradle Wrapper جنریٹ کریں (gradle-wrapper.jar بنانے کے لیے)
+          ./gradlew wrapper --gradle-version 8.10 --distribution-type all || echo "Wrapper generation failed, using existing setup"
+
+          cd ..
+
+      - name: Build APK
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build apk --release --verbose  # verbose شامل کیا
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

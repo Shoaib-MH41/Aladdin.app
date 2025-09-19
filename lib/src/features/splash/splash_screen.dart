@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:aladdin_app/src/features/app_type_selection/app_type_selection_screen.dart';
-// app_config.dart کا import ہٹا دیں کیونکہ استعمال نہیں ہو رہا
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

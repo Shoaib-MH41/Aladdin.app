@@ -16,30 +16,36 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> fetchData(Map<String, dynamic> apiConfig) async {
-    final url = apiConfig['url'];
-    final method = apiConfig['method']?.toUpperCase() ?? 'GET';
-    final apiKey = apiConfig['key'];
+    final url = apiConfig['url'] as String?;
+    if (url == null) throw Exception('URL is required');
+    final method = (apiConfig['method'] as String?)?.toUpperCase() ?? 'GET';
+    final apiKey = apiConfig['key'] as String?;
 
     try {
       http.Response response;
       if (method == 'GET') {
-        var requestUrl = Uri.parse(url!);
+        var requestUrl = Uri.parse(url);
         if (apiKey != null && apiKey.isNotEmpty) {
           requestUrl = Uri.parse('$url?key=$apiKey');
         }
         response = await http.get(requestUrl);
       } else if (method == 'POST') {
         response = await http.post(
-          Uri.parse(url!),
+          Uri.parse(url),
           headers: apiKey != null ? {'Authorization': 'Bearer $apiKey'} : {},
-          body: jsonEncode({'key': apiKey}),
+          body: apiKey != null ? jsonEncode({'key': apiKey}) : jsonEncode({}),
         );
       } else {
         throw Exception('Method $method not supported yet');
       }
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        } else {
+          throw Exception('Invalid JSON response');
+        }
       } else {
         throw Exception('Failed to load data: ${response.statusCode}');
       }

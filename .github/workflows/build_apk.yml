@@ -1,14 +1,40 @@
 name: Build APK
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: {distribution: 'temurin', java-version: '17'}
-      - uses: subosito/flutter-action@v2
-        with: {flutter-version: '3.24.3', channel: 'stable'}
-      - run: flutter clean && flutter pub get && flutter build apk --release
-      - uses: actions/upload-artifact@v4
-        with: {name: app-release-apk, path: build/app/outputs/flutter-apk/app-release.apk}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+          cache: true
+
+      - name: Upgrade Dependencies
+        run: |
+          echo "=== Updating outdated packages ==="
+          flutter pub upgrade --major-versions
+          flutter pub upgrade url_launcher http lottie leak_tracker
+
+      - name: Fix Android Embedding and Gradle
+        run: |
+          echo "=== Ensuring Android v2 embedding and fixing Gradle ==="
+          mkdir -p android/app/src/main/kotlin/com/example/aladdin/app/
+          cat > android/app/src/main/kotlin/com/example/aladdin/app/MainActivity.kt << 'EOL'

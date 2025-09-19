@@ -11,7 +11,7 @@ import 'package:aladdin_app/src/features/splash/splash_screen.dart';
 
 class CodePreviewScreen extends StatefulWidget {
   final AppConfig? config;
-  const CodePreviewScreen({super.key, this.config});
+  const CodePreviewScreen({super.key, this.config}); // Added 'const' here
 
   @override
   CodePreviewScreenState createState() => CodePreviewScreenState();
@@ -42,44 +42,42 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
       if (configInput != null && configInput.isNotEmpty) {
         final apiConfig = await ApiService.generateApiConfig(configInput);
         debugPrint('API Config: $apiConfig');
+        if (!mounted) return; // Check mounted before setState
         setState(() {
           _appConfig = _appConfig;
         });
         final data = await ApiService.fetchData(apiConfig);
-        if (mounted) {
-          setState(() => apiData = data);
-        }
+        if (!mounted) return; // Check mounted before setState
+        setState(() => apiData = data);
       } else {
-        if (mounted) {
-          setState(() => errorMessage = 'No valid API input.');
-        }
+        if (!mounted) return; // Check mounted before setState
+        setState(() => errorMessage = 'No valid API input.');
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => errorMessage = 'Error: $e');
-      }
+      if (!mounted) return; // Check mounted before setState
+      setState(() => errorMessage = 'Error: $e');
     }
   }
 
   Future<void> deleteProject() async {
     if (!mounted) return;
-    
-    // Context کو پہلے store کرلیں
+
+    // Store context before async operation
     final currentContext = context;
-    
+
     await showDialog<void>(
       context: currentContext,
-      builder: (BuildContext context) => AlertDialog(
+      builder: (BuildContext dialogContext) => AlertDialog(
         title: const Text('Confirm Delete'),
         content: const Text('Are you sure you want to delete the project? This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               final response = await http.delete(
                 Uri.parse(apiUrl),
                 headers: {
@@ -87,22 +85,17 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                   'Accept': 'application/vnd.github.v3+json'
                 },
               );
-              if (!mounted) return;
+              if (!mounted) return; // Check mounted before using context
               if (response.statusCode == 204) {
-                if (mounted) {
-                  ScaffoldMessenger.of(currentContext).showSnackBar(
-                    const SnackBar(content: Text('Project deleted successfully!')),
-                  );
-                  if (mounted) {
-                    Navigation.pushReplacement(currentContext, const SplashScreen());
-                  }
-                }
+                ScaffoldMessenger.of(currentContext).showSnackBar(
+                  const SnackBar(content: Text('Project deleted successfully!')),
+                );
+                if (!mounted) return; // Check mounted before navigation
+                Navigation.pushReplacement(currentContext, const SplashScreen());
               } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(currentContext).showSnackBar(
-                    SnackBar(content: Text('Delete failed: ${response.statusCode}')),
-                  );
-                }
+                ScaffoldMessenger.of(currentContext).showSnackBar(
+                  SnackBar(content: Text('Delete failed: ${response.statusCode}')),
+                );
               }
             },
             child: const Text('Delete'),
@@ -114,14 +107,12 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
 
   Future<void> _copyLink() async {
     await Clipboard.setData(const ClipboardData(text: apkLink));
-    if (!mounted) return;
-    // Context کو store کرلیں
+    if (!mounted) return; // Check mounted before using context
+    // Store context before using it
     final currentContext = context;
-    if (mounted) {
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        const SnackBar(content: Text('Link copied to clipboard!')),
-      );
-    }
+    ScaffoldMessenger.of(currentContext).showSnackBar(
+      const SnackBar(content: Text('Link copied to clipboard!')),
+    );
   }
 
   Future<void> _openLink() async {
@@ -129,14 +120,12 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
-      if (!mounted) return;
-      // Context کو store کرلیں
+      if (!mounted) return; // Check mounted before using context
+      // Store context before using it
       final currentContext = context;
-      if (mounted) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text('Could not launch link.')),
-        );
-      }
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text('Could not launch link.')),
+      );
     }
   }
 

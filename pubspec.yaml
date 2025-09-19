@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  lottie: ^6.3.0  # ✅ تازہ ترین ورژن
+  lottie: ^3.1.3  # ✅ تازہ ترین ورژن
   url_launcher: ^6.3.0
   http: ^1.2.2
 

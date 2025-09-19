@@ -38,3 +38,74 @@ jobs:
           echo "=== Ensuring Android v2 embedding ==="
           mkdir -p android/app/src/main/kotlin/com/example/aladdin/app/
           cat > android/app/src/main/kotlin/com/example/aladdin/app/MainActivity.kt << 'EOL'
+package com.example.aladdin.app
+
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+
+class MainActivity : FlutterActivity() {
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+    }
+}
+EOL
+
+          # AndroidManifest.xml کو بنائیں/اپ ڈیٹ کریں
+          cat > android/app/src/main/AndroidManifest.xml << 'MANIFEST'
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.aladdin.app">
+
+    <application
+        android:name="${applicationName}"
+        android:label="علادین ایپ"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <meta-data
+                android:name="io.flutter.embedding.android.SplashScreenDrawable"
+                android:resource="@drawable/launch_background" />
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+        </activity>
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+</manifest>
+MANIFEST
+
+          # styles.xml بنائیں
+          mkdir -p android/app/src/main/res/values/
+          cat > android/app/src/main/res/values/styles.xml << 'EOL'
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+</resources>
+EOL
+
+      - name: Build APK
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build apk --release --verbose
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

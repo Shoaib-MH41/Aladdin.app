@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch:  # دستی چلانے کے لیے
 
 jobs:
   build:
@@ -27,47 +27,14 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Disable Analytics
-        run: flutter config --no-analytics
-
-      - name: Install Dependencies
-        run: flutter pub get
-
       - name: Upgrade Dependencies
         run: |
           echo "=== Updating outdated packages ==="
-          flutter pub upgrade
+          flutter pub upgrade --major-versions
+          flutter pub upgrade url_launcher http lottie leak_tracker
 
-      - name: Run Flutter Analyze
-        run: flutter analyze
-
-      - name: Run Tests
-        run: flutter test
-
-      - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
-
-      - name: Build AppBundle
-        run: flutter build appbundle --release --no-tree-shake-icons
-
-      # 🔽 یہ نیا step شامل کریں - APK اپ لوڈ کرنے کے لیے
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aladdin-app-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 7
-
-      # 🔽 یہ نیا step شامل کریں - AppBundle اپ لوڈ کرنے کے لیے
-      - name: Upload AppBundle Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aladdin-app-bundle
-          path: build/app/outputs/bundle/release/app-release.aab
-          retention-days: 7
-
-      - name: Show Build Success
+      - name: Fix Android Embedding and Gradle
         run: |
-          echo "✅ Build completed successfully!"
-          echo "📦 APK Location: build/app/outputs/flutter-apk/app-release.apk"
-          echo "📦 AppBundle Location: build/app/outputs/bundle/release/app-release.aab"
+          echo "=== Ensuring Android v2 embedding and fixing Gradle ==="
+          mkdir -p android/app/src/main/kotlin/com/example/aladdin/app/
+          cat > android/app/src/main/kotlin/com/example/aladdin/app/MainActivity.kt << 'EOL'

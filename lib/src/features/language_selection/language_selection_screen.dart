@@ -1,5 +1,6 @@
+// lib/src/features/language_selection/language_selection_screen.dart
 import 'package:flutter/material.dart';
-import 'package:aladdin_app/src/models/language_model.dart';
+import 'package:aladdin_app/src/models/language_model.dart'; // درست درآمد
 
 class LanguageSelectionScreen extends StatefulWidget {
   final String appType; // ✅ نئے parameter کو شامل کریں
@@ -18,22 +19,22 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
   final List<LanguageModel> _languages = const [
     LanguageModel(
-      code: 'en', 
-      name: 'English', 
-      nativeName: 'English', 
-      flagEmoji: '🇺🇸'
+      code: 'en',
+      name: 'English',
+      nativeName: 'English',
+      flagEmoji: '🇺🇸',
     ),
     LanguageModel(
-      code: 'ur', 
-      name: 'Urdu', 
-      nativeName: 'اردو', 
-      flagEmoji: '🇵🇰'
+      code: 'ur',
+      name: 'Urdu',
+      nativeName: 'اردو',
+      flagEmoji: '🇵🇰',
     ),
     LanguageModel(
-      code: 'ar', 
-      name: 'Arabic', 
-      nativeName: 'العربية', 
-      flagEmoji: '🇸🇦'
+      code: 'ar',
+      name: 'Arabic',
+      nativeName: 'العربية',
+      flagEmoji: '🇸🇦',
     ),
   ];
 
@@ -48,9 +49,13 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   }
 
   void _navigateToNextScreen() {
-    // یہاں آپ اگلے screen پر navigation شامل کریں گے
     print('منتخب زبان: ${_selectedLanguage?.name}');
     print('ایپ کی قسم: ${widget.appType}');
+    Navigation.pushNamed(
+      context,
+      '/app_details', // اپنی ضرورت کے مطابق روٹ تبدیل کریں
+      arguments: {'language': _selectedLanguage, 'appType': widget.appType},
+    );
   }
 
   @override
@@ -71,7 +76,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              DropdownButtonFormField<LanguageModel>( // ✅ FormField استعمال کریں
+              DropdownButtonFormField<LanguageModel>(
                 value: _selectedLanguage,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
@@ -98,4 +103,19 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       ),
     );
   }
+}
+
+// lib/src/models/language_model.dart (نیا فائل)
+class LanguageModel {
+  final String code;
+  final String name;
+  final String nativeName;
+  final String flagEmoji;
+
+  const LanguageModel({
+    required this.code,
+    required this.name,
+    required this.nativeName,
+    required this.flagEmoji,
+  });
 }

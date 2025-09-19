@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package com.example.aladdin.app">
+    package="com.example.aladdin.app">
 
     <application
         android:label="علادین ایپ"
@@ -16,6 +16,5 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- یقینی بناؤ کہ کوئی پرانا <meta-data> یا v1 embedding کا کوڈ یہاں نہ ہو -->
     </application>
 </manifest>

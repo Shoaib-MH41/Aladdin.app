@@ -1,71 +1,87 @@
-name: Build APK
+name: Flutter CI/CD
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:  # دستی رن کے لیے
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  FLUTTER_VERSION: '3.19.5'  # آپ کے Flutter ورژن کے مطابق تبدیل کریں
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4  # **ترمیم**: sup-java سے setup-java
-        with:
-          distribution: 'zulu'
-          java-version: '17'  # **ترمیم**: Java 17 کے لیے اپ گریڈ
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.3'
-          channel: 'stable'
-          cache: true  # کیشنگ کے لیے
+    - name: Install Dependencies
+      run: flutter pub get
 
-      - name: Create Missing Gradle Wrapper
-        run: |
-          echo "=== Creating Gradle Wrapper Manually ==="
-          cd android
+    - name: Run Flutter Analyze
+      run: flutter analyze
 
-          # gradlew فائل بنائیں
-          cat > gradlew << 'EOL'
-#!/usr/bin/env bash
-# Gradle Wrapper اسکرپٹ (مختصر ورژن)
-APP_HOME="`dirname \"$0\"`"
-CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
-JAVACMD="java"
-"$JAVACMD" -jar "$CLASSPATH" "$@"
-EOL
+    - name: Run Flutter Tests
+      run: flutter test
 
-          # gradlew.bat فائل بنائیں
-          cat > gradlew.bat << 'EOL'
-@rem Gradle Wrapper اسکرپٹ (مختصر ورژن)
-@set CLASSPATH=%~dp0gradle\wrapper\gradle-wrapper.jar
-@java -jar %CLASSPATH% %*
-EOL
+    - name: Check Formatting
+      run: flutter format --set-exit-if-changed .
 
-          # Execute permission دیں
-          chmod +x gradlew
+    - name: Build APK
+      run: flutter build apk --release
 
-          # Gradle Wrapper جنریٹ کریں (gradle-wrapper.jar بنانے کے لیے)
-          ./gradlew wrapper --gradle-version 8.10 --distribution-type all || echo "Wrapper generation failed, using existing setup"
+    - name: Build AppBundle
+      run: flutter build appbundle --release
 
-          cd ..
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Build APK
-        run: |
-          flutter clean
-          flutter pub get
-          flutter build apk --release --verbose  # verbose شامل کیا
+    - name: Upload AppBundle Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-appbundle
+        path: build/app/outputs/bundle/release/app-release.aab
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
+  # Android-specific validation (اختیاری)
+  android-validation:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Validate Gradle Wrapper
+      run: |
+        cd android
+        ./gradlew wrapper --validate
+
+  # iOS build (اگر آپ کے پاس macOS runner ہے)
+  # ios-build:
+  #   runs-on: macos-latest
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+  #   - name: Setup Flutter
+  #     uses: subosito/flutter-action@v2
+  #   - name: Install dependencies
+  #     run: flutter pub get
+  #   - name: Build iOS
+  #     run: flutter build ios --release --no-codesign

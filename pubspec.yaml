@@ -9,9 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  lottie: ^2.7.0
-  url_launcher: ^6.1.0
-  http: ^0.13.5
+  lottie: ^3.1.2
+  url_launcher: ^6.3.0
+  http: ^1.2.2
+
 
 dev_dependencies:
   flutter_test:

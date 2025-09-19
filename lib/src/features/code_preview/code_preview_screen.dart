@@ -64,8 +64,11 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
   Future<void> deleteProject() async {
     if (!mounted) return;
     
+    // Context کو پہلے store کرلیں
+    final currentContext = context;
+    
     await showDialog<void>(
-      context: context,
+      context: currentContext,
       builder: (BuildContext context) => AlertDialog(
         title: const Text('Confirm Delete'),
         content: const Text('Are you sure you want to delete the project? This action cannot be undone.'),
@@ -87,16 +90,16 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
               if (!mounted) return;
               if (response.statusCode == 204) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(currentContext).showSnackBar(
                     const SnackBar(content: Text('Project deleted successfully!')),
                   );
                   if (mounted) {
-                    Navigation.pushReplacement(context, const SplashScreen());
+                    Navigation.pushReplacement(currentContext, const SplashScreen());
                   }
                 }
               } else {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(currentContext).showSnackBar(
                     SnackBar(content: Text('Delete failed: ${response.statusCode}')),
                   );
                 }
@@ -112,7 +115,9 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
   Future<void> _copyLink() async {
     await Clipboard.setData(const ClipboardData(text: apkLink));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    // Context کو store کرلیں
+    final currentContext = context;
+    ScaffoldMessenger.of(currentContext).showSnackBar(
       const SnackBar(content: Text('Link copied to clipboard!')),
     );
   }
@@ -123,7 +128,9 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
       await launchUrl(uri);
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Context کو store کرلیں
+      final currentContext = context;
+      ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text('Could not launch link.')),
       );
     }

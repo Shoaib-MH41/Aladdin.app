@@ -1,7 +1,5 @@
-
 import 'package:flutter/material.dart';
 
-// درست: اس لائن کو ڈیلیٹ کریں
 class LanguageModel {
   final String code;
   final String name;
@@ -18,10 +16,10 @@ class LanguageModel {
   // JSON سے Object بنانے کے لیے
   factory LanguageModel.fromJson(Map<String, dynamic> json) {
     return LanguageModel(
-      code: json['code'] as String, // ✅ Type casting
-      name: json['name'] as String, // ✅ Type casting
-      nativeName: json['nativeName'] as String, // ✅ Type casting
-      flagEmoji: json['flagEmoji'] as String, // ✅ Type casting
+      code: json['code'] as String,
+      name: json['name'] as String,
+      nativeName: json['nativeName'] as String,
+      flagEmoji: json['flagEmoji'] as String,
     );
   }
 

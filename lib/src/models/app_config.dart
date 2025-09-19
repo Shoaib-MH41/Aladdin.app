@@ -1,51 +1,43 @@
-
 class AppConfig {
-  // 🔹 Basic App Info
-  String? appName;       
-  String? appType;       
-  String? language;      
-
-  // 🔹 Theme Settings
-  String? theme;         
-  String? primaryColor;  
-
-  // 🔹 API Config
-  String? apiInput;                 
-  Map<String, dynamic>? apiConfig;  
+  final String? appName;
+  final String? appVersion;
+  final String? baseUrl;
+  final String? apiKey;
+  final String? environment;
+  final String? logLevel;
+  final Map<String, dynamic>? features;
 
   AppConfig({
     this.appName,
-    this.appType,
-    this.language,
-    this.theme,
-    this.primaryColor,
-    this.apiInput,
-    this.apiConfig,
+    this.appVersion,
+    this.baseUrl,
+    this.apiKey,
+    this.environment,
+    this.logLevel,
+    this.features,
   });
 
-  // JSON میں تبدیل کرنے کا فنکشن
+  factory AppConfig.fromJson(Map<String, dynamic> json) {
+    return AppConfig(
+      appName: json['appName'] as String?,
+      appVersion: json['appVersion'] as String?,
+      baseUrl: json['baseUrl'] as String?,
+      apiKey: json['apiKey'] as String?,
+      environment: json['environment'] as String?,
+      logLevel: json['logLevel'] as String?,
+      features: json['features'] as Map<String, dynamic>?,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'appName': appName,
-      'appType': appType,
-      'language': language,
-      'theme': theme,
-      'primaryColor': primaryColor,
-      'apiInput': apiInput,
-      'apiConfig': apiConfig,
+      'appVersion': appVersion,
+      'baseUrl': baseUrl,
+      'apiKey': apiKey,
+      'environment': environment,
+      'logLevel': logLevel,
+      'features': features,
     };
-  }
-
-  // JSON سے واپس AppConfig بنانے کا فنکشن
-  factory AppConfig.fromJson(Map<String, dynamic> json) {
-    return AppConfig(
-      appName: json['appName'],
-      appType: json['appType'],
-      language: json['language'],
-      theme: json['theme'],
-      primaryColor: json['primaryColor'],
-      apiInput: json['apiInput'],
-      apiConfig: json['apiConfig'],
-    );
   }
 }

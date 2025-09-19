@@ -117,9 +117,11 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
     if (!mounted) return;
     // Context کو store کرلیں
     final currentContext = context;
-    ScaffoldMessenger.of(currentContext).showSnackBar(
-      const SnackBar(content: Text('Link copied to clipboard!')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text('Link copied to clipboard!')),
+      );
+    }
   }
 
   Future<void> _openLink() async {
@@ -130,9 +132,11 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
       if (!mounted) return;
       // Context کو store کرلیں
       final currentContext = context;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        const SnackBar(content: Text('Could not launch link.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          const SnackBar(content: Text('Could not launch link.')),
+        );
+      }
     }
   }
 

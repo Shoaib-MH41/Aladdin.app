@@ -13,16 +13,16 @@ class AppTypeSelectionScreen extends StatelessWidget {
       body: GridView.count(
         crossAxisCount: 2,
         padding: const EdgeInsets.all(16), // ✅ const
-        children: [
-          _buildCard(context, 'ویب ایپ', Icons.web, 'web'),
-          _buildCard(context, 'موبائل ایپ', Icons.phone_android, 'mobile'),
-          _buildCard(context, 'PWA', Icons.public, 'pwa'),
+        children: const <Widget>[ // ✅ const شامل کیا
+          _buildCard('ویب ایپ', Icons.web, 'web'),
+          _buildCard('موبائل ایپ', Icons.phone_android, 'mobile'),
+          _buildCard('PWA', Icons.public, 'pwa'),
         ],
       ),
     );
   }
 
-  Widget _buildCard(BuildContext context, String title, IconData icon, String type) {
+  Widget _buildCard(String title, IconData icon, String type) {
     return Card(
       elevation: 4,
       child: InkWell(

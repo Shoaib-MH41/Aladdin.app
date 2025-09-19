@@ -6,13 +6,16 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key); // ✅ key parameter
+  const MyApp({Key? key}) : super(key: key); // ✅ key parameter with super
 
   @override
   Widget build(BuildContext context) {
     return const MaterialApp( // ✅ const
       title: 'Aladdin App',
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.blue, // اختیاری: تھیم شامل کی
+      ),
       home: SplashScreen(), // ✅ const
     );
   }

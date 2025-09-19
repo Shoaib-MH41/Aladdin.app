@@ -26,7 +26,7 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'App Details', // ✅ براہ راست text استعمال کریں
+          AppStrings.appName, // ✅ AppStrings استعمال کریں
           style: TextStyle(fontFamily: 'Poppins'),
         ),
       ),
@@ -110,7 +110,7 @@ class _AppDetailsFormState extends State<AppDetailsForm> {
                   }
                 },
                 child: const Text(
-                  'ایپ بنائیں', // ✅ براہ راست text استعمال کریں
+                  AppStrings.generateApp, // ✅ AppStrings استعمال کریں
                   style: TextStyle(fontFamily: 'Poppins'),
                 ),
               ),

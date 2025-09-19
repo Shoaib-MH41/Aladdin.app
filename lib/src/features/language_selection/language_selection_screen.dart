@@ -1,38 +1,68 @@
 import 'package:flutter/material.dart';
-import '../../app_details/app_details_form.dart';
+import 'package:aladdin_app/src/models/language_model.dart'; // ✅ package import
 
-class LanguageSelectionScreen extends StatelessWidget {
-  final String appType;
+class LanguageSelectionScreen extends StatefulWidget {
+  const LanguageSelectionScreen({Key? key}) : super(key: key); // ✅ key parameter
 
-  const LanguageSelectionScreen({required this.appType, super.key});
+  @override
+  State<LanguageSelectionScreen> createState() => _LanguageSelectionScreenState();
+}
+
+class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
+  LanguageModel? _selectedLanguage;
+
+  final List<LanguageModel> _languages = const [ // ✅ const
+    LanguageModel(code: 'en', name: 'English'),
+    LanguageModel(code: 'ur', name: 'Urdu'),
+    LanguageModel(code: 'ar', name: 'Arabic'),
+  ];
+
+  void _onLanguageSelected(LanguageModel? language) {
+    if (language != null) {
+      setState(() {
+        _selectedLanguage = language;
+      });
+      // زبان منتخب کرنے کے بعد اگلا screen
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('پروگرامنگ لینگویج منتخب کریں')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildOption(context, 'Flutter'),
-          _buildOption(context, 'React Native'),
-          _buildOption(context, 'Kotlin'),
-          _buildOption(context, 'Swift'),
-          _buildOption(context, 'HTML + JS'),
-        ],
+      appBar: AppBar(
+        title: const Text('زبان منتخب کریں'), // ✅ const
       ),
-    );
-  }
-
-  Widget _buildOption(BuildContext context, String lang) {
-    return ListTile(
-      title: Text(lang),
-      trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: () {
-        Navigator.pushNamed(context, '/app_details', arguments: {
-          'appType': appType,
-          'language': lang,
-        });
-      },
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Text( // ✅ const
+              'اپنی پسند کی زبان منتخب کریں',
+              style: TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 20), // ✅ const
+            DropdownButton<LanguageModel>(
+              value: _selectedLanguage,
+              items: _languages.map((LanguageModel language) {
+                return DropdownMenuItem<LanguageModel>(
+                  value: language,
+                  child: Text(language.name),
+                );
+              }).toList(),
+              onChanged: _onLanguageSelected,
+            ),
+            const SizedBox(height: 20), // ✅ const
+            ElevatedButton(
+              onPressed: _selectedLanguage == null
+                  ? null
+                  : () {
+                      // منتخب زبان کو save کریں
+                    },
+              child: const Text('جاری رکھیں'), // ✅ const
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

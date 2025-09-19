@@ -1,10 +1,7 @@
-package com.example.aladdin.app
+package com.example.aladdin_app  // ✅ package name درست کریں
 
 import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity: FlutterActivity() {
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-    }
+    // ✅ configureFlutterEngine میتھڈ ہٹا دیں اگر ضروری نہ ہو
 }

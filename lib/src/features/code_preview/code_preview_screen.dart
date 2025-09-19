@@ -97,7 +97,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Delete failed: ${response.statusCode}')),
+                    SnackBar(content: Text('Delete failed: ${response.statusCode}')),
                   );
                 }
               }

@@ -29,7 +29,7 @@ class AppTypeSelectionScreen extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            MaterialPageRoute<void>(
               builder: (context) => LanguageSelectionScreen(appType: type),
             ),
           );
@@ -46,4 +46,3 @@ class AppTypeSelectionScreen extends StatelessWidget {
     );
   }
 }
-

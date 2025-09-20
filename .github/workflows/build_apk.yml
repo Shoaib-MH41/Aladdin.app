@@ -28,7 +28,7 @@ jobs:
       with:
         flutter-version: '3.19.5'
         channel: 'stable'
-        cache: false # Cache سے مسائل سے بچنے کے لیے
+        cache: false
 
     - name: Create local.properties
       run: |
@@ -100,7 +100,7 @@ jobs:
         android {
             compileSdk 34
             defaultConfig {
-                applicationId "com.example.your_app" # اپنا اصل applicationId یہاں ڈالیں
+                applicationId "com.aladdin.app" # aladdin_app کے لیے
                 minSdk 21
                 targetSdk 34
                 versionCode 1
@@ -154,6 +154,10 @@ jobs:
     - name: Check pubspec.yaml
       run: cat pubspec.yaml
       continue-on-error: true
+
+    - name: Check assets
+      run: ls -la assets/fonts/ || echo "Assets/fonts directory not found"
+      continue-on-error: true # فونٹ فائلیں چیک کریں
 
     - name: Run Flutter doctor
       run: flutter doctor -v

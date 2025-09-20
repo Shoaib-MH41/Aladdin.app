@@ -1,40 +1,47 @@
-name: Build APK
+name: Flutter CI
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:  # دستی چلانے کے لیے
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3'
+          flutter-version: '3.19.5'   # اپنی مرضی کے مطابق ورژن
           channel: 'stable'
-          cache: true
 
-      - name: Upgrade Dependencies
-        run: |
-          echo "=== Updating outdated packages ==="
-          flutter pub upgrade --major-versions
-          flutter pub upgrade url_launcher http lottie leak_tracker
+      - name: Install Dependencies
+        run: flutter pub get
 
-      - name: Fix Android Embedding and Gradle
+      - name: Run Flutter Analyze
         run: |
-          echo "=== Ensuring Android v2 embedding and fixing Gradle ==="
-          mkdir -p android/app/src/main/kotlin/com/example/aladdin/app/
-          cat > android/app/src/main/kotlin/com/example/aladdin/app/MainActivity.kt << 'EOL'
+          echo "=== Detailed Flutter Analysis ==="
+          flutter analyze --no-pub --fatal-infos --fatal-warnings 2>&1 | tee analysis_output.txt
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build AAB (Play Store Bundle)
+        run: flutter build appbundle --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: build/app/outputs/bundle/release/app-release.aab

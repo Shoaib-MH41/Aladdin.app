@@ -1,8 +1,7 @@
-
 android {
     namespace 'com.example.aladdin.app'
     compileSdkVersion 34
-    ndkVersion "25.1.8937393"  // ✅ واضح NDK ورژن
+    ndkVersion "25.1.8937393"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -44,4 +43,9 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
+    implementation "androidx.core:core-ktx:1.12.0"
 }

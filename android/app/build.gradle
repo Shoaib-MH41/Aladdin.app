@@ -1,3 +1,9 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'dev.flutter.flutter-gradle-plugin'
+}
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
@@ -19,12 +25,6 @@ if (!flutterVersionCode) {
 def flutterVersionName = localProperties.getProperty('flutter.versionName')
 if (!flutterVersionName) {
     flutterVersionName = '1.0.0'
-}
-
-plugins {
-    id 'com.android.application'
-    id 'kotlin-android'
-    id 'dev.flutter.flutter-gradle-plugin'
 }
 
 android {
@@ -66,7 +66,7 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
-            signingConfig signingConfigs.release // ریلیز کے لیے سائننگ
+            signingConfig signingConfigs.release
         }
         debug {
             signingConfig signingConfigs.debug

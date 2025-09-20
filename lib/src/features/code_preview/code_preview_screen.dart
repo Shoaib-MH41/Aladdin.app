@@ -46,7 +46,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
           _appConfig = _appConfig;
         });
         final data = await ApiService.fetchData(apiConfig);
-        if (!mounted) return; // mounted چیک async gap کے بعد
+        if (!mounted) return;
         setState(() => apiData = data);
       } else {
         if (!mounted) return;
@@ -158,7 +158,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
             const SizedBox(height: 20),
             const Text('Download APK from:', style: TextStyle(fontFamily: 'Poppins')),
             const SizedBox(height: 10),
-            Text(
+            Text( // یہاں const نہیں لگے گا کیونکہ apkLink variable ہے
               apkLink,
               style: const TextStyle(fontFamily: 'Poppins', color: Colors.blue),
               textAlign: TextAlign.center,

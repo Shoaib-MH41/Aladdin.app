@@ -43,10 +43,7 @@ jobs:
           weight: 500
         - asset: assets/fonts/Poppins-Italic.ttf
           style: italic" >> pubspec.yaml
-        
-        # تصدیق کریں
-        echo "=== Assets structure ==="
-        find assets/ -type f
+  
         
     - name: Install dependencies
       run: |

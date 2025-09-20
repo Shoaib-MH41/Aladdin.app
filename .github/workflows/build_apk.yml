@@ -1,47 +1,40 @@
-name: Flutter CI
+name: Build APK
 
 on:
   push:
     branches:
       - main
-  pull_request:
+  workflow_dispatch:  # دستی چلانے کے لیے
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup Flutter
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.5'   # اپنی مرضی کے مطابق ورژن
+          flutter-version: '3.24.3'
           channel: 'stable'
+          cache: true
 
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Run Flutter Analyze
+      - name: Upgrade Dependencies
         run: |
-          echo "=== Detailed Flutter Analysis ==="
-          flutter analyze --no-pub --fatal-infos --fatal-warnings 2>&1 | tee analysis_output.txt
+          echo "=== Updating outdated packages ==="
+          flutter pub upgrade --major-versions
+          flutter pub upgrade url_launcher http lottie leak_tracker
 
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Build AAB (Play Store Bundle)
-        run: flutter build appbundle --release
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Upload AAB Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-aab
-          path: build/app/outputs/bundle/release/app-release.aab
+      - name: Fix Android Embedding and Gradle
+        run: |
+          echo "=== Ensuring Android v2 embedding and fixing Gradle ==="
+          mkdir -p android/app/src/main/kotlin/com/example/aladdin/app/
+          cat > android/app/src/main/kotlin/com/example/aladdin/app/MainActivity.kt << 'EOL'

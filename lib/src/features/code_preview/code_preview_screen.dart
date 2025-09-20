@@ -46,7 +46,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
           _appConfig = _appConfig;
         });
         final data = await ApiService.fetchData(apiConfig);
-        if (!mounted) return; // Rule check: use mounted after async gap
+        if (!mounted) return; // mounted چیک async gap کے بعد
         setState(() => apiData = data);
       } else {
         if (!mounted) return;
@@ -81,7 +81,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                   'Accept': 'application/vnd.github.v3+json'
                 },
               );
-              if (!mounted) return; // Rule check: use mounted after async gap
+              if (!mounted) return;
               if (response.statusCode == 204) {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -153,12 +153,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                             style: const TextStyle(fontFamily: 'Poppins', color: Colors.red),
                           ),
                         )
-                      :const Center(
-  child: CircularProgressIndicator(),
-)
-
-
-
+                      : const Center(child: CircularProgressIndicator()),
             ),
             const SizedBox(height: 20),
             const Text('Download APK from:', style: TextStyle(fontFamily: 'Poppins')),

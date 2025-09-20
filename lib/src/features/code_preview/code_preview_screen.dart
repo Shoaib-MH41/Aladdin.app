@@ -153,7 +153,12 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                             style: const TextStyle(fontFamily: 'Poppins', color: Colors.red),
                           ),
                         )
-                      : const Center(child: CircularProgressIndicator()),
+                      :const Center(
+  child: CircularProgressIndicator(),
+)
+
+
+
             ),
             const SizedBox(height: 20),
             const Text('Download APK from:', style: TextStyle(fontFamily: 'Poppins')),

@@ -14,7 +14,10 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Debug directory structure
-      run: ls -la
+      run: |
+        ls -la
+        ls -la lib/ || echo "lib directory not found"
+        ls -la assets/fonts/ || echo "assets/fonts directory not found"
       continue-on-error: true
 
     - name: Set up Java
@@ -100,7 +103,7 @@ jobs:
         android {
             compileSdk 34
             defaultConfig {
-                applicationId "com.aladdin.app" # aladdin_app کے لیے
+                applicationId "com.aladdin.app"
                 minSdk 21
                 targetSdk 34
                 versionCode 1
@@ -155,12 +158,18 @@ jobs:
       run: cat pubspec.yaml
       continue-on-error: true
 
-    - name: Check assets
-      run: ls -la assets/fonts/ || echo "Assets/fonts directory not found"
-      continue-on-error: true # فونٹ فائلیں چیک کریں
+    - name: Check assets and lib
+      run: |
+        ls -la assets/fonts/ || echo "assets/fonts directory not found"
+        ls -la lib/ || echo "lib directory not found"
+      continue-on-error: true
 
     - name: Run Flutter doctor
       run: flutter doctor -v
+      continue-on-error: true
+
+    - name: Check outdated dependencies
+      run: flutter pub outdated
       continue-on-error: true
 
     - name: Clean project
@@ -171,12 +180,22 @@ jobs:
       run: flutter pub get
       continue-on-error: true
 
+    - name: Check Dart code
+      run: flutter analyze
+      continue-on-error: true
+
     - name: Debug Flutter build
       run: flutter build apk --release --no-tree-shake-icons --verbose
       continue-on-error: true
 
     - name: Debug APK output
-      run: ls -la build/app/outputs/flutter-apk/ || echo "No APK directory found"
+      run: |
+        ls -la build/app/outputs/flutter-apk/ || echo "No APK directory found"
+        if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+          echo "APK found: build/app/outputs/flutter-apk/app-release.apk"
+        else
+          echo "APK not found"
+        fi
       continue-on-error: true
 
     - name: Upload APK
@@ -184,4 +203,5 @@ jobs:
       with:
         name: app-release.apk
         path: build/app/outputs/flutter-apk/app-release.apk
+        if-no-files-found: warn # اگر APK نہ ملے تو warning دکھائیں
       if: success()

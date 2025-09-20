@@ -1,3 +1,26 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (!flutterRoot) {
+    flutterRoot = '../flutter'
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (!flutterVersionCode) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (!flutterVersionName) {
+    flutterVersionName = '1.0.0'
+}
+
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
@@ -30,10 +53,20 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        release {
+            keyAlias 'key'
+            keyPassword 'password'
+            storeFile file('/path/to/your/keystore.jks')
+            storePassword 'password'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             shrinkResources false
+            signingConfig signingConfigs.release // ریلیز کے لیے سائننگ
         }
         debug {
             signingConfig signingConfigs.debug
@@ -43,4 +76,8 @@ android {
 
 flutter {
     source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }

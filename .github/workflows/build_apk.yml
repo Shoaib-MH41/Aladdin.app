@@ -13,6 +13,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Debug directory structure
+      run: ls -la
+
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
@@ -24,15 +27,32 @@ jobs:
       with:
         flutter-version: '3.19.5'
         channel: 'stable'
-        cache: true
+        cache: false # Cache سے مسائل سے بچنے کے لیے
 
     - name: Create local.properties
       run: |
         echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
         echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
 
+    - name: Rebuild Gradle Wrapper
+      run: |
+        cd android
+        gradle wrapper --gradle-version 8.2 --distribution-type all
+      continue-on-error: true # اگر gradle-wrapper.jar غائب ہو، تو یہ step ناکام ہو سکتا ہے
+
+    - name: Verify Gradle Wrapper
+      run: |
+        cd android
+        ls -la gradle/wrapper/
+      continue-on-error: true # Debugging کے لیے
+
     - name: Install dependencies
       run: flutter pub get
+
+    - name: Clean Gradle cache
+      run: |
+        cd android
+        ./gradlew cleanBuildCache
 
     - name: Build APK
       run: flutter build apk --release --no-tree-shake-icons

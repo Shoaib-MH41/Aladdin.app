@@ -1,81 +1,47 @@
-name: Build APK & AAB
+name: Build APK
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.19.5'
-        
-    - name: Fix Gradle Project Structure
+        channel: 'stable'
+        cache: true
+
+    - name: Create local.properties
       run: |
-        # موجودہ فولڈر کا نام چیک کریں
-        CURRENT_DIR=$(basename "$PWD")
-        echo "Current directory: $CURRENT_DIR"
-        
-        # عارضی فولڈر میں نیا پروجیکٹ بنائیں
-        flutter create -t app temp_fixed_app
-        
-        # اپنا سارا کوڈ منتقل کریں
-        cp -r lib/* temp_fixed_app/lib/
-        cp pubspec.yaml temp_fixed_app/
-        [ -d assets ] && cp -r assets/* temp_fixed_app/assets/ || true
-        
-        # Android فولڈر مکمل منتقل کریں
-        rm -rf temp_fixed_app/android
-        cp -r android temp_fixed_app/
-        
-        # Test فولڈر ڈیلیٹ کریں (اگر نہیں چاہیے)
-        rm -rf temp_fixed_app/test
-        
-        # Gradle version اپ ڈیٹ کریں
-        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-all.zip" > temp_fixed_app/android/gradle/wrapper/gradle-wrapper.properties
-        
-        # AndroidManifest درست کریں
-        sed -i '/<activity.*MainActivity/a\            android:exported=\"true\"' temp_fixed_app/android/app/src/main/AndroidManifest.xml
-        
-        # عارضی فولڈر میں منتقل ہو جائیں
-        cd temp_fixed_app
-        
-    - name: Install Dependencies
-      run: |
-        cd temp_fixed_app
-        flutter pub get
-      
+        echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+        echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
+      working-directory: ./temp_fixed_app
+
+    - name: Install dependencies
+      run: flutter pub get
+      working-directory: ./temp_fixed_app
+
     - name: Build APK
-      run: |
-        cd temp_fixed_app
-        flutter build apk --release --no-tree-shake-icons
-      
-    - name: Build AAB
-      run: |
-        cd temp_fixed_app
-        flutter build appbundle --release --no-tree-shake-icons
-      
+      run: flutter build apk --release --no-tree-shake-icons
+      working-directory: ./temp_fixed_app
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: release-apk
-        path: temp_fixed_app/build/app/outputs/flutter-apk/app-release.apk
-        
-    - name: Upload AAB
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-aab
-        path: temp_fixed_app/build/app/outputs/bundle/release/app-release.aab
-        
-    - name: Cleanup
-      run: |
-        rm -rf temp_fixed_app
-        echo "✅ Build completed successfully!"
+        name: app-release.apk
+        path: ./temp_fixed_app/build/app/outputs/flutter-apk/app-release.apk

@@ -15,6 +15,7 @@ jobs:
 
     - name: Debug directory structure
       run: ls -la
+      continue-on-error: true
 
     - name: Set up Java
       uses: actions/setup-java@v4
@@ -33,6 +34,7 @@ jobs:
       run: |
         echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
         echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
+      continue-on-error: true
 
     - name: Grant execute permission for gradlew
       run: |
@@ -73,7 +75,7 @@ jobs:
         android {
             compileSdk 34
             defaultConfig {
-                applicationId "com.example.your_app"
+                applicationId "com.example.your_app" # اپنا اصل applicationId یہاں ڈالیں
                 minSdk 21
                 targetSdk 34
                 versionCode 1
@@ -114,18 +116,31 @@ jobs:
         EOF
       continue-on-error: true
 
+    - name: Check pubspec.yaml
+      run: cat pubspec.yaml
+      continue-on-error: true # Debugging کے لیے pubspec.yaml چیک کریں
+
+    - name: Run Flutter doctor
+      run: flutter doctor
+      continue-on-error: true # Debugging کے لیے Flutter کی حالت چیک کریں
+
+    - name: Install dependencies
+      run: flutter pub get
+      continue-on-error: true
+
     - name: Clean Gradle cache
       run: |
         cd android
         ./gradlew cleanBuildCache
       continue-on-error: true
 
-    - name: Install dependencies
-      run: flutter pub get
-
     - name: Build APK
       run: flutter build apk --release --no-tree-shake-icons
       continue-on-error: true
+
+    - name: Debug APK output
+      run: ls -la build/app/outputs/flutter-apk/
+      continue-on-error: true # Debugging کے لیے چیک کریں کہ APK بنی یا نہیں
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

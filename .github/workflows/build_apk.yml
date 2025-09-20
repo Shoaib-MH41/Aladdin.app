@@ -21,20 +21,32 @@ jobs:
         # نیا پروجیکٹ بنائیں
         flutter create -t app temp_fixed_app
         
-        # کوڈ منتقل کریں
+        # مکمل assets folder copy کریں
+        rm -rf temp_fixed_app/assets
+        cp -r assets temp_fixed_app/
+        
+        # باقی کوڈ منتقل کریں
         cp -r lib/* temp_fixed_app/lib/
         cp pubspec.yaml temp_fixed_app/
-        [ -d assets ] && cp -r assets/* temp_fixed_app/assets/ || true
-        
-        # Android folder منتقل کریں
         rm -rf temp_fixed_app/android
         cp -r android temp_fixed_app/
-        
-        # test folder مکمل ڈیلیٹ کریں کیونکہ آپ کے پاس نہیں ہے
         rm -rf temp_fixed_app/test
         
-        # fonts والی لائن ہٹائیں اگر assets نہیں ہیں
-        sed -i '/assets\/fonts/d' temp_fixed_app/pubspec.yaml
+        # fonts section درست کریں
+        cd temp_fixed_app
+        sed -i '/fonts:/,/^[^ ]/d' pubspec.yaml
+        echo "  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-Italic.ttf
+          style: italic" >> pubspec.yaml
+        
+        # تصدیق کریں
+        echo "=== Assets structure ==="
+        find assets/ -type f
         
     - name: Install dependencies
       run: |
@@ -46,29 +58,15 @@ jobs:
         cd temp_fixed_app
         sed -i '/<activity.*MainActivity/a\            android:exported=\"true\"' android/app/src/main/AndroidManifest.xml
       
-    - name: Build APK (Ignore Warnings)
+    - name: Build APK
       run: |
         cd temp_fixed_app
-        # صرف errors پر fail کریں، warnings ignore کریں
-        flutter build apk --release --no-tree-shake-icons 2>&1 | grep -v "prefer_const_constructors" || true
-        # APK فائل چیک کریں
-        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-          echo "APK built successfully!"
-        else
-          echo "APK build failed!"
-          exit 1
-        fi
-      
-    - name: Build AAB (Ignore Warnings)
+        flutter build apk --release --no-tree-shake-icons
+        
+    - name: Build AAB
       run: |
         cd temp_fixed_app
-        flutter build appbundle --release --no-tree-shake-icons 2>&1 | grep -v "prefer_const_constructors" || true
-        if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
-          echo "AAB built successfully!"
-        else
-          echo "AAB build failed!"
-          exit 1
-        fi
+        flutter build appbundle --release --no-tree-shake-icons
       
     - name: Upload APK
       uses: actions/upload-artifact@v4

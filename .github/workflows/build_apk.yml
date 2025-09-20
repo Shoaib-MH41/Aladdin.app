@@ -1,43 +1,14 @@
-- name: Create Analysis Options
-  run: |
-    # analysis_options.yaml فائل بنائیں
-    cat > analysis_options.yaml << 'EOL'
-analyzer:
-  exclude:
-    - "**/*.g.dart"
-    - "**/*.freezed.dart" 
-    - "**/*.gr.dart"
-    - "temp_fixed_app/**"
-
-  language:
-    strict-casts: true
-    strict-inference: true
-    strict-raw-types: true
-
-  errors:
-    unused_import: error
-    unused_field: error
-    unused_element: error
-    dead_code: error
-    prefer_const_constructors: ignore
-    use_build_context_synchronously: ignore
-
-linter:
-  rules:
-    - always_declare_return_types
-    - avoid_print
-    - prefer_const_constructors
-    - use_build_context_synchronously
-EOL
-
-    # temporary فولڈر کے لیے الگ analysis options
-    cat > temp_fixed_app/analysis_options.yaml << 'EOL'
-analyzer:
-  errors:
-    prefer_const_constructors: ignore
-    use_build_context_synchronously: ignore
-
-linter:
-  rules:
-    - avoid_print
-EOL
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: 'temurin', java-version: '17'}
+      - uses: subosito/flutter-action@v2
+        with: {flutter-version: '3.24.3', channel: 'stable'}
+      - run: flutter clean && flutter pub get && flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with: {name: app-release-apk, path: build/app/outputs/flutter-apk/app-release.apk}

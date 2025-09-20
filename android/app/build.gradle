@@ -1,23 +1,23 @@
 def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
-if (localPropertiesFile.exists()) {
+def localPropertiesFile= rootProject.file('local.properties')
+if(localPropertiesFile.exists()) {
     localPropertiesFile.withReader('UTF-8') { reader ->
         localProperties.load(reader)
     }
 }
 
 def flutterRoot = localProperties.getProperty('flutter.sdk')
-if (flutterRoot == null) {
+if(flutterRoot == null) {
     throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
+if(flutterVersionCode == null) {
     flutterVersionCode = '1'
 }
 
 def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
+if(flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
@@ -26,35 +26,36 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    compileSdkVersion 34  // ✅ واضح طور پر ورژن سیٹ کریں
+    namespace 'com.example.aladdin.app'  // یہاں اپنے پیکیج کے مطابق نام لکھیں
+    compileSdkVersion 34  // واضح طور پر ورژن سیٹ کریں
     ndkVersion flutter.ndkVersion
 
-    compileOptions {  
-        sourceCompatibility JavaVersion.VERSION_1_8  
-        targetCompatibility JavaVersion.VERSION_1_8  
-    }  
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 
-    kotlinOptions {  
-        jvmTarget = '1.8'  
-    }  
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
 
-    sourceSets {  
-        main.java.srcDirs += 'src/main/kotlin'  
-    }  
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
 
-    defaultConfig {  
-        applicationId "com.example.aladdin.app"  
-        minSdkVersion 21  
-        targetSdkVersion 34  
-        versionCode flutterVersionCode.toInteger()  
-        versionName flutterVersionName  
-    }  
+    defaultConfig {
+        applicationId "com.example.aladdin.app"  // یقینی بنائیں یہ namespace سے میل کھاتا ہے
+        minSdkVersion 21
+        targetSdkVersion 34
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+    }
 
-    buildTypes {  
-        release {  
-            // signingConfig signingConfigs.debug  // ہٹایا گیا، کیونکہ ریلیز کے لیے ڈیبگ سگننگ مناسب نہیں
+    buildTypes {
+        release {
             minifyEnabled false
             shrinkResources false
+            // اگربھی سگننگ کنفیگریشن چاہیے تو یہاں ڈالیں لیکن ڈیبگ سگننگ نہ لگائیں
         }
         debug {
             signingConfig signingConfigs.debug

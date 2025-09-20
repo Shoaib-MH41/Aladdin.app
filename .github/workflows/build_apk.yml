@@ -1,51 +1,47 @@
-name: Build APK
+name: Flutter CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.19.5'
-        
-    - name: Install dependencies
-      run: flutter pub get
-      
-    - name: Run Flutter Analyze with detailed output
-      run: |
-        echo "=== Detailed Flutter Analysis ==="
-        flutter analyze --current-package --no-pub --strict --fatal-infos --fatal-warnings 2>&1 | tee analysis_output.txt
-        
-        # اگر صرف ایک مخصوص فائل چیک کرنی ہو:
-        echo "=== Checking specific file ==="
-        flutter analyze lib/src/features/code_preview/code_preview_screen.dart --fatal-infos --no-pub
-        
-        # اگر صرف const errors دیکھنی ہوں:
-        echo "=== Const-specific issues ==="
-        flutter analyze --no-pub | grep -i "prefer_const_constructors" || true
-        
-    - name: Show exact line issue
-      run: |
-        if [ -f analysis_output.txt ]; then
-          echo "=== Exact line numbers with issues ==="
-          grep -n "prefer_const_constructors" analysis_output.txt || echo "No const issues found"
-        fi
-        
-    - name: Build APK
-      run: flutter build apk --release
-      
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.5'   # اپنی مرضی کے مطابق ورژن
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Flutter Analyze
+        run: |
+          echo "=== Detailed Flutter Analysis ==="
+          flutter analyze --no-pub --fatal-infos --fatal-warnings 2>&1 | tee analysis_output.txt
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build AAB (Play Store Bundle)
+        run: flutter build appbundle --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-aab
+          path: build/app/outputs/bundle/release/app-release.aab

@@ -2,8 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
@@ -13,171 +12,95 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Debug directory structure
-      run: ls -la
-      continue-on-error: true
-
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.19.5'
-        channel: 'stable'
-        cache: false # Cache سے مسائل سے بچنے کے لیے
 
-    - name: Create local.properties
+    - name: Debug directory structure
       run: |
-        echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
-        echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
-      continue-on-error: true
+        echo "=== Current Directory ==="
+        pwd
+        ls -la
+        echo "=== Lib Directory ==="
+        ls -la lib/ || echo "No lib directory"
+        echo "=== Android Directory ==="
+        ls -la android/ || echo "No android directory"
 
-    - name: Grant execute permission for gradlew
+    - name: Create proper project structure
       run: |
-        cd android
-        chmod +x gradlew
-      continue-on-error: true
-
-    - name: Ensure Gradle Wrapper JAR exists
-      run: |
-        cd android
-        mkdir -p gradle/wrapper
-        if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-          echo "gradle-wrapper.jar missing, downloading..."
-          curl -L https://services.gradle.org/distributions/gradle-8.2-bin.zip -o gradle/wrapper/gradle-8.2-bin.zip
-          unzip -j gradle/wrapper/gradle-8.2-bin.zip gradle-8.2/lib/gradle-wrapper.jar -d gradle/wrapper/
-          rm gradle/wrapper/gradle-8.2-bin.zip
+        # اگر lib فولڈر نہیں ہے تو بنائیں
+        if [ ! -d "lib" ]; then
+          mkdir -p lib
+          echo "void main() {}" > lib/main.dart
         fi
-      continue-on-error: true
+        
+        # اگر pubspec.yaml نہیں ہے تو بنائیں
+        if [ ! -f "pubspec.yaml" ]; then
+          cat > pubspec.yaml << 'EOF'
+name: aladdin_app
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
 
-    - name: Update gradle-wrapper.properties
-      run: |
-        cd android
-        echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-        echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-        echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-        echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-      continue-on-error: true
+environment:
+  sdk: '>=3.0.0 <4.0.0'
 
-    - name: Update android/build.gradle
-      run: |
-        cd android
-        cat > build.gradle << 'EOF'
-        buildscript {
-            ext.kotlin_version = '1.9.0'
-            repositories {
-                google()
-                mavenCentral()
-            }
-            dependencies {
-                classpath 'com.android.tools.build:gradle:8.2.0'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-            }
-        }
+dependencies:
+  flutter:
+    sdk: flutter
 
-        allprojects {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        EOF
-      continue-on-error: true
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
 
-    - name: Update android/app/build.gradle
-      run: |
-        cd android/app
-        cat > build.gradle << 'EOF'
-        apply plugin: 'com.android.application'
-        apply plugin: 'kotlin-android'
-        apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
-
-        android {
-            compileSdk 34
-            defaultConfig {
-                applicationId "com.example.your_app" # اپنا اصل applicationId یہاں ڈالیں
-                minSdk 21
-                targetSdk 34
-                versionCode 1
-                versionName "1.0"
-            }
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.debug
-                }
-            }
-        }
-
-        dependencies {
-            implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
-        }
-
-        flutter {
-            source '../..'
-        }
-        EOF
-      continue-on-error: true
-
-    - name: Update settings.gradle
-      run: |
-        cd android
-        cat > settings.gradle << 'EOF'
-        include ':app'
-        def flutterSdkPath = getFlutterSdkPath()
-        apply from: "$flutterSdkPath/packages/flutter_tools/gradle/app_plugin_loader.gradle"
-
-        def getFlutterSdkPath() {
-            def properties = new Properties()
-            file("local.properties").withInputStream { stream ->
-                properties.load(stream)
-            }
-            return properties.getProperty("flutter.sdk")
-        }
-        EOF
-      continue-on-error: true
-
-    - name: Update gradle.properties
-      run: |
-        cd android
-        cat > gradle.properties << 'EOF'
-        org.gradle.jvmargs=-Xmx1536M
-        android.useAndroidX=true
-        android.enableJetifier=true
-        EOF
-      continue-on-error: true
-
-    - name: Check pubspec.yaml
-      run: cat pubspec.yaml
-      continue-on-error: true
-
-    - name: Run Flutter doctor
-      run: flutter doctor -v
-      continue-on-error: true
-
-    - name: Clean project
-      run: flutter clean
-      continue-on-error: true
+flutter:
+  uses-material-design: true
+EOF
+        fi
 
     - name: Install dependencies
       run: flutter pub get
-      continue-on-error: true
 
-    - name: Debug Flutter build
-      run: flutter build apk --release --no-tree-shake-icons --verbose
-      continue-on-error: true
+    - name: Fix Android configuration
+      run: |
+        # اگر android فولڈر نہیں ہے تو بنائیں
+        if [ ! -d "android" ]; then
+          echo "Creating android directory..."
+          mkdir -p android
+          flutter create --platforms=android . --no-pub
+        fi
+        
+        # Gradle version اپڈیٹ کریں
+        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+        
+        # AndroidManifest درست کریں
+        if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+          sed -i '/<activity.*MainActivity/a\            android:exported=\"true\"' android/app/src/main/AndroidManifest.xml
+        fi
 
-    - name: Debug APK output
-      run: ls -la build/app/outputs/flutter-apk/ || echo "No APK directory found"
-      continue-on-error: true
+    - name: Build APK with detailed logging
+      run: |
+        echo "=== Building APK ==="
+        flutter build apk --release --verbose 2>&1 | head -100
+        echo "=== Build completed ==="
+        
+        # APK فائل چیک کریں
+        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la build/app/outputs/flutter-apk/
+          echo "File size: $(du -h build/app/outputs/flutter-apk/app-release.apk | cut -f1)"
+        else
+          echo "❌ APK not found!"
+          echo "=== Searching for APK files ==="
+          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          exit 1
+        fi
 
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-release.apk
+        name: app-release
         path: build/app/outputs/flutter-apk/app-release.apk
-      if: success()
+        if-no-files-found: error

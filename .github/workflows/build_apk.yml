@@ -121,25 +121,24 @@ jobs:
       continue-on-error: true # Debugging کے لیے pubspec.yaml چیک کریں
 
     - name: Run Flutter doctor
-      run: flutter doctor
+      run: flutter doctor -v
       continue-on-error: true # Debugging کے لیے Flutter کی حالت چیک کریں
+
+    - name: Clean project
+      run: flutter clean
+      continue-on-error: true # پرانے build artifacts ہٹائیں
 
     - name: Install dependencies
       run: flutter pub get
       continue-on-error: true
 
-    - name: Clean Gradle cache
+    - name: Debug Flutter build
       run: |
-        cd android
-        ./gradlew cleanBuildCache
-      continue-on-error: true
-
-    - name: Build APK
-      run: flutter build apk --release --no-tree-shake-icons
-      continue-on-error: true
+        flutter build apk --release --no-tree-shake-icons --verbose
+      continue-on-error: true # Build کی تفصیلی logs کے لیے
 
     - name: Debug APK output
-      run: ls -la build/app/outputs/flutter-apk/
+      run: ls -la build/app/outputs/flutter-apk/ || echo "No APK directory found"
       continue-on-error: true # Debugging کے لیے چیک کریں کہ APK بنی یا نہیں
 
     - name: Upload APK

@@ -78,7 +78,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                 Uri.parse(apiUrl),
                 headers: {
                   'Authorization': 'token $token',
-                  'Accept': 'application/vnd.github.v3+json'
+                  'Accept': 'application/vnd.github.v3+json',
                 },
               );
               if (!mounted) return;
@@ -158,7 +158,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
             const SizedBox(height: 20),
             const Text('Download APK from:', style: TextStyle(fontFamily: 'Poppins')),
             const SizedBox(height: 10),
-            Text( // یہاں const نہیں لگے گا کیونکہ apkLink variable ہے
+            Text( // یہاں const نہیں لگے گا کیونکہ apkLink mutable value ہے
               apkLink,
               style: const TextStyle(fontFamily: 'Poppins', color: Colors.blue),
               textAlign: TextAlign.center,

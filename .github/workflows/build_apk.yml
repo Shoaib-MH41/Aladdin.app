@@ -28,7 +28,7 @@ jobs:
       with:
         flutter-version: '3.19.5'
         channel: 'stable'
-        cache: false # Cache سے مسائل سے بچنے کے لیے
+        cache: false
 
     - name: Create local.properties
       run: |
@@ -118,28 +118,27 @@ jobs:
 
     - name: Check pubspec.yaml
       run: cat pubspec.yaml
-      continue-on-error: true # Debugging کے لیے pubspec.yaml چیک کریں
+      continue-on-error: true
 
     - name: Run Flutter doctor
       run: flutter doctor -v
-      continue-on-error: true # Debugging کے لیے Flutter کی حالت چیک کریں
+      continue-on-error: true
 
     - name: Clean project
       run: flutter clean
-      continue-on-error: true # پرانے build artifacts ہٹائیں
+      continue-on-error: true
 
     - name: Install dependencies
       run: flutter pub get
       continue-on-error: true
 
     - name: Debug Flutter build
-      run: |
-        flutter build apk --release --no-tree-shake-icons --verbose
-      continue-on-error: true # Build کی تفصیلی logs کے لیے
+      run: flutter build apk --release --no-tree-shake-icons --verbose
+      continue-on-error: true
 
     - name: Debug APK output
       run: ls -la build/app/outputs/flutter-apk/ || echo "No APK directory found"
-      continue-on-error: true # Debugging کے لیے چیک کریں کہ APK بنی یا نہیں
+      continue-on-error: true
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

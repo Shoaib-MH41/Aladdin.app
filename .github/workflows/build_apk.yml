@@ -46,13 +46,18 @@ jobs:
         ls -la gradle/wrapper/
       continue-on-error: true # Debugging کے لیے
 
-    - name: Install dependencies
-      run: flutter pub get
+    - name: Grant execute permission for gradlew
+      run: |
+        cd android
+        chmod +x gradlew
 
     - name: Clean Gradle cache
       run: |
         cd android
         ./gradlew cleanBuildCache
+
+    - name: Install dependencies
+      run: flutter pub get
 
     - name: Build APK
       run: flutter build apk --release --no-tree-shake-icons

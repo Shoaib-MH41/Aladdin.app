@@ -30,18 +30,15 @@ jobs:
       run: |
         echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
         echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
-      working-directory: ./temp_fixed_app
 
     - name: Install dependencies
       run: flutter pub get
-      working-directory: ./temp_fixed_app
 
     - name: Build APK
       run: flutter build apk --release --no-tree-shake-icons
-      working-directory: ./temp_fixed_app
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-release.apk
-        path: ./temp_fixed_app/build/app/outputs/flutter-apk/app-release.apk
+        path: build/app/outputs/flutter-apk/app-release.apk

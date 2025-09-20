@@ -52,8 +52,9 @@ jobs:
         if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
           echo "gradle-wrapper.jar missing, downloading..."
           curl -L https://services.gradle.org/distributions/gradle-8.2-bin.zip -o gradle/wrapper/gradle-8.2-bin.zip
-          unzip -j gradle/wrapper/gradle-8.2-bin.zip gradle-8.2/lib/gradle-wrapper.jar -d gradle/wrapper/
-          rm gradle/wrapper/gradle-8.2-bin.zip
+          unzip gradle/wrapper/gradle-8.2-bin.zip -d gradle/wrapper/tmp
+          mv gradle/wrapper/tmp/gradle-8.2/lib/gradle-wrapper.jar gradle/wrapper/
+          rm -rf gradle/wrapper/tmp gradle/wrapper/gradle-8.2-bin.zip
         fi
       continue-on-error: true
 
@@ -203,5 +204,5 @@ jobs:
       with:
         name: app-release.apk
         path: build/app/outputs/flutter-apk/app-release.apk
-        if-no-files-found: warn # اگر APK نہ ملے تو warning دکھائیں
-      if: success()
+        if-no-files-found: warn
+      continue-on-error: true

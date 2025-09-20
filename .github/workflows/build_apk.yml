@@ -1,81 +1,43 @@
-name: Build APK & AAB
+- name: Create Analysis Options
+  run: |
+    # analysis_options.yaml فائل بنائیں
+    cat > analysis_options.yaml << 'EOL'
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart" 
+    - "**/*.gr.dart"
+    - "temp_fixed_app/**"
 
-on:
-  push:
-    branches: [ main ]
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+  errors:
+    unused_import: error
+    unused_field: error
+    unused_element: error
+    dead_code: error
+    prefer_const_constructors: ignore
+    use_build_context_synchronously: ignore
 
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.19.5'
-        
-    - name: Fix Project Structure
-      run: |
-        # نیا پروجیکٹ بنائیں
-        flutter create -t app temp_fixed_app
-        
-        # مکمل assets folder copy کریں
-        rm -rf temp_fixed_app/assets
-        cp -r assets temp_fixed_app/
-        
-        # باقی کوڈ منتقل کریں
-        cp -r lib/* temp_fixed_app/lib/
-        cp pubspec.yaml temp_fixed_app/
-        rm -rf temp_fixed_app/android
-        cp -r android temp_fixed_app/
-        rm -rf temp_fixed_app/test
-        
-        # fonts section درست کریں
-        cd temp_fixed_app
-        sed -i '/fonts:/,/^[^ ]/d' pubspec.yaml
-        echo "  fonts:
-    - family: Poppins
-      fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Poppins-Italic.ttf
-          style: italic" >> pubspec.yaml
-  
-        
-    - name: Install dependencies
-      run: |
-        cd temp_fixed_app
-        flutter pub get
-      
-    - name: Fix AndroidManifest.xml
-      run: |
-        cd temp_fixed_app
-        sed -i '/<activity.*MainActivity/a\            android:exported=\"true\"' android/app/src/main/AndroidManifest.xml
-      
-    - name: Build APK
-      run: |
-        cd temp_fixed_app
-        flutter build apk --release --no-tree-shake-icons
-        
-    - name: Build AAB
-      run: |
-        cd temp_fixed_app
-        flutter build appbundle --release --no-tree-shake-icons
-      
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apk
-        path: temp_fixed_app/build/app/outputs/flutter-apk/app-release.apk
-        
-    - name: Upload AAB
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-aab
-        path: temp_fixed_app/build/app/outputs/bundle/release/app-release.aab
-        
-    - name: Cleanup
-      run: rm -rf temp_fixed_app
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_print
+    - prefer_const_constructors
+    - use_build_context_synchronously
+EOL
+
+    # temporary فولڈر کے لیے الگ analysis options
+    cat > temp_fixed_app/analysis_options.yaml << 'EOL'
+analyzer:
+  errors:
+    prefer_const_constructors: ignore
+    use_build_context_synchronously: ignore
+
+linter:
+  rules:
+    - avoid_print
+EOL

@@ -28,7 +28,7 @@ jobs:
       with:
         flutter-version: '3.19.5'
         channel: 'stable'
-        cache: false
+        cache: false # Cache سے مسائل سے بچنے کے لیے
 
     - name: Create local.properties
       run: |
@@ -64,7 +64,32 @@ jobs:
         echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
       continue-on-error: true
 
-    - name: Update build.gradle
+    - name: Update android/build.gradle
+      run: |
+        cd android
+        cat > build.gradle << 'EOF'
+        buildscript {
+            ext.kotlin_version = '1.9.0'
+            repositories {
+                google()
+                mavenCentral()
+            }
+            dependencies {
+                classpath 'com.android.tools.build:gradle:8.2.0'
+                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+            }
+        }
+
+        allprojects {
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        EOF
+      continue-on-error: true
+
+    - name: Update android/app/build.gradle
       run: |
         cd android/app
         cat > build.gradle << 'EOF'
@@ -113,6 +138,16 @@ jobs:
             }
             return properties.getProperty("flutter.sdk")
         }
+        EOF
+      continue-on-error: true
+
+    - name: Update gradle.properties
+      run: |
+        cd android
+        cat > gradle.properties << 'EOF'
+        org.gradle.jvmargs=-Xmx1536M
+        android.useAndroidX=true
+        android.enableJetifier=true
         EOF
       continue-on-error: true
 

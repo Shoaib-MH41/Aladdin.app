@@ -1,47 +1,77 @@
-name: Flutter CI
+name: Build APK & AAB
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.5'   # اپنی مرضی کے مطابق ورژن
-          channel: 'stable'
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Run Flutter Analyze
-        run: |
-          echo "=== Detailed Flutter Analysis ==="
-          flutter analyze --no-pub --fatal-infos --fatal-warnings 2>&1 | tee analysis_output.txt
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Build AAB (Play Store Bundle)
-        run: flutter build appbundle --release
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Upload AAB Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-aab
-          path: build/app/outputs/bundle/release/app-release.aab
+    - uses: actions/checkout@v4
+    
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.5'
+        
+    - name: Fix Gradle Project Structure
+      run: |
+        # نیا temporary پروجیکٹ بنائیں
+        flutter create -t app temp_fixed_app
+        
+        # اپنا تمام کوڈ نیو پروجیکٹ میں منتقل کریں
+        cp -r lib/* temp_fixed_app/lib/
+        cp pubspec.yaml temp_fixed_app/
+        cp -r assets/* temp_fixed_app/assets/ 2>/dev/null || true
+        
+        # Android folder مکمل replace کریں (اپنا والا)
+        rm -rf temp_fixed_app/android
+        cp -r android temp_fixed_app/
+        
+        # نیے پروجیکٹ میں چلیں
+        cd temp_fixed_app
+        
+    - name: Install dependencies
+      run: |
+        cd temp_fixed_app
+        flutter pub get
+      
+    - name: Fix AndroidManifest.xml
+      run: |
+        cd temp_fixed_app
+        # exported attribute شامل کریں
+        sed -i '/<activity.*MainActivity/a\            android:exported="true"' android/app/src/main/AndroidManifest.xml
+      
+    - name: Run Flutter Analyze
+      run: |
+        cd temp_fixed_app
+        flutter analyze
+      
+    - name: Build APK
+      run: |
+        cd temp_fixed_app
+        flutter build apk --release
+      
+    - name: Build AAB
+      run: |
+        cd temp_fixed_app
+        flutter build appbundle --release
+      
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: temp_fixed_app/build/app/outputs/flutter-apk/app-release.apk
+        
+    - name: Upload AAB
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-aab
+        path: temp_fixed_app/build/app/outputs/bundle/release/app-release.aab
+        
+    - name: Cleanup
+      run: rm -rf temp_fixed_app

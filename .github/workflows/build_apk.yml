@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Flutter APK
 
 on:
   push:
@@ -11,28 +11,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # ✅ Checkout repo into valid folder name
+      - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          path: my_new_app
 
-      - name: Set up Flutter
+      # ✅ Setup Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.5'
 
-      - name: Clean old Android folder and recreate
-        run: |
-          rm -rf android
-          flutter create .
+      # ✅ Go to project folder
+      - name: Move into Project
+        run: cd my_new_app
 
-      - name: Install dependencies
+      # ✅ Disable analytics (optional, to keep logs clean)
+      - name: Disable Flutter Analytics
+        run: flutter config --no-analytics
+
+      # ✅ Get dependencies
+      - name: Install Dependencies
         run: |
-          flutter pub upgrade --major-versions
+          cd my_new_app
           flutter pub get
 
-      # 🔹 Analyzer چلائیں لیکن const warnings ignore کریں
-      - name: Analyze project
+      # ✅ Add analysis options to ignore const warnings
+      - name: Add analysis options
         run: |
-          flutter analyze || true
+          echo "include: package:flutter_lints/flutter.yaml
+          linter:
+            rules:
+              prefer_const_constructors: false
+              prefer_const_literals_to_create_immutables: false
+              prefer_const_declarations: false" > my_new_app/.analysis_options.yaml
 
-      - name: Build release APK
-        run: flutter build apk --release
+      # ✅ Analyze code
+      - name: Run Analyzer
+        run: |
+          cd my_new_app
+          flutter analyze
+
+      # ✅ Build APK (Release)
+      - name: Build Release APK
+        run: |
+          cd my_new_app
+          flutter build apk --release

@@ -42,12 +42,11 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
       if (configInput != null && configInput.isNotEmpty) {
         final apiConfig = await ApiService.generateApiConfig(configInput);
         debugPrint('API Config: $apiConfig');
-        if (!mounted) return;
         setState(() {
           _appConfig = _appConfig;
         });
         final data = await ApiService.fetchData(apiConfig);
-        if (!mounted) return;
+        if (!mounted) return; // Rule check: use mounted after async gap
         setState(() => apiData = data);
       } else {
         if (!mounted) return;
@@ -61,10 +60,9 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
 
   Future<void> deleteProject() async {
     if (!mounted) return;
-    final currentContext = context;
 
     await showDialog<void>(
-      context: currentContext,
+      context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
         title: const Text('Confirm Delete'),
         content: const Text('Are you sure you want to delete the project? This action cannot be undone.'),
@@ -83,15 +81,17 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
                   'Accept': 'application/vnd.github.v3+json'
                 },
               );
-              if (!mounted) return;
+              if (!mounted) return; // Rule check: use mounted after async gap
               if (response.statusCode == 204) {
-                ScaffoldMessenger.of(currentContext).showSnackBar(
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Project deleted successfully!')),
                 );
                 if (!mounted) return;
-                Navigation.pushReplacement(currentContext, const SplashScreen());
+                Navigation.pushReplacement(context, const SplashScreen());
               } else {
-                ScaffoldMessenger.of(currentContext).showSnackBar(
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Delete failed: ${response.statusCode}')),
                 );
               }
@@ -106,8 +106,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
   Future<void> _copyLink() async {
     await Clipboard.setData(const ClipboardData(text: apkLink));
     if (!mounted) return;
-    final currentContext = context;
-    ScaffoldMessenger.of(currentContext).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Link copied to clipboard!')),
     );
   }
@@ -118,8 +117,7 @@ class CodePreviewScreenState extends State<CodePreviewScreen> {
       await launchUrl(uri);
     } else {
       if (!mounted) return;
-      final currentContext = context;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not launch link.')),
       );
     }

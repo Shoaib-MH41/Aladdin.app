@@ -53,9 +53,10 @@ jobs:
           echo "gradle-wrapper.jar missing, downloading..."
           curl -L https://services.gradle.org/distributions/gradle-8.2-bin.zip -o gradle/wrapper/gradle-8.2-bin.zip
           unzip gradle/wrapper/gradle-8.2-bin.zip -d gradle/wrapper/tmp
-          mv gradle/wrapper/tmp/gradle-8.2/lib/gradle-wrapper.jar gradle/wrapper/
+          mv gradle/wrapper/tmp/gradle-8.2/lib/gradle-wrapper.jar gradle/wrapper/ || echo "Failed to move gradle-wrapper.jar"
           rm -rf gradle/wrapper/tmp gradle/wrapper/gradle-8.2-bin.zip
         fi
+        ls -la gradle/wrapper/ || echo "gradle/wrapper directory not found"
       continue-on-error: true
 
     - name: Update gradle-wrapper.properties
@@ -163,6 +164,7 @@ jobs:
       run: |
         ls -la assets/fonts/ || echo "assets/fonts directory not found"
         ls -la lib/ || echo "lib directory not found"
+        ls -la lib/src/features/splash/ || echo "splash directory not found"
       continue-on-error: true
 
     - name: Run Flutter doctor
@@ -175,6 +177,10 @@ jobs:
 
     - name: Clean project
       run: flutter clean
+      continue-on-error: true
+
+    - name: Upgrade dependencies
+      run: flutter pub upgrade
       continue-on-error: true
 
     - name: Install dependencies

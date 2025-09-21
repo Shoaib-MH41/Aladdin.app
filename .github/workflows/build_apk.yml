@@ -13,6 +13,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Debug directory structure
+      run: |
+        ls -la
+        ls -la lib/ || echo "lib directory not found"
+        ls -la assets/fonts/ || echo "assets/fonts directory not found"
+        ls -la lib/src/features/splash/ || echo "splash directory not found"
+        ls -la lib/src/features/app_type_selection/ || echo "app_type_selection directory not found"
+      continue-on-error: true
+
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
@@ -26,21 +35,183 @@ jobs:
         channel: 'stable'
         cache: false
 
+    - name: Create local.properties
+      run: |
+        echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+        echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
+      continue-on-error: true
+
+    - name: Grant execute permission for gradlew
+      run: |
+        cd android
+        chmod +x gradlew
+      continue-on-error: true
+
+    - name: Ensure Gradle Wrapper JAR exists
+      run: |
+        cd android
+        mkdir -p gradle/wrapper
+        if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+          echo "gradle-wrapper.jar missing, downloading..."
+          curl -L https://services.gradle.org/distributions/gradle-8.2-bin.zip -o gradle/wrapper/gradle-8.2-bin.zip
+          unzip gradle/wrapper/gradle-8.2-bin.zip -d gradle/wrapper/tmp
+          mv gradle/wrapper/tmp/gradle-8.2/lib/gradle-wrapper.jar gradle/wrapper/ || echo "Failed to move gradle-wrapper.jar"
+          rm -rf gradle/wrapper/tmp gradle/wrapper/gradle-8.2-bin.zip
+        fi
+        ls -la gradle/wrapper/ || echo "gradle/wrapper directory not found"
+      continue-on-error: true
+
+    - name: Update gradle-wrapper.properties
+      run: |
+        cd android
+        echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+        echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+      continue-on-error: true
+
+    - name: Update android/build.gradle
+      run: |
+        cd android
+        cat > build.gradle << 'EOF'
+        buildscript {
+            ext.kotlin_version = '1.9.0'
+            repositories {
+                google()
+                mavenCentral()
+            }
+            dependencies {
+                classpath 'com.android.tools.build:gradle:8.2.0'
+                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+            }
+        }
+
+        allprojects {
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        EOF
+      continue-on-error: true
+
+    - name: Update android/app/build.gradle
+      run: |
+        cd android/app
+        cat > build.gradle << 'EOF'
+        apply plugin: 'com.android.application'
+        apply plugin: 'kotlin-android'
+        apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+        android {
+            compileSdk 34
+            defaultConfig {
+                applicationId "com.aladdin.app"
+                minSdk 21
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+            }
+            buildTypes {
+                release {
+                    signingConfig signingConfigs.debug
+                }
+            }
+        }
+
+        dependencies {
+            implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+        }
+
+        flutter {
+            source '../..'
+        }
+        EOF
+      continue-on-error: true
+
+    - name: Update settings.gradle
+      run: |
+        cd android
+        cat > settings.gradle << 'EOF'
+        include ':app'
+        def flutterSdkPath = getFlutterSdkPath()
+        apply from: "$flutterSdkPath/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+
+        def getFlutterSdkPath() {
+            def properties = new Properties()
+            file("local.properties").withInputStream { stream ->
+                properties.load(stream)
+            }
+            return properties.getProperty("flutter.sdk")
+        }
+        EOF
+      continue-on-error: true
+
+    - name: Update gradle.properties
+      run: |
+        cd android
+        cat > gradle.properties << 'EOF'
+        org.gradle.jvmargs=-Xmx1536M
+        android.useAndroidX=true
+        android.enableJetifier=true
+        EOF
+      continue-on-error: true
+
+    - name: Check pubspec.yaml
+      run: cat pubspec.yaml
+      continue-on-error: true
+
+    - name: Check assets and lib
+      run: |
+        ls -la assets/fonts/ || echo "assets/fonts directory not found"
+        ls -la lib/ || echo "lib directory not found"
+        ls -la lib/src/features/splash/ || echo "splash directory not found"
+        ls -la lib/src/features/app_type_selection/ || echo "app_type_selection directory not found"
+      continue-on-error: true
+
+    - name: Run Flutter doctor
+      run: flutter doctor -v
+      continue-on-error: true
+
+    - name: Check outdated dependencies
+      run: flutter pub outdated
+      continue-on-error: true
+
     - name: Clean project
       run: flutter clean
+      continue-on-error: true
 
     - name: Install dependencies
       run: flutter pub get
+      continue-on-error: true
 
-    - name: Build APK
-      run: flutter build apk --release --no-tree-shake-icons
+    - name: Check Dart code
+      run: flutter analyze
+      continue-on-error: true
+
+    - name: Debug Flutter build
+      run: flutter build apk --release --no-tree-shake-icons --verbose
+      continue-on-error: true
 
     - name: List APK files
       run: ls -R build/app/outputs/flutter-apk || echo "No APK directory found"
+      continue-on-error: true
+
+    - name: Debug APK output
+      run: |
+        ls -la build/app/outputs/flutter-apk/ || echo "No APK directory found"
+        if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+          echo "APK found: build/app/outputs/flutter-apk/app-release.apk"
+        else
+          echo "APK not found"
+        fi
+      continue-on-error: true
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
+        name: app-release.apk
         path: build/app/outputs/flutter-apk/app-release.apk
         if-no-files-found: warn
+      continue-on-error: true

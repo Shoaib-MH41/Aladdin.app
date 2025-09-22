@@ -1,63 +1,72 @@
-name: Build Flutter APK
+name: Build APK
 
 on:
   push:
     branches:
-      - main   # صرف main branch پر push ہونے پر build ہوگا
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # ✅ Repo checkout
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # ✅ Java setup (Android build کے لیے)
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-      # ✅ Flutter setup
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.5'
-          channel: 'stable'
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.5'
+        channel: 'stable'
 
-      # ✅ local.properties (Flutter + Android SDK path)
-      - name: Create local.properties
-        run: |
-          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
-          echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
+    - name: Create local.properties
+      run: |
+        echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+        echo "sdk.dir=/usr/local/lib/android/sdk" >> android/local.properties
 
-      # ✅ Gradle wrapper auto-fix
-      - name: Ensure Gradle Wrapper
-        run: |
-          mkdir -p android/gradle/wrapper
-          curl -L https://services.gradle.org/distributions/gradle-8.2-bin.zip -o gradle-8.2-bin.zip
-          unzip -q gradle-8.2-bin.zip -d gradle-8.2-unpacked
-          cp gradle-8.2-unpacked/gradle-8.2/lib/gradle-wrapper.jar android/gradle/wrapper/
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-bin.zip" > android/gradle/wrapper/gradle-wrapper.properties
+    - name: Grant execute permission for gradlew
+      run: |
+        cd android
+        chmod +x gradlew || true
 
-      # ✅ Clean + dependencies
-      - name: Clean project
-        run: flutter clean
+    - name: Ensure Gradle Wrapper
+      run: |
+        cd android
+        if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+          echo "Gradle wrapper missing, regenerating..."
+          ./gradlew wrapper --gradle-version 8.2 --distribution-type=bin || true
+        fi
+        ls -la gradle/wrapper/ || echo "gradle/wrapper directory not found"
 
-      - name: Install dependencies
-        run: flutter pub get
+    - name: Update gradle-wrapper.properties
+      run: |
+        cd android/gradle/wrapper
+        cat > gradle-wrapper.properties << 'EOF'
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
+        EOF
 
-      # ✅ Build APK (release mode)
-      - name: Build release APK
-        run: flutter build apk --release --no-tree-shake-icons
+    - name: Install Flutter dependencies
+      run: flutter pub get
 
-      # ✅ Upload artifact (APK output)
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+    - name: Run Flutter analyze
+      run: flutter analyze
+      continue-on-error: true
 
+    - name: Build APK
+      run: flutter build apk --release --no-tree-shake-icons
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release.apk
+        path: build/app/outputs/flutter-apk/app-release.apk

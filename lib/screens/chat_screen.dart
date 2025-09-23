@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/project_model.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -8,59 +9,52 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _controller = TextEditingController();
   final List<String> _messages = [];
+  final TextEditingController _controller = TextEditingController();
 
-  void _sendMessage() {
-    if (_controller.text.trim().isEmpty) return;
+  void _sendMessage(String text) {
     setState(() {
-      _messages.add("You: ${_controller.text.trim()}");
-      _messages.add("AI: [Mock response for now]");
+      _messages.add("You: $text");
+      _messages.add("AI: Generated mock code for '$text'");
     });
     _controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final Project project =
+        ModalRoute.of(context)!.settings.arguments as Project;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Chat with AI"),
-      ),
+      appBar: AppBar(title: Text("Chat - ${project.name}")),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(8),
               itemCount: _messages.length,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(_messages[index]),
+              itemBuilder: (context, index) => ListTile(
+                title: Text(_messages[index]),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: "Type your prompt...",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration:
+                      const InputDecoration(hintText: "Enter your prompt..."),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
-                )
-              ],
-            ),
-          ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: () => _sendMessage(_controller.text),
+              )
+            ],
+          )
         ],
       ),
     );
   }
 }
+

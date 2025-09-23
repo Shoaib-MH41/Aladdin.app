@@ -19,7 +19,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.5' # آپ کے system کے مطابق latest stable رکھیں
+          flutter-version: '3.19.5' # latest stable رکھیں
 
       # ✅ Install dependencies
       - name: Install dependencies
@@ -61,6 +61,6 @@ jobs:
           body: |
             🚀 Aladdin App
             Automatically generated APK from main branch.
+          files: ./release-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        files: ./release-apk/app-release.apk

@@ -1,0 +1,66 @@
+name: Aladdin App CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # ✅ Repo checkout
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ✅ Install Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.5' # آپ کے system کے مطابق latest stable رکھیں
+
+      # ✅ Install dependencies
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ✅ Build APK (release, no tree shake icons)
+      - name: Build release APK
+        run: flutter build apk --release --no-tree-shake-icons
+
+      # ✅ Upload build artifact
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Aladdin-App-Release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ✅ Download APK artifact
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: Aladdin-App-Release
+          path: ./release-apk
+
+      # ✅ Create Release with APK
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Aladdin App Release v1.0.${{ github.run_number }}"
+          body: |
+            🚀 Aladdin App
+            Automatically generated APK from main branch.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        files: ./release-apk/app-release.apk

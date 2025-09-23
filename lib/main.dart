@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-
-// Import Screens
 import 'screens/project_screen.dart';
+import 'screens/selection_screen.dart';
+import 'screens/upload_screen.dart';
 import 'screens/chat_screen.dart';
+import 'models/project_model.dart';
 
 void main() {
   runApp(const AladdinApp());
@@ -14,21 +15,15 @@ class AladdinApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aladdin App Builder',
-      debugShowCheckedModeBanner: false,
+      title: 'Aladdin App',
       theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
-        ),
+        primarySwatch: Colors.deepPurple,
       ),
-      // Default Route
-      initialRoute: '/projects',
-
-      // Routes
+      initialRoute: '/',
       routes: {
-        '/projects': (context) => const ProjectScreen(),
+        '/': (context) => const ProjectScreen(),
+        '/select': (context) => const SelectionScreen(),
+        '/upload': (context) => const UploadScreen(),
         '/chat': (context) => const ChatScreen(),
       },
     );

@@ -1,4 +1,4 @@
-name: Aladdin App CI/CD
+name: Build Flutter APK
 
 on:
   push:
@@ -7,60 +7,44 @@ on:
 
 jobs:
   build:
-    name: Build Flutter APK
     runs-on: ubuntu-latest
 
     steps:
-      # ✅ Repo checkout
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # ✅ Install Flutter
-      - name: Setup Flutter
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.5' # latest stable رکھیں
+          flutter-version: '3.19.5'
+          channel: 'stable'
 
-      # ✅ Install dependencies
-      - name: Install dependencies
+      # ✅ Android project regenerate if old/unsupported
+      - name: Ensure valid Android project
+        run: |
+          if [ ! -d android ]; then
+            echo "android folder missing, creating new..."
+            flutter create --project-name my_new_app .
+          else
+            echo "Re-creating android folder to fix Gradle issues..."
+            rm -rf android
+            flutter create --project-name aladdin_app .
+          fi
+
+      - name: Get dependencies
         run: flutter pub get
 
-      # ✅ Build APK (release, no tree shake icons)
       - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons
 
-      # ✅ Upload build artifact
-      - name: Upload release artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Aladdin-App-Release
+          name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
-
-  release:
-    name: Create GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # ✅ Download APK artifact
-      - name: Download build artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: Aladdin-App-Release
-          path: ./release-apk
-
-      # ✅ Create Release with APK
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: "Aladdin App Release v1.0.${{ github.run_number }}"
-          body: |
-            🚀 Aladdin App
-            Automatically generated APK from main branch.
-          files: ./release-apk/app-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

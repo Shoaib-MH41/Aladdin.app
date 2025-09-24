@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/project_model.dart';
 
 class UploadScreen extends StatefulWidget {
@@ -14,33 +15,56 @@ class _UploadScreenState extends State<UploadScreen> {
   File? _iconFile;
   File? _fontFile;
 
-  void _showFilePicker(String type) {
-    // فی الحال mock function - بعد میں file picker لگائیں گے
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("$type upload feature will be implemented in next version")),
-    );
-    
-    // Mock file path (حقیقی implementation کے لیے)
-    setState(() {
-      if (type == 'Animation') {
-        _animationFile = File('/assets/animations/custom_animation.json');
-      } else if (type == 'Icon') {
-        _iconFile = File('/assets/icons/custom_icon.png');
-      } else if (type == 'Font') {
-        _fontFile = File('/assets/fonts/custom_font.ttf');
+  Future<void> _pickFile(String type) async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _getAllowedExtensions(type),
+      );
+
+      if (result != null && result.files.single.path != null) {
+        PlatformFile file = result.files.first;
+        setState(() {
+          if (type == 'Animation') {
+            _animationFile = File(file.path!);
+          } else if (type == 'Icon') {
+            _iconFile = File(file.path!);
+          } else if (type == 'Font') {
+            _fontFile = File(file.path!);
+          }
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("$type file selected: ${file.name}")),
+        );
       }
-    });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error picking file: $e")),
+      );
+    }
+  }
+
+  List<String> _getAllowedExtensions(String type) {
+    switch (type) {
+      case 'Animation':
+        return ['json', 'lottie'];
+      case 'Font':
+        return ['ttf', 'otf'];
+      case 'Icon':
+        return ['png', 'jpg', 'jpeg', 'svg'];
+      default:
+        return [];
+    }
   }
 
   bool _canContinue() {
     final Project project = ModalRoute.of(context)!.settings.arguments as Project;
     
-    // Animation required ہے اگر selected ہے
     if (project.features['animation'] != "none" && _animationFile == null) {
       return false;
     }
     
-    // Font required ہے اگر custom selected ہے  
     if (project.features['font'] != "default" && _fontFile == null) {
       return false;
     }
@@ -118,7 +142,7 @@ class _UploadScreenState extends State<UploadScreen> {
             if (project.features['animation'] != "none") ...[
               _buildUploadSection(
                 title: "Animation File",
-                subtitle: "Upload Lottie JSON animation file",
+                subtitle: "Upload Lottie JSON animation file (.json)",
                 icon: Icons.animation,
                 file: _animationFile,
                 type: "Animation",
@@ -130,7 +154,7 @@ class _UploadScreenState extends State<UploadScreen> {
             if (project.features['font'] != "default") ...[
               _buildUploadSection(
                 title: "Custom Font", 
-                subtitle: "Upload TTF font file",
+                subtitle: "Upload TTF/OTF font file (.ttf, .otf)",
                 icon: Icons.font_download,
                 file: _fontFile,
                 type: "Font",
@@ -141,7 +165,7 @@ class _UploadScreenState extends State<UploadScreen> {
             
             _buildUploadSection(
               title: "App Icon",
-              subtitle: "Upload custom app icon (optional)",
+              subtitle: "Upload custom app icon (.png, .jpg, .svg)",
               icon: Icons.image,
               file: _iconFile,
               type: "Icon",
@@ -155,7 +179,7 @@ class _UploadScreenState extends State<UploadScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: _canContinue() ? Colors.deepPurple : Colors.grey,
                   padding: EdgeInsets.symmetric(vertical: 15),
                 ),
                 onPressed: _canContinue() ? () {
@@ -174,7 +198,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 } : null,
                 child: Text(
                   "Continue to AI Chat",
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
             ),
@@ -230,9 +254,18 @@ class _UploadScreenState extends State<UploadScreen> {
                     Icon(Icons.check_circle, color: Colors.green, size: 20),
                     SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        "Selected: ${file.path.split('/').last}",
-                        style: TextStyle(color: Colors.green[800]),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            file.path.split('/').last,
+                            style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "${(file.lengthSync() / 1024).toStringAsFixed(1)} KB",
+                            style: TextStyle(color: Colors.green[600], fontSize: 12),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -248,8 +281,11 @@ class _UploadScreenState extends State<UploadScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: file != null ? Colors.orange : Colors.deepPurple,
                     ),
-                    onPressed: () => _showFilePicker(type),
-                    child: Text(file != null ? "Change File" : "Select File"),
+                    onPressed: () => _pickFile(type),
+                    child: Text(
+                      file != null ? "Change File" : "Select File",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               ],

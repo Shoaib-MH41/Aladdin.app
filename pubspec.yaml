@@ -9,8 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  file_picker: ^6.1.1  # ✅ فائل اپلوڈ کے لیے ضروری ہے
-  url_launcher: ^6.2.0  # APK لنک کھولنے کے لیے
+  file_picker: ^6.1.1  # ✅ فائل اپلوڈ کے لیے
+  url_launcher: ^6.2.0  # ✅ APK لنک کھولنے کے لیے
+  process: ^4.2.4  # ✅ نئی - Termux commands چلانے کے لیے
 
 dev_dependencies:
   flutter_test:

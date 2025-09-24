@@ -34,7 +34,7 @@ jobs:
           else
             echo "Re-creating android folder to fix Gradle issues..."
             rm -rf android
-            flutter create --project-name my_new_app .
+            flutter create --project-name aladdin_app .
           fi
 
       - name: Get dependencies

@@ -4,6 +4,9 @@ class Project {
   String framework;
   List<String> platforms;
   Map<String, String> assets;
+  Map<String, String> features;
+  String? generatedCode;
+  String? apkLink;
 
   Project({
     required this.id,
@@ -11,9 +14,11 @@ class Project {
     required this.framework,
     required this.platforms,
     required this.assets,
+    this.features = const {},
+    this.generatedCode,
+    this.apkLink,
   });
 
-  // Convert to Map (for Firebase/GitHub/API use later)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -21,10 +26,12 @@ class Project {
       'framework': framework,
       'platforms': platforms,
       'assets': assets,
+      'features': features,
+      'generatedCode': generatedCode,
+      'apkLink': apkLink,
     };
   }
 
-  // Convert back from Map
   factory Project.fromMap(Map<String, dynamic> map) {
     return Project(
       id: map['id'],
@@ -32,6 +39,9 @@ class Project {
       framework: map['framework'],
       platforms: List<String>.from(map['platforms']),
       assets: Map<String, String>.from(map['assets']),
+      features: Map<String, String>.from(map['features'] ?? {}),
+      generatedCode: map['generatedCode'],
+      apkLink: map['apkLink'],
     );
   }
 }

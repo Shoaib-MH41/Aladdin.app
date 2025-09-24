@@ -33,7 +33,7 @@ class _UploadScreenState extends State<UploadScreen> {
             _fontFile = File(file.path!);
           }
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("$type file selected: ${file.name}")),
         );
@@ -59,22 +59,24 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   bool _canContinue() {
-    final Project project = ModalRoute.of(context)!.settings.arguments as Project;
-    
+    final Project project =
+        ModalRoute.of(context)!.settings.arguments as Project;
+
     if (project.features['animation'] != "none" && _animationFile == null) {
       return false;
     }
-    
+
     if (project.features['font'] != "default" && _fontFile == null) {
       return false;
     }
-    
+
     return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    final Project project = ModalRoute.of(context)!.settings.arguments as Project;
+    final Project project =
+        ModalRoute.of(context)!.settings.arguments as Project;
 
     return Scaffold(
       appBar: AppBar(
@@ -89,55 +91,60 @@ class _UploadScreenState extends State<UploadScreen> {
             // Project Summary Card
             Card(
               elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Project Settings",
+                    const Text(
+                      "📋 Project Summary",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.deepPurple,
                       ),
                     ),
-                    SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.phone_android, size: 16, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text("Platforms: ${project.platforms.join(', ')}"),
-                      ],
+                    const SizedBox(height: 12),
+
+                    _buildSummaryRow(
+                      icon: Icons.devices,
+                      label: "Platforms",
+                      value: project.platforms.join(', '),
                     ),
-                    Row(
-                      children: [
-                        Icon(Icons.code, size: 16, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text("Framework: ${project.framework}"),
-                      ],
+                    _buildSummaryRow(
+                      icon: Icons.code,
+                      label: "Framework",
+                      value: project.framework,
                     ),
-                    Row(
-                      children: [
-                        Icon(Icons.animation, size: 16, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text("Animation: ${project.features['animation']}"),
-                      ],
+
+                    // Only show if Web selected
+                    if (project.platforms.contains("Web"))
+                      _buildSummaryRow(
+                        icon: Icons.web,
+                        label: "Web Build",
+                        value: project.features['webBuild'] ?? "Default",
+                      ),
+
+                    _buildSummaryRow(
+                      icon: Icons.animation,
+                      label: "Animation",
+                      value: project.features['animation'],
                     ),
-                    Row(
-                      children: [
-                        Icon(Icons.font_download, size: 16, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text("Font: ${project.features['font']}"),
-                      ],
+                    _buildSummaryRow(
+                      icon: Icons.font_download,
+                      label: "Font",
+                      value: project.features['font'],
                     ),
                   ],
                 ),
               ),
             ),
-            
-            SizedBox(height: 20),
-            
+
+            const SizedBox(height: 20),
+
             // Upload Sections
             if (project.features['animation'] != "none") ...[
               _buildUploadSection(
@@ -148,21 +155,21 @@ class _UploadScreenState extends State<UploadScreen> {
                 type: "Animation",
                 isRequired: true,
               ),
-              SizedBox(height: 15),
+              const SizedBox(height: 15),
             ],
-            
+
             if (project.features['font'] != "default") ...[
               _buildUploadSection(
-                title: "Custom Font", 
+                title: "Custom Font",
                 subtitle: "Upload TTF/OTF font file (.ttf, .otf)",
                 icon: Icons.font_download,
                 file: _fontFile,
                 type: "Font",
                 isRequired: true,
               ),
-              SizedBox(height: 15),
+              const SizedBox(height: 15),
             ],
-            
+
             _buildUploadSection(
               title: "App Icon",
               subtitle: "Upload custom app icon (.png, .jpg, .svg)",
@@ -171,32 +178,39 @@ class _UploadScreenState extends State<UploadScreen> {
               type: "Icon",
               isRequired: false,
             ),
-            
-            Spacer(),
-            
+
+            const Spacer(),
+
             // Continue Button
             Container(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _canContinue() ? Colors.deepPurple : Colors.grey,
-                  padding: EdgeInsets.symmetric(vertical: 15),
+                  backgroundColor:
+                      _canContinue() ? Colors.deepPurple : Colors.grey,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                onPressed: _canContinue() ? () {
-                  // فائلیں project میں سیو کریں
-                  if (_animationFile != null) {
-                    project.assets['animation'] = _animationFile!.path;
-                  }
-                  if (_iconFile != null) {
-                    project.assets['icon'] = _iconFile!.path;
-                  }
-                  if (_fontFile != null) {
-                    project.assets['font'] = _fontFile!.path;
-                  }
-                  
-                  Navigator.pushNamed(context, '/chat', arguments: project);
-                } : null,
-                child: Text(
+                onPressed: _canContinue()
+                    ? () {
+                        // Save files into project
+                        if (_animationFile != null) {
+                          project.assets['animation'] = _animationFile!.path;
+                        }
+                        if (_iconFile != null) {
+                          project.assets['icon'] = _iconFile!.path;
+                        }
+                        if (_fontFile != null) {
+                          project.assets['font'] = _fontFile!.path;
+                        }
+
+                        Navigator.pushNamed(context, '/chat',
+                            arguments: project);
+                      }
+                    : null,
+                child: const Text(
                   "Continue to AI Chat",
                   style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
@@ -204,6 +218,35 @@ class _UploadScreenState extends State<UploadScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(
+      {required IconData icon,
+      required String label,
+      required String value}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.deepPurple),
+          const SizedBox(width: 8),
+          Text(
+            "$label:",
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -218,6 +261,7 @@ class _UploadScreenState extends State<UploadScreen> {
   }) {
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -226,24 +270,27 @@ class _UploadScreenState extends State<UploadScreen> {
             Row(
               children: [
                 Icon(icon, color: Colors.deepPurple),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Text(
                   title,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 if (isRequired) ...[
-                  SizedBox(width: 5),
-                  Text("*", style: TextStyle(color: Colors.red, fontSize: 16)),
+                  const SizedBox(width: 5),
+                  const Text("*",
+                      style: TextStyle(color: Colors.red, fontSize: 16)),
                 ],
               ],
             ),
-            SizedBox(height: 5),
-            Text(subtitle, style: TextStyle(color: Colors.grey, fontSize: 14)),
-            SizedBox(height: 10),
-            
+            const SizedBox(height: 5),
+            Text(subtitle,
+                style: const TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 10),
+
             if (file != null) ...[
               Container(
-                padding: EdgeInsets.all(10),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.green[50],
                   borderRadius: BorderRadius.circular(8),
@@ -251,19 +298,23 @@ class _UploadScreenState extends State<UploadScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.green, size: 20),
-                    SizedBox(width: 10),
+                    const Icon(Icons.check_circle,
+                        color: Colors.green, size: 20),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             file.path.split('/').last,
-                            style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: Colors.green[800],
+                                fontWeight: FontWeight.bold),
                           ),
                           Text(
                             "${(file.lengthSync() / 1024).toStringAsFixed(1)} KB",
-                            style: TextStyle(color: Colors.green[600], fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.green[600], fontSize: 12),
                           ),
                         ],
                       ),
@@ -271,20 +322,24 @@ class _UploadScreenState extends State<UploadScreen> {
                   ],
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
             ],
-            
+
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: file != null ? Colors.orange : Colors.deepPurple,
+                      backgroundColor:
+                          file != null ? Colors.orange : Colors.deepPurple,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: () => _pickFile(type),
                     child: Text(
                       file != null ? "Change File" : "Select File",
-                      style: TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
                 ),

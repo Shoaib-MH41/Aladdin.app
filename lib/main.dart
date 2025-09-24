@@ -6,6 +6,7 @@ import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
 import 'screens/upload_screen.dart';
 import 'screens/chat_screen.dart';
+import 'screens/build_screen.dart'; // ✅ نئی Build Screen شامل کریں
 
 void main() {
   runApp(const AladdinApp());
@@ -19,7 +20,7 @@ class AladdinApp extends StatelessWidget {
     return MaterialApp(
       title: 'Aladdin App',
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.system, // دن/رات auto
+      themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -38,6 +39,7 @@ class AladdinApp extends StatelessWidget {
         '/select': (context) => const SelectionScreen(),
         '/upload': (context) => const UploadScreen(),
         '/chat': (context) => const ChatScreen(),
+        '/build': (context) => const BuildScreen(), // ✅ نئی route شامل کریں
       },
     );
   }

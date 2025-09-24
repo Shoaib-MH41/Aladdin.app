@@ -1,14 +1,3 @@
-import 'package:flutter/material.dart';
-import 'screens/project_screen.dart';
-import 'screens/selection_screen.dart';
-import 'screens/upload_screen.dart';
-import 'screens/chat_screen.dart';
-import 'models/project_model.dart';
-
-void main() {
-  runApp(const AladdinApp());
-}
-
 class AladdinApp extends StatelessWidget {
   const AladdinApp({super.key});
 
@@ -16,12 +5,21 @@ class AladdinApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Aladdin App',
+      themeMode: ThemeMode.system, // ✅ device کے حساب سے auto
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        brightness: Brightness.light,
       ),
-      initialRoute: '/',
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        brightness: Brightness.dark,
+      ),
+      initialRoute: '/home',
       routes: {
-        '/': (context) => const ProjectScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/projects': (context) => const ProjectScreen(),
         '/select': (context) => const SelectionScreen(),
         '/upload': (context) => const UploadScreen(),
         '/chat': (context) => const ChatScreen(),

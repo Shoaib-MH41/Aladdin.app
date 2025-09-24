@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  file_picker: ^6.1.1  # ✅ فائل اپلوڈ کے لیے ضروری ہے
+  url_launcher: ^6.2.0  # APK لنک کھولنے کے لیے
 
 dev_dependencies:
   flutter_test:
@@ -17,4 +19,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Assets section عارضی طور پر ہٹا دیں

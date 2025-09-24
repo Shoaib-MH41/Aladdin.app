@@ -9,7 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  url_launcher: ^6.2.0  # APK لنک کھولنے کے لیے
 
 dev_dependencies:
   flutter_test:
@@ -18,15 +17,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
-  assets:
-    - assets/animations/
-    - assets/fonts/
-    - assets/icons/
-  
-  fonts:
-    - family: Poppins
-      fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-Bold.ttf
-          weight: 700
+  # Assets section عارضی طور پر ہٹا دیں

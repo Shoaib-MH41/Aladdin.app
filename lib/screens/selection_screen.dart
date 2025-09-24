@@ -18,10 +18,19 @@ class _SelectionScreenState extends State<SelectionScreen> {
   void _saveSelection() {
     if (_platforms.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please select at least one platform")),
+        const SnackBar(content: Text("Please select at least one platform")),
       );
       return;
     }
+
+    // === ڈیبگ معلومات ===
+    print("=== SELECTION DEBUG INFO ===");
+    print("Platforms: $_platforms");
+    print("Framework: $_framework");
+    print("Animation: $_animation");
+    print("Font: $_font");
+    print("API Integration: $_apiIntegration");
+    print("============================");
 
     final project = Project(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -35,13 +44,22 @@ class _SelectionScreenState extends State<SelectionScreen> {
         'api': _apiIntegration,
       },
     );
-    
+
+    // === پروجیکٹ features چیک ===
+    print("Project Features: ${project.features}");
+    print("API Value in Project: ${project.features['api']}");
+    print("Navigation: ${_animation != "none" || _font != "default" ? "UploadScreen" : "ChatScreen"}");
+
     // اگر کوئی custom feature selected ہے تو UploadScreen پر جائیں
     if (_animation != "none" || _font != "default") {
-      Navigator.pushNamed(context, '/upload', arguments: project);
+      Navigator.pushNamed(context, '/upload', arguments: project).then((_) {
+        print("Navigation to UploadScreen completed");
+      });
     } else {
       // ورنہ براہ راست ChatScreen پر جائیں
-      Navigator.pushNamed(context, '/chat', arguments: project);
+      Navigator.pushNamed(context, '/chat', arguments: project).then((_) {
+        print("Navigation to ChatScreen completed");
+      });
     }
   }
 
@@ -67,7 +85,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
               ],
             ),
             
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             
             // Framework Section
             Card(
@@ -78,12 +96,12 @@ class _SelectionScreenState extends State<SelectionScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.code, color: Colors.deepPurple),
-                        SizedBox(width: 10),
-                        Text("Framework", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Icon(Icons.code, color: Colors.deepPurple),
+                        const SizedBox(width: 10),
+                        const Text("Framework", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ],
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButton<String>(
                       value: _framework,
                       isExpanded: true,
@@ -97,7 +115,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
               ),
             ),
             
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             
             // Animation Section
             _buildSection(
@@ -111,7 +129,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
               ],
             ),
             
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             
             // Font Section
             _buildSection(
@@ -125,7 +143,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
               ],
             ),
             
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             
             // API Section
             _buildSection(
@@ -138,7 +156,29 @@ class _SelectionScreenState extends State<SelectionScreen> {
               ],
             ),
             
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
+            
+            // Current Selection Display
+            Card(
+              color: Colors.blue[50],
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Current Selection:", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 5),
+                    Text("• Platforms: ${_platforms.isEmpty ? "None" : _platforms.join(", ")}"),
+                    Text("• Framework: $_framework"),
+                    Text("• Animation: $_animation"),
+                    Text("• Font: $_font"),
+                    Text("• API: $_apiIntegration"),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 20),
             
             // Create Project Button
             Container(
@@ -146,10 +186,10 @@ class _SelectionScreenState extends State<SelectionScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
-                  padding: EdgeInsets.symmetric(vertical: 15),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
                 onPressed: _saveSelection,
-                child: Text(
+                child: const Text(
                   "Create Project",
                   style: TextStyle(fontSize: 16),
                 ),
@@ -171,11 +211,11 @@ class _SelectionScreenState extends State<SelectionScreen> {
             Row(
               children: [
                 Icon(icon, color: Colors.deepPurple),
-                SizedBox(width: 10),
-                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 10),
+                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ...children,
           ],
         ),
@@ -198,9 +238,9 @@ class _SelectionScreenState extends State<SelectionScreen> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontWeight: FontWeight.w500)),
-          SizedBox(height: 2),
-          Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
       value: value,
@@ -220,9 +260,16 @@ class _SelectionScreenState extends State<SelectionScreen> {
 
   void _setGroupValue(String type, String value) {
     switch (type) {
-      case "animation": _animation = value; break;
-      case "font": _font = value; break;
-      case "api": _apiIntegration = value; break;
+      case "animation": 
+        setState(() => _animation = value);
+        break;
+      case "font": 
+        setState(() => _font = value);
+        break;
+      case "api": 
+        setState(() => _apiIntegration = value);
+        break;
     }
+    print("Updated $type to: $value");
   }
 }

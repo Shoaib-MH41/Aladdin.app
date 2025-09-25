@@ -1,38 +1,16 @@
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
-  final ThemeMode currentThemeMode;
-  final ValueChanged<ThemeMode> onThemeModeChanged;
-
-  const HomeScreen({
-    super.key,
-    required this.currentThemeMode,
-    required this.onThemeModeChanged,
-  });
+  const HomeScreen({super.key});  // ✅ سادہ constructor
 
   @override
   Widget build(BuildContext context) {
-    // Decide whether dark visuals should be used
-    final platformBrightness = MediaQuery.of(context).platformBrightness;
-    final isDark = currentThemeMode == ThemeMode.dark ||
-        (currentThemeMode == ThemeMode.system &&
-            platformBrightness == Brightness.dark);
-
+    final isDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Aladdin App'),
-        actions: [
-          PopupMenuButton<ThemeMode>(
-            tooltip: 'Theme',
-            onSelected: onThemeModeChanged,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: ThemeMode.system, child: Text('System')),
-              PopupMenuItem(value: ThemeMode.light, child: Text('Light')),
-              PopupMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-            ],
-            icon: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-          ),
-        ],
+        backgroundColor: Colors.deepPurple,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -52,8 +30,8 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildCard(
                   context,
-                  title: 'My Projects',
-                  subtitle: 'Open your saved projects',
+                  title: 'میرے پروجیکٹس',
+                  subtitle: 'محفوظ شدہ پروجیکٹس کھولیں',
                   icon: Icons.folder_open,
                   color: Colors.indigo,
                   routeName: '/projects',
@@ -61,8 +39,8 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 _buildCard(
                   context,
-                  title: 'New Project',
-                  subtitle: 'Create a fresh app from prompt',
+                  title: 'نیا پروجیکٹ',
+                  subtitle: 'پرومپٹ سے نئی ایپ بنائیں',
                   icon: Icons.add_circle_outline,
                   color: Colors.green,
                   routeName: '/select',
@@ -124,4 +102,3 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-

@@ -59,14 +59,14 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   bool _canContinue() {
-    final Project project =
-        ModalRoute.of(context)!.settings.arguments as Project;
+    final Project project = ModalRoute.of(context)!.settings.arguments as Project;
 
-    if (project.features['animation'] != "none" && _animationFile == null) {
+    // ✅ NULL SAFETY FIX - default values added
+    if ((project.features['animation'] ?? 'none') != "none" && _animationFile == null) {
       return false;
     }
 
-    if (project.features['font'] != "default" && _fontFile == null) {
+    if ((project.features['font'] ?? 'default') != "default" && _fontFile == null) {
       return false;
     }
 
@@ -75,8 +75,7 @@ class _UploadScreenState extends State<UploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Project project =
-        ModalRoute.of(context)!.settings.arguments as Project;
+    final Project project = ModalRoute.of(context)!.settings.arguments as Project;
 
     return Scaffold(
       appBar: AppBar(
@@ -128,15 +127,21 @@ class _UploadScreenState extends State<UploadScreen> {
                         value: project.features['webBuild'] ?? "Default",
                       ),
 
+                    // ✅ NULL SAFETY FIX - default values added
                     _buildSummaryRow(
                       icon: Icons.animation,
                       label: "Animation",
-                      value: project.features['animation'],
+                      value: project.features['animation'] ?? 'none', // ✅ FIXED
                     ),
                     _buildSummaryRow(
                       icon: Icons.font_download,
                       label: "Font",
-                      value: project.features['font'],
+                      value: project.features['font'] ?? 'default', // ✅ FIXED
+                    ),
+                    _buildSummaryRow(
+                      icon: Icons.cloud,
+                      label: "API Integration",
+                      value: project.features['api'] ?? 'none', // ✅ ADDED
                     ),
                   ],
                 ),
@@ -146,7 +151,8 @@ class _UploadScreenState extends State<UploadScreen> {
             const SizedBox(height: 20),
 
             // Upload Sections
-            if (project.features['animation'] != "none") ...[
+            // ✅ NULL SAFETY FIX - default values added
+            if ((project.features['animation'] ?? 'none') != "none") ...[
               _buildUploadSection(
                 title: "Animation File",
                 subtitle: "Upload Lottie JSON animation file (.json)",
@@ -158,7 +164,7 @@ class _UploadScreenState extends State<UploadScreen> {
               const SizedBox(height: 15),
             ],
 
-            if (project.features['font'] != "default") ...[
+            if ((project.features['font'] ?? 'default') != "default") ...[
               _buildUploadSection(
                 title: "Custom Font",
                 subtitle: "Upload TTF/OTF font file (.ttf, .otf)",
@@ -186,8 +192,7 @@ class _UploadScreenState extends State<UploadScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      _canContinue() ? Colors.deepPurple : Colors.grey,
+                  backgroundColor: _canContinue() ? Colors.deepPurple : Colors.grey,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -206,8 +211,7 @@ class _UploadScreenState extends State<UploadScreen> {
                           project.assets['font'] = _fontFile!.path;
                         }
 
-                        Navigator.pushNamed(context, '/chat',
-                            arguments: project);
+                        Navigator.pushNamed(context, '/chat', arguments: project);
                       }
                     : null,
                 child: const Text(
@@ -222,10 +226,11 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 
-  Widget _buildSummaryRow(
-      {required IconData icon,
-      required String label,
-      required String value}) {
+  Widget _buildSummaryRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -244,6 +249,7 @@ class _UploadScreenState extends State<UploadScreen> {
             child: Text(
               value,
               style: const TextStyle(fontSize: 14, color: Colors.black87),
+              softWrap: true,
             ),
           ),
         ],
@@ -330,8 +336,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          file != null ? Colors.orange : Colors.deepPurple,
+                      backgroundColor: file != null ? Colors.orange : Colors.deepPurple,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

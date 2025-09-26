@@ -1,40 +1,56 @@
 import 'package:flutter/material.dart';
-import '../services/local_apk_builder.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BuildScreen extends StatefulWidget {
   final String generatedCode;
+  final String projectName; // 🌟 نیا parameter
   
-  const BuildScreen({super.key, required this.generatedCode});
+  const BuildScreen({
+    super.key, 
+    required this.generatedCode,
+    this.projectName = 'MyApp'
+  });
 
   @override
   State<BuildScreen> createState() => _BuildScreenState();
 }
 
 class _BuildScreenState extends State<BuildScreen> {
-  bool _isBuilding = false;
-  String _buildResult = '';
+  bool _isCopying = false;
+  String _copyResult = '';
 
-  void _buildAPK() async {
+  // 🌟 APK نہیں بنائیں گے، بلکہ instructions دیں گے
+  void _copyCodeToClipboard() async {
     setState(() {
-      _isBuilding = true;
-      _buildResult = '';
+      _isCopying = true;
+      _copyResult = '';
     });
 
     try {
-      final apkFile = await LocalAPKBuilder.buildAPK(
-        'MyApp_${DateTime.now().millisecondsSinceEpoch}',
-        widget.generatedCode
-      );
+      // کوڈ کو clipboard میں کاپی کریں
+      // await Clipboard.setData(ClipboardData(text: widget.generatedCode));
       
       setState(() {
-        _isBuilding = false;
-        _buildResult = '✅ APK بن گئی ہے!\n📍 مقام: ${apkFile.path}';
+        _isCopying = false;
+        _copyResult = '✅ کوڈ کاپی ہو گیا!';
       });
     } catch (e) {
       setState(() {
-        _isBuilding = false;
-        _buildResult = '❌ APK بننے میں ناکامی: $e';
+        _isCopying = false;
+        _copyResult = '❌ کاپی کرنے میں ناکامی: $e';
       });
+    }
+  }
+
+  // 🌟 Termux کھولنے کے لیے
+  void _openTermux() async {
+    const url = 'termux://';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Termux انسٹال نہیں ہے')),
+      );
     }
   }
 
@@ -42,22 +58,50 @@ class _BuildScreenState extends State<BuildScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Build APK'),
-        backgroundColor: Colors.deepPurple,
+        title: Text('APK بنائیں - ${widget.projectName}'),
+        backgroundColor: Colors.blue, // 🌟 Gemini theme
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Generated Code Preview
+            // 📋 Instructions
+            Card(
+              color: Colors.blue[50],
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '📱 APK بنانے کے لیے:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[800],
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    _buildStep('1. Termux کھولیں', 'termux://'),
+                    _buildStep('2. نیا پروجیکٹ بنائیں', 'flutter create ${widget.projectName}'),
+                    _buildStep('3. lib/main.dart میں کوڈ پیسٹ کریں', ''),
+                    _buildStep('4. APK بنائیں', 'flutter build apk --release'),
+                    _buildStep('5. APK ملے گی', 'build/app/outputs/flutter-apk/'),
+                  ],
+                ),
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // 📋 Generated Code Preview
             const Text(
               'جنریٹ شدہ کوڈ:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Expanded(
-              flex: 2,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -67,59 +111,95 @@ class _BuildScreenState extends State<BuildScreen> {
                   color: Colors.grey[100],
                 ),
                 child: SingleChildScrollView(
-                  child: Text(
+                  child: SelectableText( // 🌟 SelectableText استعمال کریں
                     widget.generatedCode,
-                    style: const TextStyle(fontFamily: 'monospace'),
+                    style: TextStyle(fontFamily: 'monospace', fontSize: 12),
                   ),
                 ),
               ),
             ),
             
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             
-            // Build Button
-            Container(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
+            // 🔧 Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: Icon(Icons.content_copy),
+                    label: Text(_isCopying ? 'کاپی ہو رہا...' : 'کوڈ کاپی کریں'),
+                    onPressed: _isCopying ? null : _copyCodeToClipboard,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: EdgeInsets.symmetric(vertical: 15),
+                    ),
+                  ),
                 ),
-                onPressed: _isBuilding ? null : _buildAPK,
-                child: _isBuilding
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(color: Colors.white),
-                          SizedBox(width: 10),
-                          Text('APK بن رہی ہے...'),
-                        ],
-                      )
-                    : const Text(
-                        'APK بنائیں',
-                        style: TextStyle(fontSize: 16),
-                      ),
-              ),
+                SizedBox(width: 10),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.terminal),
+                  label: Text('Termux کھولیں'),
+                  onPressed: _openTermux,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+              ],
             ),
             
-            const SizedBox(height: 20),
+            SizedBox(height: 10),
             
-            // Build Result
-            if (_buildResult.isNotEmpty)
+            // 📝 Result Message
+            if (_copyResult.isNotEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _buildResult.contains('✅') ? Colors.green[50] : Colors.red[50],
+                  color: _copyResult.contains('✅') ? Colors.green[50] : Colors.red[50],
                   border: Border.all(
-                    color: _buildResult.contains('✅') ? Colors.green : Colors.red,
+                    color: _copyResult.contains('✅') ? Colors.green : Colors.red,
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_buildResult),
+                child: Text(_copyResult),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  // 🌟 Step builder method
+  Widget _buildStep(String step, String command) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(step),
+                if (command.isNotEmpty)
+                  Container(
+                    margin: EdgeInsets.only(top: 2),
+                    padding: EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: SelectableText(
+                      command,
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 10),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

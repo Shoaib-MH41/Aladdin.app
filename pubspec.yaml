@@ -9,9 +9,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  file_picker: ^6.1.1  # ✅ فائل اپلوڈ کے لیے
-  url_launcher: ^6.2.0  # ✅ APK لنک کھولنے کے لیے
-  process: ^4.2.4  # ✅ نئی - Termux commands چلانے کے لیے
+  cupertino_icons: ^1.0.2  # ✅ iOS-style icons کے لیے
+  
+  # 🌟 ضروری packages
+  http: ^1.1.0  # Gemini API calls کے لیے
+  file_picker: ^6.1.1  # فائل اپلوڈ کے لیے
+  url_launcher: ^6.2.0  # APK لنک کھولنے کے لیے
+  
+  # 🌟 Termux integration کے لیے
+  external_path: ^2.0.0  # فائل سسٹم access
+  permission_handler: ^11.0.0  # permissions management
 
 dev_dependencies:
   flutter_test:
@@ -20,3 +27,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # 🌟 Android permissions
+  assets:
+    - assets/images/

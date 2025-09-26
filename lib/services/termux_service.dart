@@ -4,27 +4,27 @@ class TermuxService {
   static Future<String> buildAPK(String projectName, String flutterCode) async {
     try {
       print("🚀 APK بنانے کا پروسیس شروع...");
-      
+
       // ✅ پہلے Download folder میں ڈائریکٹری بنائیں
       final downloadDir = Directory('/storage/emulated/0/Download/aladdin_projects');
       if (!await downloadDir.exists()) {
         await downloadDir.create(recursive: true);
       }
-      
+
       final projectDir = Directory('${downloadDir.path}/$projectName');
       if (await projectDir.exists()) {
         await projectDir.delete(recursive: true);
       }
       await projectDir.create(recursive: true);
-      
+
       // ✅ lib ڈائریکٹری بنائیں
       final libDir = Directory('${projectDir.path}/lib');
       await libDir.create(recursive: true);
-      
+
       // ✅ main.dart فائل بنائیں
       final mainFile = File('${libDir.path}/main.dart');
       await mainFile.writeAsString(flutterCode);
-      
+
       // ✅ pubspec.yaml بنائیں
       final pubspecFile = File('${projectDir.path}/pubspec.yaml');
       await pubspecFile.writeAsString('''
@@ -45,12 +45,12 @@ flutter:
   uses-material-design: true
 ''');
 
-      // ✅ یہاں Process.run نہیں چلے گا - اس کی جگہ manual instructions دیں
+      // ✅ Termux میں دستی ہدایات واپس کریں
       return """
 ✅ **Flutter پروجیکٹ تیار ہو گیا!**
 
 📁 **پروجیکٹ لوکیشن:**
-`/storage/emulated/0/Download/aladdin_projects/$projectName`
+/storage/emulated/0/Download/aladdin_projects/$projectName
 
 📱 **APK بنانے کے لیے Termux میں یہ commands چلائیں:**
 
@@ -58,4 +58,4 @@ flutter:
 cd /storage/emulated/0/Download/aladdin_projects/$projectName
 flutter clean
 flutter pub get
-flutter build apk --release
+flutter build apk --release --no-tree-shake-icons

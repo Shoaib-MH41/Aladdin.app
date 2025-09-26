@@ -53,7 +53,7 @@ class _ChatScreenState extends State<ChatScreen> {
       Make sure the code is error-free and can compile directly.
       """;
 
-      final String aiResponse = await geminiService.generateFlutterCode(smartPrompt);
+      final String aiResponse = await -geminiService.generateFlutterCode(smartPrompt);
 
       final aiMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),

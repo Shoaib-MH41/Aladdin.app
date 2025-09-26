@@ -14,7 +14,6 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final TextEditingController _controller = TextEditingController();
-  final GeminiService _geminiService = GeminiService();
   bool _isAIThinking = false;
   bool _isBuildingAPK = false;
 
@@ -53,7 +52,8 @@ class _ChatScreenState extends State<ChatScreen> {
       Make sure the code is error-free and can compile directly.
       """;
 
-      final String aiResponse = await _geminiService.generateFlutterCode(smartPrompt);
+      // ✅ درست static call
+      final String aiResponse = await GeminiService.generateFlutterCode(smartPrompt);
 
       final aiMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),

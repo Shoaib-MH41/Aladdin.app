@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -81,61 +82,61 @@ Return the code in a single code block.
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(MyApp());
+runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AI Generated App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: MyHomePage(prompt: '$prompt'),
-    );
-  }
+@override
+Widget build(BuildContext context) {
+  return MaterialApp(
+    title: 'AI Generated App',
+    theme: ThemeData(
+      primarySwatch: Colors.blue,
+      useMaterial3: true,
+    ),
+    home: MyHomePage(prompt: '$prompt'),
+  );
+}
 }
 
 class MyHomePage extends StatelessWidget {
-  final String prompt;
+final String prompt;
 
-  MyHomePage({required this.prompt});
+MyHomePage({required this.prompt});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Your AI App'),
-        backgroundColor: Colors.deepPurple,
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Your AI App'),
+      backgroundColor: Colors.deepPurple,
+    ),
+    body: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.auto_awesome, size: 50, color: Colors.deepPurple),
+          SizedBox(height: 20),
+          Text(
+            'AI App Factory',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'For: $prompt',
+            style: TextStyle(fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {},
+            child: Text('Get Started'),
+          ),
+        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.auto_awesome, size: 50, color: Colors.deepPurple),
-            SizedBox(height: 20),
-            Text(
-              'AI App Factory',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'For: $prompt',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {},
-              child: Text('Get Started'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
 }
 """;
   }

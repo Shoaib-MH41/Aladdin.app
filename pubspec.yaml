@@ -9,16 +9,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2  # ✅ iOS-style icons کے لیے
+  cupertino_icons: ^1.0.2
   
   # 🌟 ضروری packages
-  http: ^1.1.0  # Gemini API calls کے لیے
-  file_picker: ^6.1.1  # فائل اپلوڈ کے لیے
-  url_launcher: ^6.2.0  # APK لنک کھولنے کے لیے
+  http: ^1.1.0
+  file_picker: ^6.1.1
+  url_launcher: ^6.2.0
   
-  # 🌟 Termux integration کے لیے
-  external_path: ^2.0.0  # فائل سسٹم access
-  permission_handler: ^11.0.0  # permissions management
+  # 🌟 Termux integration کے لیے - version کم کریں
+  external_path: ^1.0.0  # ✅ نیا version
+  # permission_handler: ^11.0.0  # ❌ عارضی طور پر ہٹائیں
 
 dev_dependencies:
   flutter_test:
@@ -28,6 +28,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # 🌟 Android permissions
-  assets:
-    - assets/images/
+  # 🌟 Assets کو عارضی طور پر comment کریں
+  # assets:
+  #   - assets/images/

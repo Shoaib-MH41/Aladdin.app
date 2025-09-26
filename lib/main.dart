@@ -7,6 +7,7 @@ import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const AladdinApp());
 }
 
@@ -16,18 +17,22 @@ class AladdinApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aladdin App',
+      title: 'Aladdin AI App Factory',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue, // 🌟 Gemini کے رنگوں میں
+          brightness: Brightness.light,
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue, // 🌟 Gemini کے رنگوں میں
+          brightness: Brightness.dark,
+        ),
       ),
       initialRoute: '/home',
       routes: {
@@ -38,8 +43,15 @@ class AladdinApp extends StatelessWidget {
         '/chat': (context) => const ChatScreen(),
         '/build': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          final generatedCode = arguments?['code'] ?? '// No code generated yet';
-          return BuildScreen(generatedCode: generatedCode);
+          
+          if (arguments == null) {
+            return const BuildScreen(generatedCode: '// کوئی کوڈ نہیں ملا');
+          }
+          
+          return BuildScreen(
+            generatedCode: arguments['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
+            projectName: arguments['projectName'] ?? 'نیا پروجیکٹ',
+          );
         },
       },
     );

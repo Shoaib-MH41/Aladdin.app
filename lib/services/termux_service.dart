@@ -3,7 +3,7 @@ import 'dart:io';
 class TermuxService {
   static Future<String> buildAPK(String projectName, String flutterCode) async {
     try {
-      // Temporary directory بنائیں
+      // ✅ Download/aladdin_projects میں project بنائیں
       final downloadDir = Directory('/storage/emulated/0/Download/aladdin_projects');
       if (!await downloadDir.exists()) {
         await downloadDir.create(recursive: true);
@@ -15,15 +15,15 @@ class TermuxService {
       }
       await projectDir.create(recursive: true);
       
-      // lib ڈائریکٹری بنائیں
+      // lib ڈائریکٹری
       final libDir = Directory('${projectDir.path}/lib');
       await libDir.create(recursive: true);
       
-      // main.dart فائل بنائیں
+      // main.dart فائل
       final mainFile = File('${libDir.path}/main.dart');
       await mainFile.writeAsString(flutterCode);
       
-      // pubspec.yaml بنائیں - syntax درست کریں
+      // pubspec.yaml
       final pubspecFile = File('${projectDir.path}/pubspec.yaml');
       await pubspecFile.writeAsString('''
 name: $projectName
@@ -43,11 +43,23 @@ flutter:
   uses-material-design: true
 ''');
 
-      // Manual instructions واپس کریں
-      return "✅ Flutter پروجیکٹ تیار ہو گیا!";
-      
+      // ✅ اب Termux کو command push کریں
+      final bridgeDir = Directory('/storage/emulated/0/Download/Aladdin');
+      if (!await bridgeDir.exists()) {
+        await bridgeDir.create(recursive: true);
+      }
+
+      final cmdFile = File('${bridgeDir.path}/cmd.txt');
+      await cmdFile.writeAsString('''
+cd ~/storage/downloads/aladdin_projects/$projectName &&
+flutter build apk --release --no-tree-shake-icons
+''');
+
+      return "✅ Project ready & build command sent to Termux!";
+
     } catch (e) {
-      return "❌ پروجیکٹ بنانے میں خرابی: $e";
+      return "❌ Error: $e";
     }
   }
 }
+

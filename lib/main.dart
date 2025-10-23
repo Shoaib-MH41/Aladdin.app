@@ -5,8 +5,9 @@ import 'screens/selection_screen.dart';
 import 'screens/upload_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
-import 'services/gemini_service.dart'; // ✅ نئی
-import 'services/github_service.dart'; // ✅ نئی
+import 'screens/settings_screen.dart'; // ✅ SettingsScreen شامل کریں
+import 'services/gemini_service.dart';
+import 'services/github_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,9 +19,9 @@ class AladdinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ APIs کے keys - بعد میں environment variables میں ڈالیں
-    final geminiService = GeminiService('your_gemini_api_key_here');
-    final githubService = GitHubService('your_github_token_here');
+    // ✅ Services کو بغیر keys کے initialize کریں - user بعد میں settings میں ڈالے گا
+    final geminiService = GeminiService();
+    final githubService = GitHubService();
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
@@ -43,19 +44,26 @@ class AladdinApp extends StatelessWidget {
       initialRoute: '/home',
       routes: {
         '/home': (context) => HomeScreen(
-              geminiService: geminiService, // ✅ پاس کریں
-              githubService: githubService, // ✅ پاس کریں
+              geminiService: geminiService,
+              githubService: githubService,
             ),
         '/projects': (context) => ProjectScreen(
-              geminiService: geminiService, // ✅ پاس کریں
-              githubService: githubService, // ✅ پاس کریں
+              geminiService: geminiService,
+              githubService: githubService,
             ),
         '/select': (context) => SelectionScreen(
-              geminiService: geminiService, // ✅ پاس کریں
-              githubService: githubService, // ✅ پاس کریں
+              geminiService: geminiService,
+              githubService: githubService,
             ),
         '/upload': (context) => const UploadScreen(),
-        '/chat': (context) => const ChatScreen(),
+        '/chat': (context) => ChatScreen( // ✅ const ہٹائیں اور services پاس کریں
+              geminiService: geminiService,
+              githubService: githubService,
+            ),
+        '/settings': (context) => SettingsScreen( // ✅ نیا route شامل کریں
+              geminiService: geminiService,
+              githubService: githubService,
+            ),
         '/build': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           

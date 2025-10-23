@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import '../services/gemini_service.dart'; // ✅ شامل کریں
+import '../services/github_service.dart'; // ✅ شامل کریں
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});  // ✅ سادہ constructor
+  final GeminiService geminiService; // ✅ شامل کریں
+  final GitHubService githubService; // ✅ شامل کریں
+
+  const HomeScreen({
+    super.key,
+    required this.geminiService, // ✅ شامل کریں
+    required this.githubService, // ✅ شامل کریں
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -11,6 +20,14 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Aladdin App'),
         backgroundColor: Colors.deepPurple,
+        actions: [
+          // ✅ Settings button شامل کریں
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => Navigator.pushNamed(context, '/settings'),
+            tooltip: 'ترتیبات',
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -44,6 +61,15 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.add_circle_outline,
                   color: Colors.green,
                   routeName: '/select',
+                ),
+                const SizedBox(height: 20),
+                _buildCard( // ✅ نیا card شامل کریں
+                  context,
+                  title: 'ترتیبات',
+                  subtitle: 'API Keys اور سیٹنگز',
+                  icon: Icons.settings,
+                  color: Colors.orange,
+                  routeName: '/settings',
                 ),
               ],
             ),

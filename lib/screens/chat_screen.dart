@@ -49,28 +49,28 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
 
     try {
-      // ✅ درست prompt بنائیں - اب universal generateCode استعمال کریں
+      // درست prompt بنائیں
       String smartPrompt = """
 آپ ایک ${_project.framework} expert ہیں۔ مکمل، چلنے کے قابل کوڈ بنائیں۔
 
-**ضروریات:**
+ضروریات:
 $text
 
-**ٹیکنیکل تفصیلات:**
+ٹیکنیکل تفصیلات:
 - فریم ورک: ${_project.framework}
 - پلیٹ فارمز: ${_project.platforms.join(', ')}
 - ضروری assets: ${_project.assets.keys.join(', ')}
 
-**ہدایات:**
+ہدایات:
 1. صرف کوڈ لوٹائیں، وضاحت نہیں
 2. تمام necessary imports شامل کریں
 3. مکمل working app ہو
 4. کوئی syntax errors نہ ہوں
 
-**صرف کوڈ لوٹائیں:**
+صرف کوڈ لوٹائیں:
 """;
 
-      // ✅ درست method استعمال کریں - generateFlutterCode کی بجائے generateCode
+      // درست method استعمال کریں
       final String generatedCode = await widget.geminiService.generateCode(
         prompt: smartPrompt,
         framework: _project.framework,
@@ -91,7 +91,7 @@ $text
         _isAIThinking = false;
       });
 
-      // ✅ GitHub پر automatically save کریں
+      // GitHub پر automatically save کریں
       if (_isValidCode(generatedCode, _project.framework)) {
         final repoName = '${_project.name}_${DateTime.now().millisecondsSinceEpoch}';
         final repoUrl = await widget.githubService.createRepository(repoName, generatedCode);
@@ -156,7 +156,7 @@ $text
       arguments: {
         'code': lastAIMessage.text,
         'projectName': _project.name,
-        'framework': _project.framework, // ✅ فریم ورک بھی پاس کریں
+        'framework': _project.framework,
       }
     );
   }
@@ -169,7 +169,7 @@ $text
         (msg) => msg.sender == "ai" && msg.isCode,
       );
       
-      // ✅ کوڈ کی validation بہتر بنائیں
+      // کوڈ کی validation بہتر بنائیں
       if (lastAIMessage.text.trim().isEmpty || 
           lastAIMessage.text.startsWith('// ابھی تک')) return;
       
@@ -367,7 +367,7 @@ ${lastAIMessage.text}
   }
 
   Widget _buildCodeWidget(String code) {
-    // ✅ فریم ورک کے مطابق language select کریں
+    // فریم ورک کے مطابق language select کریں
     String language = 'dart';
     switch (_project.framework.toLowerCase()) {
       case 'flutter':
@@ -401,7 +401,7 @@ ${lastAIMessage.text}
             scrollDirection: Axis.horizontal,
             child: HighlightView(
               code.length > 500 ? code.substring(0, 500) + "\n// ... مزید کوڈ" : code,
-              language: language, // ✅ dynamic language
+              language: language,
               theme: githubTheme,
               padding: EdgeInsets.all(8),
               textStyle: TextStyle(fontFamily: 'monospace', fontSize: 12),

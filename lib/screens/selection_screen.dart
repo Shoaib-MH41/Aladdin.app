@@ -34,18 +34,19 @@ class _SelectionScreenState extends State<SelectionScreen> {
     }
 
     final project = Project(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: "پروجیکٹ_${DateTime.now().millisecondsSinceEpoch}",
-      framework: _framework,
-      platforms: _platforms,
-      assets: {},
-      features: {
-        'animation': _animation,
-        'font': _font,
-        'api': _apiIntegration,
-        'webBuild': _webBuild,
-      },
-    );
+  id: DateTime.now().millisecondsSinceEpoch.toString(),
+  name: "پروجیکٹ_${DateTime.now().millisecondsSinceEpoch}",
+  framework: _framework,
+  platforms: _platforms,
+  assets: {},
+  features: {
+    'animation': _animation,
+    'font': _font,
+    'api': _apiIntegration,
+    'webBuild': _webBuild,
+  },
+  createdAt: DateTime.now(), // ✅ required parameter
+);
 
     // اگر animation یا font custom ہے تو upload پر جائیں
     if (_animation != "none" || _font != "default") {

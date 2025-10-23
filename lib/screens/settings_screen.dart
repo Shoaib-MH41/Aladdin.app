@@ -31,23 +31,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ✅ محفوظ شدہ settings لوڈ کریں
   void _loadSavedSettings() async {
-    try {
-      final savedGeminiKey = await widget.geminiService.getSavedApiKey();
-      final savedGithubToken = await widget.githubService.getSavedToken();
+  try {
+    final savedGeminiKey = await widget.geminiService.getSavedApiKey();
+    final savedGithubToken = await widget.githubService.getSavedToken();
 
-      setState(() {
-        _geminiApiKeyController.text = savedGeminiKey ?? '';
-        _githubTokenController.text = savedGithubToken ?? '';
-      });
+    if (!mounted) return; // 🔒 تاکہ setState اس وقت نہ چلے جب widget dispose ہو جائے
 
-      // ✅ connection test کریں اگر key موجود ہے
-      if (savedGeminiKey != null && savedGeminiKey.isNotEmpty) {
-        _testConnection();
-      }
-    } catch (e) {
-      print('Settings load error: $e');
+    setState(() {
+      _geminiApiKeyController.text = savedGeminiKey ?? '';
+      _githubTokenController.text = savedGithubToken ?? '';
+    });
+
+    // 🔍 اگر Gemini Key موجود ہے تو کنکشن ٹیسٹ کریں
+    if ((savedGeminiKey ?? '').isNotEmpty) {
+      _testConnection();
     }
+  } catch (e, stack) {
+    debugPrint('⚠️ Settings load error: $e');
+    debugPrintStack(stackTrace: stack);
   }
+}
+
 
   // ✅ API connection test کریں
   void _testConnection() async {

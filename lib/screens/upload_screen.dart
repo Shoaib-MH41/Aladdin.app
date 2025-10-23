@@ -35,12 +35,12 @@ class _UploadScreenState extends State<UploadScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$type file selected: ${file.name}")),
+          SnackBar(content: Text("$type فائل منتخب ہو گئی: ${file.name}")),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error picking file: $e")),
+        SnackBar(content: Text("فائل منتخب کرنے میں خرابی: $e")),
       );
     }
   }
@@ -79,7 +79,7 @@ class _UploadScreenState extends State<UploadScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Upload Assets"),
+        title: const Text("ایسٹس اپ لوڈ کریں"),
         backgroundColor: Colors.deepPurple,
       ),
       body: Padding(
@@ -99,7 +99,7 @@ class _UploadScreenState extends State<UploadScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "📋 Project Summary",
+                      "📋 پروجیکٹ کا خلاصہ",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -110,12 +110,12 @@ class _UploadScreenState extends State<UploadScreen> {
 
                     _buildSummaryRow(
                       icon: Icons.devices,
-                      label: "Platforms",
+                      label: "پلیٹ فارمز",
                       value: project.platforms.join(', '),
                     ),
                     _buildSummaryRow(
                       icon: Icons.code,
-                      label: "Framework",
+                      label: "فریم ورک",
                       value: project.framework,
                     ),
 
@@ -123,25 +123,25 @@ class _UploadScreenState extends State<UploadScreen> {
                     if (project.platforms.contains("Web"))
                       _buildSummaryRow(
                         icon: Icons.web,
-                        label: "Web Build",
-                        value: project.features['webBuild'] ?? "Default",
+                        label: "ویب بلڈ",
+                        value: project.features['webBuild'] ?? "ڈیفالٹ",
                       ),
 
                     // ✅ NULL SAFETY FIX - default values added
                     _buildSummaryRow(
                       icon: Icons.animation,
-                      label: "Animation",
-                      value: project.features['animation'] ?? 'none', // ✅ FIXED
+                      label: "اینی میشن",
+                      value: project.features['animation'] ?? 'کوئی نہیں',
                     ),
                     _buildSummaryRow(
                       icon: Icons.font_download,
-                      label: "Font",
-                      value: project.features['font'] ?? 'default', // ✅ FIXED
+                      label: "فونٹ",
+                      value: project.features['font'] ?? 'ڈیفالٹ',
                     ),
                     _buildSummaryRow(
                       icon: Icons.cloud,
-                      label: "API Integration",
-                      value: project.features['api'] ?? 'none', // ✅ ADDED
+                      label: "API انٹیگریشن",
+                      value: project.features['api'] ?? 'کوئی نہیں',
                     ),
                   ],
                 ),
@@ -154,8 +154,8 @@ class _UploadScreenState extends State<UploadScreen> {
             // ✅ NULL SAFETY FIX - default values added
             if ((project.features['animation'] ?? 'none') != "none") ...[
               _buildUploadSection(
-                title: "Animation File",
-                subtitle: "Upload Lottie JSON animation file (.json)",
+                title: "اینی میشن فائل",
+                subtitle: "Lottie JSON اینی میشن فائل اپ لوڈ کریں (.json)",
                 icon: Icons.animation,
                 file: _animationFile,
                 type: "Animation",
@@ -166,8 +166,8 @@ class _UploadScreenState extends State<UploadScreen> {
 
             if ((project.features['font'] ?? 'default') != "default") ...[
               _buildUploadSection(
-                title: "Custom Font",
-                subtitle: "Upload TTF/OTF font file (.ttf, .otf)",
+                title: "اپنا فونٹ",
+                subtitle: "TTF/OTF فونٹ فائل اپ لوڈ کریں (.ttf, .otf)",
                 icon: Icons.font_download,
                 file: _fontFile,
                 type: "Font",
@@ -177,8 +177,8 @@ class _UploadScreenState extends State<UploadScreen> {
             ],
 
             _buildUploadSection(
-              title: "App Icon",
-              subtitle: "Upload custom app icon (.png, .jpg, .svg)",
+              title: "ایپ آئیکن",
+              subtitle: "اپنا ایپ آئیکن اپ لوڈ کریں (.png, .jpg, .svg)",
               icon: Icons.image,
               file: _iconFile,
               type: "Icon",
@@ -215,7 +215,7 @@ class _UploadScreenState extends State<UploadScreen> {
                       }
                     : null,
                 child: const Text(
-                  "Continue to AI Chat",
+                  "AI چیٹ پر جائیں",
                   style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
@@ -343,7 +343,7 @@ class _UploadScreenState extends State<UploadScreen> {
                     ),
                     onPressed: () => _pickFile(type),
                     child: Text(
-                      file != null ? "Change File" : "Select File",
+                      file != null ? "فائل تبدیل کریں" : "فائل منتخب کریں",
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),

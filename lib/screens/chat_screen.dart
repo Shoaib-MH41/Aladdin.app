@@ -49,9 +49,9 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
 
     try {
-      // ✅ درست prompt بنائیں
+      // ✅ درست prompt بنائیں - اب universal generateCode استعمال کریں
       String smartPrompt = """
-آپ ایک Flutter expert ہیں۔ مکمل، چلنے کے قابل Flutter کوڈ بنائیں۔
+آپ ایک ${_project.framework} expert ہیں۔ مکمل، چلنے کے قابل کوڈ بنائیں۔
 
 **ضروریات:**
 $text
@@ -62,17 +62,20 @@ $text
 - ضروری assets: ${_project.assets.keys.join(', ')}
 
 **ہدایات:**
-1. صرف Dart کوڈ لوٹائیں، وضاحت نہیں
+1. صرف کوڈ لوٹائیں، وضاحت نہیں
 2. تمام necessary imports شامل کریں
-3. MaterialApp اور Scaffold استعمال کریں
+3. مکمل working app ہو
 4. کوئی syntax errors نہ ہوں
-5. مکمل working app ہو
 
 **صرف کوڈ لوٹائیں:**
 """;
 
-      // ✅ Gemini سے کوڈ جنریٹ کریں
-      final String generatedCode = await widget.geminiService.generateFlutterCode(smartPrompt);
+      // ✅ درست method استعمال کریں - generateFlutterCode کی بجائے generateCode
+      final String generatedCode = await widget.geminiService.generateCode(
+        prompt: smartPrompt,
+        framework: _project.framework,
+        platforms: _project.platforms,
+      );
 
       // AI message بنائیں
       final aiMsg = ChatMessage(
@@ -80,7 +83,7 @@ $text
         sender: "ai",
         text: generatedCode,
         timestamp: DateTime.now(),
-        isCode: true, // ✅ یہ کوڈ ہے
+        isCode: true,
       );
 
       setState(() {
@@ -89,11 +92,10 @@ $text
       });
 
       // ✅ GitHub پر automatically save کریں
-      if (_isValidFlutterCode(generatedCode)) {
+      if (_isValidCode(generatedCode, _project.framework)) {
         final repoName = '${_project.name}_${DateTime.now().millisecondsSinceEpoch}';
         final repoUrl = await widget.githubService.createRepository(repoName, generatedCode);
         
-        // ✅ کامیابی کا message دکھائیں
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ کوڈ GitHub پر محفوظ ہو گیا!'),
@@ -117,10 +119,21 @@ $text
     }
   }
 
-  bool _isValidFlutterCode(String code) {
-    return code.contains('import') && 
-           code.contains('void main') && 
-           code.contains('MaterialApp');
+  bool _isValidCode(String code, String framework) {
+    switch (framework.toLowerCase()) {
+      case 'flutter':
+        return code.contains('import') && code.contains('void main');
+      case 'react':
+        return code.contains('import') && (code.contains('function') || code.contains('const'));
+      case 'vue':
+        return code.contains('<template>') && code.contains('<script>');
+      case 'android native':
+        return code.contains('package') && code.contains('class');
+      case 'html':
+        return code.contains('<!DOCTYPE') || code.contains('<html>');
+      default:
+        return code.isNotEmpty && code.length > 10;
+    }
   }
 
   void _viewGeneratedCode() {
@@ -143,6 +156,7 @@ $text
       arguments: {
         'code': lastAIMessage.text,
         'projectName': _project.name,
+        'framework': _project.framework, // ✅ فریم ورک بھی پاس کریں
       }
     );
   }
@@ -150,17 +164,19 @@ $text
   void _debugCurrentCode() async {
     if (_messages.isEmpty) return;
     
-    final lastAIMessage = _messages.lastWhere(
-      (msg) => msg.sender == "ai" && msg.isCode,
-    );
-    
-    if (lastAIMessage.text.contains('//')) return; // اگر کوڈ نہیں ہے
-    
-    setState(() => _isAIThinking = true);
-    
     try {
+      final lastAIMessage = _messages.lastWhere(
+        (msg) => msg.sender == "ai" && msg.isCode,
+      );
+      
+      // ✅ کوڈ کی validation بہتر بنائیں
+      if (lastAIMessage.text.trim().isEmpty || 
+          lastAIMessage.text.startsWith('// ابھی تک')) return;
+      
+      setState(() => _isAIThinking = true);
+      
       final debugPrompt = """
-اس Flutter کوڈ میں ممکنہ مسائل ڈھونڈیں اور بہتر بنائیں:
+اس ${_project.framework} کوڈ میں ممکنہ مسائل ڈھونڈیں اور بہتر بنائیں:
 
 کوڈ:
 ${lastAIMessage.text}
@@ -172,7 +188,11 @@ ${lastAIMessage.text}
 4. صرف درست شدہ کوڈ لوٹائیں
 """;
 
-      final debuggedCode = await widget.geminiService.generateFlutterCode(debugPrompt);
+      final debuggedCode = await widget.geminiService.generateCode(
+        prompt: debugPrompt,
+        framework: _project.framework,
+        platforms: _project.platforms,
+      );
       
       final debugMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -189,6 +209,9 @@ ${lastAIMessage.text}
       
     } catch (e) {
       setState(() => _isAIThinking = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ڈیبگ ناکام: $e'))
+      );
     }
   }
 
@@ -200,13 +223,11 @@ ${lastAIMessage.text}
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
-          // ✅ کوڈ دیکھنے کا بٹن
           IconButton(
             icon: Icon(Icons.code),
             tooltip: 'جنریٹڈ کوڈ دیکھیں',
             onPressed: _isAIThinking ? null : _viewGeneratedCode,
           ),
-          // ✅ ڈیبگ کا بٹن
           IconButton(
             icon: Icon(Icons.bug_report),
             tooltip: 'کوڈ ڈیبگ کریں',
@@ -216,7 +237,6 @@ ${lastAIMessage.text}
       ),
       body: Column(
         children: [
-          // ✅ پروجیکٹ انفارمیشن
           Container(
             padding: EdgeInsets.all(12),
             color: Colors.blue.shade50,
@@ -232,7 +252,6 @@ ${lastAIMessage.text}
             ),
           ),
           
-          // ✅ میسجز list
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.all(8.0),
@@ -244,7 +263,6 @@ ${lastAIMessage.text}
             ),
           ),
           
-          // ✅ thinking indicator
           if (_isAIThinking)
             Container(
               padding: EdgeInsets.all(8),
@@ -261,7 +279,6 @@ ${lastAIMessage.text}
               ),
             ),
           
-          // ✅ input area
           Padding(
             padding: EdgeInsets.all(8.0),
             child: Row(
@@ -313,7 +330,6 @@ ${lastAIMessage.text}
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ✅ sender name
                 Text(
                   isUser ? "آپ" : "AI اسسٹنٹ",
                   style: TextStyle(
@@ -324,7 +340,6 @@ ${lastAIMessage.text}
                 ),
                 SizedBox(height: 4),
                 
-                // ✅ message content
                 if (msg.isCode && !isUser)
                   _buildCodeWidget(msg.text)
                 else
@@ -335,7 +350,6 @@ ${lastAIMessage.text}
                     ),
                   ),
                 
-                // ✅ timestamp
                 SizedBox(height: 4),
                 Text(
                   "${msg.timestamp.hour}:${msg.timestamp.minute.toString().padLeft(2, '0')}",
@@ -353,10 +367,29 @@ ${lastAIMessage.text}
   }
 
   Widget _buildCodeWidget(String code) {
+    // ✅ فریم ورک کے مطابق language select کریں
+    String language = 'dart';
+    switch (_project.framework.toLowerCase()) {
+      case 'flutter':
+        language = 'dart';
+        break;
+      case 'react':
+      case 'vue':
+        language = 'javascript';
+        break;
+      case 'android native':
+        language = 'kotlin';
+        break;
+      case 'html':
+        language = 'html';
+        break;
+      default:
+        language = 'dart';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ✅ کوڈ کے لیے special styling
         Container(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -368,7 +401,7 @@ ${lastAIMessage.text}
             scrollDirection: Axis.horizontal,
             child: HighlightView(
               code.length > 500 ? code.substring(0, 500) + "\n// ... مزید کوڈ" : code,
-              language: 'dart',
+              language: language, // ✅ dynamic language
               theme: githubTheme,
               padding: EdgeInsets.all(8),
               textStyle: TextStyle(fontFamily: 'monospace', fontSize: 12),

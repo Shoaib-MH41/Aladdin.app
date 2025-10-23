@@ -16,9 +16,14 @@ dependencies:
   file_picker: ^6.1.1
   url_launcher: ^6.2.0
   
-  # 🌟 Termux integration کے لیے - version کم کریں
-  external_path: ^1.0.0  # ✅ نیا version
-  # permission_handler: ^11.0.0  # ❌ عارضی طور پر ہٹائیں
+  # 🌟 Termux integration کے لیے
+  external_path: ^1.0.0
+  
+  # 🌟 نئی packages Gemini + GitHub کے لیے
+  flutter_highlight: ^5.0.0        # ✅ کوڈ syntax highlighting
+  google_generative_ai: ^0.2.0     # ✅ Gemini AI official package
+  github: ^9.0.0                   # ✅ GitHub API integration
+  shared_preferences: ^2.2.2       # ✅ API keys ذخیرہ کرنے کے لیے
 
 dev_dependencies:
   flutter_test:

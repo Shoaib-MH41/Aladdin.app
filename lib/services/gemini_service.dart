@@ -11,7 +11,6 @@ class GeminiService {
     _initializeModel();
   }
 
-  // ✅ API key کے بغیر بھی کام چل سکے
   Future<void> _initializeModel() async {
     try {
       final savedKey = await getSavedApiKey();
@@ -23,10 +22,9 @@ class GeminiService {
         );
         _isInitialized = true;
       } else {
-        // ✅ Default demo key - user بعد میں اپنی key ڈال سکتا ہے
         _model = GenerativeModel(
           model: 'gemini-pro',
-          apiKey: 'AIzaSyB0OXLqeOY4e19eYr3xXQwOD yahan apni key daalen', // Replace with your key
+          apiKey: 'AIzaSyB0OXLqeOY4e19eYr3xXQwOD_yahan_apni_key_daalen',
         );
         _isInitialized = true;
       }
@@ -36,7 +34,6 @@ class GeminiService {
     }
   }
 
-  // ✅ API key کو save/retrieve کرنے کے لیے
   Future<void> saveApiKey(String apiKey) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -61,7 +58,6 @@ class GeminiService {
     }
   }
 
-  // ✅ API key کو remove کرنے کے لیے
   Future<void> removeApiKey() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -72,10 +68,8 @@ class GeminiService {
     }
   }
 
-  // ✅ Service کی status چیک کرنے کے لیے
   bool isInitialized() => _isInitialized;
 
-  // ✅ Universal code generation - کسی بھی فریم ورک کے لیے
   Future<String> generateCode({
     required String prompt,
     required String framework,
@@ -97,7 +91,6 @@ class GeminiService {
       
       String generatedCode = response.text?.trim() ?? '';
       
-      // ✅ اگر response خالی ہے تو error throw کریں
       if (generatedCode.isEmpty) {
         throw Exception('AI نے کوئی کوڈ جنریٹ نہیں کیا۔ براہ کرم دوبارہ کوشش کریں۔');
       }
@@ -108,7 +101,6 @@ class GeminiService {
     }
   }
 
-  // ✅ ہر فریم ورک کے لیے الگ prompt بنانا
   String _buildFrameworkPrompt(
     String userPrompt, 
     String framework, 
@@ -118,160 +110,136 @@ class GeminiService {
     
     switch (framework.toLowerCase()) {
       case 'react':
-        return """
+        return '''
 You are a React.js expert. Generate COMPLETE, READY-TO-RUN React code.
 
-**USER REQUIREMENT:**
+USER REQUIREMENT:
 $userPrompt
 
-**TECHNICAL SPECIFICATIONS:**
+TECHNICAL SPECIFICATIONS:
 - Framework: React.js with functional components
 - Platforms: $platformInfo
 - Use React Hooks (useState, useEffect)
 - Include modern CSS styling
 - Make it a complete working component
 
-**IMPORTANT INSTRUCTIONS:**
+IMPORTANT INSTRUCTIONS:
 1. Return ONLY JavaScript/JSX code
 2. No explanations, comments, or markdown
 3. Include all necessary imports
 4. Ensure no syntax errors
 5. The code should run directly
 
-**RETURN ONLY THE CODE:**
-""";
+RETURN ONLY THE CODE:
+''';
 
       case 'vue':
-        return """
+        return '''
 You are a Vue.js expert. Generate COMPLETE, READY-TO-RUN Vue.js code.
 
-**USER REQUIREMENT:**
+USER REQUIREMENT:
 $userPrompt
 
-**TECHNICAL SPECIFICATIONS:**
+TECHNICAL SPECIFICATIONS:
 - Framework: Vue.js 3 with Composition API
 - Platforms: $platformInfo
 - Use <template>, <script setup>, <style>
 - Include modern CSS styling
 - Make it a complete working component
 
-**IMPORTANT INSTRUCTIONS:**
+IMPORTANT INSTRUCTIONS:
 1. Return ONLY Vue.js code
 2. No explanations, comments, or markdown
 3. Include complete single-file component
 4. Ensure no syntax errors
 5. The code should run directly
 
-**RETURN ONLY THE CODE:**
-""";
+RETURN ONLY THE CODE:
+''';
 
       case 'android native':
-        return """
+        return '''
 You are an Android Kotlin expert. Generate COMPLETE, READY-TO-RUN Android code.
 
-**USER REQUIREMENT:**
+USER REQUIREMENT:
 $userPrompt
 
-**TECHNICAL SPECIFICATIONS:**
+TECHNICAL SPECIFICATIONS:
 - Framework: Android Native with Kotlin
 - Platforms: $platformInfo
 - Use MainActivity.kt and XML layouts
 - Follow Material Design guidelines
 - Make it a complete working app
 
-**IMPORTANT INSTRUCTIONS:**
+IMPORTANT INSTRUCTIONS:
 1. Return ONLY Kotlin and XML code
 2. No explanations, comments, or markdown
 3. Include complete file structure
 4. Ensure no syntax errors
 5. The code should run directly
 
-**RETURN ONLY THE CODE:**
-""";
+RETURN ONLY THE CODE:
+''';
 
       case 'html':
-        return """
+        return '''
 You are a web development expert. Generate COMPLETE, READY-TO-RUN HTML/CSS/JS code.
 
-**USER REQUIREMENT:**
+USER REQUIREMENT:
 $userPrompt
 
-**TECHNICAL SPECIFICATIONS:**
+TECHNICAL SPECIFICATIONS:
 - Framework: HTML5, CSS3, JavaScript
 - Platforms: $platformInfo
 - Use modern responsive design
 - Include complete styling
 - Make it a complete working webpage
 
-**IMPORTANT INSTRUCTIONS:**
+IMPORTANT INSTRUCTIONS:
 1. Return ONLY HTML/CSS/JS code
 2. No explanations, comments, or markdown
 3. Include complete file in one response
 4. Ensure no syntax errors
 5. The webpage should run directly in browser
 
-**RETURN ONLY THE CODE:**
-""";
+RETURN ONLY THE CODE:
+''';
 
       case 'flutter':
       default:
-        return """
+        return '''
 You are a Flutter expert. Generate COMPLETE, READY-TO-RUN Flutter code.
 
-**USER REQUIREMENT:**
+USER REQUIREMENT:
 $userPrompt
 
-**TECHNICAL SPECIFICATIONS:**
+TECHNICAL SPECIFICATIONS:
 - Framework: Flutter/Dart
 - Platforms: $platformInfo
 - Use MaterialApp and Scaffold
 - Include all necessary imports
 - Make it a complete working app
 
-**IMPORTANT INSTRUCTIONS:**
+IMPORTANT INSTRUCTIONS:
 1. Return ONLY Dart code
 2. No explanations, comments, or markdown
 3. Include void main() and runApp()
 4. Ensure no syntax errors
 5. The code should run directly with "flutter run"
 
-**RETURN ONLY THE CODE:**
-""";
+RETURN ONLY THE CODE:
+''';
     }
   }
 
-  // ✅ جنریٹڈ کوڈ کو صاف کرنا
   String _cleanGeneratedCode(String code, String framework) {
-    // ✅ Markdown code blocks کو remove کریں
     code = code.replaceAll(RegExp(r'```[a-z]*\n'), '');
     code = code.replaceAll('```', '');
-    
-    // ✅ Excess whitespace کو remove کریں
     code = code.trim();
-    
-    // ✅ Framework-specific validation
-    switch (framework.toLowerCase()) {
-      case 'flutter':
-        if (!code.contains('import') || !code.contains('void main')) {
-          throw Exception('غیر معقول Flutter کوڈ۔ براہ کرم دوبارہ کوشش کریں۔');
-        }
-        break;
-      case 'react':
-        if (!code.contains('import') || !code.contains('function') && !code.contains('const')) {
-          throw Exception('غیر معقول React کوڈ۔ براہ کرم دوبارہ کوشش کریں۔');
-        }
-        break;
-      case 'vue':
-        if (!code.contains('<template>') || !code.contains('<script>')) {
-          throw Exception('غیر معقول Vue کوڈ۔ براہ کرم دوبارہ کوشش کریں۔');
-        }
-        break;
-    }
     
     return code;
   }
 
-  // ✅ کوڈ ڈیبگ کرنا
   Future<String> debugCode({
     required String faultyCode,
     required String errorDescription,
@@ -286,7 +254,47 @@ $userPrompt
       String debugPrompt = """
 Debug and fix this $framework code:
 
-**ORIGINAL REQUIREMENT:**
+ORIGINAL REQUIREMENT:
 $originalPrompt
 
-**FAULTY CODE:**
+FAULTY CODE:
+$faultyCode
+
+ERROR EXPERIENCED:
+$errorDescription
+
+INSTRUCTIONS:
+1. Analyze and fix the issue
+2. Return ONLY the corrected code
+3. No explanations or comments
+4. Maintain the original functionality
+5. Ensure the fixed code runs without errors
+
+RETURN ONLY THE CORRECTED CODE:
+""";
+
+      final content = Content.text(debugPrompt);
+      final response = await _model.generateContent(content);
+      
+      String fixedCode = response.text?.trim() ?? faultyCode;
+      
+      return _cleanGeneratedCode(fixedCode, framework);
+    } catch (e) {
+      throw Exception('Debugging failed: $e');
+    }
+  }
+
+  Future<bool> testConnection() async {
+    if (!_isInitialized) return false;
+
+    try {
+      final testPrompt = "Generate a simple 'Hello World' Flutter app";
+      final content = Content.text(testPrompt);
+      final response = await _model.generateContent(content);
+      
+      return response.text != null && response.text!.contains('Hello');
+    } catch (e) {
+      return false;
+    }
+  }
+}

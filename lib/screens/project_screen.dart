@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/project_service.dart';
 import '../models/project_model.dart';
+import '../services/project_service.dart';
+import '../services/gemini_service.dart'; // ✅ import شامل کریں
+import '../services/github_service.dart'; // ✅ import شامل کریں
 
 class ProjectScreen extends StatefulWidget {
   final GeminiService? geminiService;
@@ -40,9 +42,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
     final projects = _service.getProjects();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("My Projects")),
+      appBar: AppBar(title: const Text("میرے پروجیکٹس")),
       body: projects.isEmpty
-          ? const Center(child: Text("No projects yet. Create one!"))
+          ? const Center(child: Text("ابھی تک کوئی پروجیکٹ نہیں ہے۔ نیا پروجیکٹ بنائیں!"))
           : ListView.builder(
               itemCount: projects.length,
               itemBuilder: (context, index) {
@@ -51,7 +53,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   child: ListTile(
                     title: Text(p.name),
                     subtitle: Text(
-                        "Framework: ${p.framework} | Platforms: ${p.platforms.join(', ')}"),
+                        "فریم ورک: ${p.framework} | پلیٹ فارم: ${p.platforms.join(', ')}"),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _deleteProject(p.id),

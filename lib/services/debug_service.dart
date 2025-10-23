@@ -1,32 +1,37 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/debug_model.dart';
 
 class DebugService {
   final String apiKey;
-  final String baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
   DebugService(this.apiKey);
 
-  Future<DebugResponse> debugFlutterCode(DebugRequest request) async {
+  // ✅ کوڈ جنریٹ کرنا
+  Future<String> generateCode({
+    required String prompt,
+    required String framework,
+    required List<String> platforms,
+  }) async {
     try {
-      final prompt = _buildDebugPrompt(request);
-      
       final response = await http.post(
-        Uri.parse('$baseUrl/models/gemini-pro:generateContent?key=$apiKey'),
+        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'contents': [
             {
               'parts': [
-                {'text': prompt}
+                {
+                  'text': '''
+                  Generate $framework code for: $prompt
+                  Platforms: ${platforms.join(', ')}
+                  Return only code without explanations:
+                  '''
+                }
               ]
             }
           ],
           'generationConfig': {
-            'temperature': 0.1,
-            'topK': 32,
-            'topP': 0.8,
+            'temperature': 0.7,
             'maxOutputTokens': 2048,
           }
         }),
@@ -34,30 +39,59 @@ class DebugService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final generatedText = data['candidates'][0]['content']['parts'][0]['text'];
-        
-        return _parseGeminiResponse(generatedText, request.faultyCode);
+        return data['candidates'][0]['content']['parts'][0]['text'] ?? '// کوڈ نہیں ملا';
       } else {
         throw Exception('API Error: ${response.statusCode}');
       }
     } catch (e) {
-      return DebugResponse(
-        fixedCode: request.faultyCode,
-        explanation: 'Debugging failed: $e',
-        rootCause: 'Unknown',
-        preventionTips: [],
-        success: false,
-      );
+      throw Exception('کوڈ جنریٹ کرنے میں ناکامی: $e');
     }
   }
 
-  String _buildDebugPrompt(DebugRequest request) {
-    return """
-**FLUTTER CODE DEBUGGING REQUEST**
+  // ✅ کوڈ ڈیبگ کرنا
+  Future<String> debugFlutterCode({
+    required String faultyCode,
+    required String errorDescription,
+    required String originalPrompt,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {
+                  'text': '''
+                  Debug this code:
+                  $faultyCode
+                  
+                  Error: $errorDescription
+                  
+                  Original: $originalPrompt
+                  
+                  Return only fixed code:
+                  '''
+                }
+              ]
+            }
+          ],
+          'generationConfig': {
+            'temperature': 0.3,
+            'maxOutputTokens': 2048,
+          }
+        }),
+      );
 
-**ORIGINAL REQUIREMENTS:**
-${request.originalPrompt}
-
-**FAULTY CODE:**
-```dart
-${request.faultyCode}
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['candidates'][0]['content']['parts'][0]['text'] ?? faultyCode;
+      } else {
+        return faultyCode;
+      }
+    } catch (e) {
+      return faultyCode;
+    }
+  }
+}

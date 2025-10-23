@@ -33,6 +33,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
+  # 🌟 Android permissions
+  permissions:
+    - internet
+    - read_external_storage
+    - write_external_storage
+  
   # 🌟 Assets کو عارضی طور پر comment کریں
   # assets:
   #   - assets/images/

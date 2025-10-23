@@ -6,30 +6,35 @@ class AIService {
     try {
       print("🤖 AI Service called with: $userMessage");
       
-      // ✅ Gemini API call کریں
+      // ✅ Gemini API call
       final String aiResponse = await GeminiService.generateFlutterCode(userMessage);
-      
+
+      // ✅ اگر response خالی ہو تو fallback
+      final safeResponse = aiResponse.isNotEmpty
+          ? aiResponse
+          : "// ⚠️ Gemini returned an empty response. Please try again.";
+
       print("✅ AI Response received");
-      
+
       return ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         sender: "ai",
-        text: aiResponse,
+        text: safeResponse,
         timestamp: DateTime.now(),
       );
     } catch (e) {
       print("❌ AI Service error: $e");
       
-      // ✅ Better error message
+      // ✅ Better error message with fallback UI
       return ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         sender: "ai",
         text: """
-// 🔧 AI Service is Initializing...
+// ⚙️ Gemini AI Service Initializing...
 
 // Your request: "$userMessage"
 
-// Temporary response - Gemini AI will be ready soon!
+// Temporary response while Gemini connects
 
 import 'package:flutter/material.dart';
 
@@ -46,7 +51,7 @@ class MyApp extends StatelessWidget {
         ),
         body: Center(
           child: Text(
-            'Hello! Your app for: $userMessage',
+            'Hello! Your app for: "$userMessage"',
             style: TextStyle(fontSize: 20),
             textAlign: TextAlign.center,
           ),
@@ -56,7 +61,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-💡 Tip: Gemini AI integration is in progress...
+💡 Tip: Gemini API integration is in progress...
 """,
         timestamp: DateTime.now(),
       );

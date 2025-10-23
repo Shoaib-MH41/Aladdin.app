@@ -1,15 +1,18 @@
 class ChatMessage {
   final String id;
-  final String sender; // "user" یا "ai"
+  final String sender; // "user" or "ai"
   final String text;
   final DateTime timestamp;
+  final bool isCode; // ✅ parameter شامل کریں
 
   ChatMessage({
     required this.id,
     required this.sender,
     required this.text,
     required this.timestamp,
+    this.isCode = false, // ✅ ڈیفالٹ ویلیو
   });
+}
 
   // Map میں بدلنا (API/Database کے لیے)
   Map<String, dynamic> toMap() {

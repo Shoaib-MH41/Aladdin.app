@@ -1,32 +1,29 @@
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class GeminiService {
+  // ✅ API key environment سے لی جاتی ہے (security purpose)
   static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
-  static const String _apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+  static const String _apiUrl =
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
   static bool get isApiKeyValid => _apiKey.isNotEmpty;
 
+  /// Generate complete Flutter app code from user prompt
   static Future<String> generateFlutterCode(String userPrompt) async {
-    if (!isApiKeyValid) {
-      return _getFallbackCode(userPrompt);
-    }
+    if (!isApiKeyValid) return _fallbackCode(userPrompt);
 
-    try {
-      String smartPrompt = """
-You are a Flutter expert. Create complete, runnable Flutter code for: $userPrompt
+    final prompt = """
+You are a senior Flutter developer.
+Write a COMPLETE Flutter app for this idea: "$userPrompt"
 
-Requirements:
-- Use Material Design
+- Use Material 3 design
 - Make it responsive
-- Add proper imports
-- Return only Dart code without explanations
-- The code should compile successfully
-
-Return the code in a single code block.
+- Include all imports
+- Output ONLY runnable Flutter code (no explanation)
 """;
 
+    try {
       final response = await http.post(
         Uri.parse('$_apiUrl?key=$_apiKey'),
         headers: {'Content-Type': 'application/json'},
@@ -34,110 +31,75 @@ Return the code in a single code block.
           "contents": [
             {
               "parts": [
-                {"text": smartPrompt}
+                {"text": prompt}
               ]
             }
           ],
           "generationConfig": {
-            "temperature": 0.7,
+            "temperature": 0.6,
             "topK": 40,
-            "topP": 0.95,
-            "maxOutputTokens": 2048,
+            "topP": 0.9,
+            "maxOutputTokens": 2048
           }
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['candidates'] != null && data['candidates'].isNotEmpty) {
-          final generatedText = data['candidates'][0]['content']['parts'][0]['text'];
-          return _extractCode(generatedText);
-        } else {
-          return _getFallbackCode(userPrompt);
+        final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'];
+        if (text != null && text.isNotEmpty) {
+          return _extractCode(text);
         }
-      } else {
-        print('Gemini API error: ${response.statusCode} - ${response.body}');
-        return _getFallbackCode(userPrompt);
       }
+
+      print('⚠️ Gemini error: ${response.statusCode} → ${response.body}');
+      return _fallbackCode(userPrompt);
     } catch (e) {
-      print('Error generating code: $e');
-      return _getFallbackCode(userPrompt);
+      print('❌ Error generating code: $e');
+      return _fallbackCode(userPrompt);
     }
   }
 
-  static String _extractCode(String generatedText) {
-    generatedText = generatedText.trim();
-    if (generatedText.contains('```dart')) {
-      return generatedText.split('```dart')[1].split('```')[0].trim();
-    } else if (generatedText.contains('```')) {
-      return generatedText.split('```')[1].split('```')[0].trim();
-    } else if (generatedText.startsWith('import ') || generatedText.contains('void main()')) {
-      return generatedText;
+  /// Extract pure Dart code from Gemini response
+  static String _extractCode(String raw) {
+    raw = raw.trim();
+    if (raw.contains('```dart')) {
+      return raw.split('```dart')[1].split('```')[0].trim();
+    } else if (raw.contains('```')) {
+      return raw.split('```')[1].split('```')[0].trim();
     }
-    return _getFallbackCode('Generic Flutter App');
+    return raw;
   }
 
-  static String _getFallbackCode(String prompt) {
-    return """
+  /// Fallback code if Gemini fails
+  static String _fallbackCode(String prompt) => """
 import 'package:flutter/material.dart';
 
-void main() {
-runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-@override
-Widget build(BuildContext context) {
-  return MaterialApp(
-    title: 'AI Generated App',
-    theme: ThemeData(
-      primarySwatch: Colors.blue,
-      useMaterial3: true,
-    ),
-    home: MyHomePage(prompt: '$prompt'),
-  );
-}
-}
-
-class MyHomePage extends StatelessWidget {
-final String prompt;
-
-MyHomePage({required this.prompt});
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('Your AI App'),
-      backgroundColor: Colors.deepPurple,
-    ),
-    body: Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.auto_awesome, size: 50, color: Colors.deepPurple),
-          SizedBox(height: 20),
-          Text(
-            'AI App Factory',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
+      home: Scaffold(
+        appBar: AppBar(title: const Text('AI Generated App')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.auto_awesome, size: 60, color: Colors.blue),
+              const SizedBox(height: 20),
+              Text('For idea: "$prompt"',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 18)),
+            ],
           ),
-          SizedBox(height: 10),
-          Text(
-            'For: $prompt',
-            style: TextStyle(fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {},
-            child: Text('Get Started'),
-          ),
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 """;
-  }
 }

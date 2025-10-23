@@ -5,7 +5,7 @@ import 'screens/selection_screen.dart';
 import 'screens/upload_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
-import 'screens/settings_screen.dart'; // ✅ SettingsScreen شامل کریں
+import 'screens/settings_screen.dart';
 import 'services/gemini_service.dart';
 import 'services/github_service.dart';
 
@@ -19,7 +19,7 @@ class AladdinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Services کو بغیر keys کے initialize کریں - user بعد میں settings میں ڈالے گا
+    // ✅ Services initialize کریں
     final geminiService = GeminiService();
     final githubService = GitHubService();
 
@@ -48,19 +48,19 @@ class AladdinApp extends StatelessWidget {
               githubService: githubService,
             ),
         '/projects': (context) => ProjectScreen(
-              geminiService: geminiService,
-              githubService: githubService,
+              geminiService: geminiService, // ✅ درست parameter
+              githubService: githubService, // ✅ درست parameter
             ),
         '/select': (context) => SelectionScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
         '/upload': (context) => const UploadScreen(),
-        '/chat': (context) => ChatScreen( // ✅ const ہٹائیں اور services پاس کریں
+        '/chat': (context) => ChatScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
-        '/settings': (context) => SettingsScreen( // ✅ نیا route شامل کریں
+        '/settings': (context) => SettingsScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
@@ -68,12 +68,16 @@ class AladdinApp extends StatelessWidget {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           
           if (arguments == null) {
-            return const BuildScreen(generatedCode: '// کوئی کوڈ نہیں ملا');
+            return const BuildScreen(
+              generatedCode: '// کوئی کوڈ نہیں ملا',
+              projectName: 'نا معلوم پروجیکٹ',
+            );
           }
           
           return BuildScreen(
             generatedCode: arguments['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
             projectName: arguments['projectName'] ?? 'نیا پروجیکٹ',
+            framework: arguments['framework'] ?? 'Flutter', // ✅ نیا parameter
           );
         },
       },

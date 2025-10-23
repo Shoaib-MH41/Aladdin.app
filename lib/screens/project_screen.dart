@@ -3,7 +3,14 @@ import '../services/project_service.dart';
 import '../models/project_model.dart';
 
 class ProjectScreen extends StatefulWidget {
-  const ProjectScreen({super.key});
+  final GeminiService? geminiService;
+  final GitHubService? githubService;
+
+  const ProjectScreen({
+    super.key,
+    this.geminiService,
+    this.githubService,
+  });
 
   @override
   State<ProjectScreen> createState() => _ProjectScreenState();

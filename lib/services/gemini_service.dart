@@ -87,7 +87,9 @@ class GeminiService {
       );
 
       final content = Content.text(frameworkSpecificPrompt);
-      final response = await _model.generateContent(content);
+
+      // ✅ FIXED: pass as Iterable<Content>
+      final response = await _model.generateContent([content]);
       
       String generatedCode = response.text?.trim() ?? '';
       
@@ -236,7 +238,6 @@ RETURN ONLY THE CODE:
     code = code.replaceAll(RegExp(r'```[a-z]*\n'), '');
     code = code.replaceAll('```', '');
     code = code.trim();
-    
     return code;
   }
 
@@ -274,10 +275,11 @@ RETURN ONLY THE CORRECTED CODE:
 """;
 
       final content = Content.text(debugPrompt);
-      final response = await _model.generateContent(content);
+
+      // ✅ FIXED
+      final response = await _model.generateContent([content]);
       
       String fixedCode = response.text?.trim() ?? faultyCode;
-      
       return _cleanGeneratedCode(fixedCode, framework);
     } catch (e) {
       throw Exception('Debugging failed: $e');
@@ -290,7 +292,9 @@ RETURN ONLY THE CORRECTED CODE:
     try {
       final testPrompt = "Generate a simple 'Hello World' Flutter app";
       final content = Content.text(testPrompt);
-      final response = await _model.generateContent(content);
+
+      // ✅ FIXED
+      final response = await _model.generateContent([content]);
       
       return response.text != null && response.text!.contains('Hello');
     } catch (e) {

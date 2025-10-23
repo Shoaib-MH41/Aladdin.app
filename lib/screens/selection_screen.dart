@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/project_model.dart';
+import '../services/gemini_service.dart'; // ✅ شامل کریں
+import '../services/github_service.dart'; // ✅ شامل کریں
 
 class SelectionScreen extends StatefulWidget {
-  const SelectionScreen({super.key});
+  final GeminiService geminiService; // ✅ شامل کریں
+  final GitHubService githubService; // ✅ شامل کریں
+
+  const SelectionScreen({
+    super.key,
+    required this.geminiService, // ✅ شامل کریں
+    required this.githubService, // ✅ شامل کریں
+  });
 
   @override
   State<SelectionScreen> createState() => _SelectionScreenState();
@@ -14,19 +23,19 @@ class _SelectionScreenState extends State<SelectionScreen> {
   String _animation = "none";
   String _font = "default";
   String _apiIntegration = "none";
-  String _webBuild = "flutter_web"; // ✅ Default web build
+  String _webBuild = "flutter_web";
 
   void _saveSelection() {
     if (_platforms.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select at least one platform")),
+        const SnackBar(content: Text("براہ کرم کم از کم ایک پلیٹ فارم منتخب کریں")),
       );
       return;
     }
 
     final project = Project(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: "Project_${DateTime.now().millisecondsSinceEpoch}",
+      name: "پروجیکٹ_${DateTime.now().millisecondsSinceEpoch}",
       framework: _framework,
       platforms: _platforms,
       assets: {},
@@ -34,7 +43,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
         'animation': _animation,
         'font': _font,
         'api': _apiIntegration,
-        'webBuild': _webBuild, // ✅ save web build type
+        'webBuild': _webBuild,
       },
     );
 
@@ -50,7 +59,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Create New Project"),
+        title: const Text("نیا پروجیکٹ بنائیں"),
         backgroundColor: Colors.deepPurple,
       ),
       body: Padding(
@@ -59,12 +68,13 @@ class _SelectionScreenState extends State<SelectionScreen> {
           children: [
             // Platforms Section
             _buildSection(
-              title: "Platforms *",
+              title: "پلیٹ فارمز *",
               icon: Icons.devices,
               children: [
                 _buildCheckbox("Android", "Android"),
                 _buildCheckbox("iOS", "iOS"),
                 _buildCheckbox("Web", "Web"),
+                _buildCheckbox("Desktop", "Desktop"), // ✅ نیا option
               ],
             ),
 
@@ -79,13 +89,13 @@ class _SelectionScreenState extends State<SelectionScreen> {
 
             // Animation Section
             _buildSection(
-              title: "Animation",
+              title: "اینی میشن",
               icon: Icons.animation,
               children: [
-                _buildRadio("None", "animation", "none", "No animation effects"),
-                _buildRadio("Fade In", "animation", "fade", "Fade animation effects"),
-                _buildRadio("Slide In", "animation", "slide", "Slide animation effects"),
-                _buildRadio("Bounce", "animation", "bounce", "Bounce animation effects"),
+                _buildRadio("کوئی نہیں", "animation", "none", "کوئی اینی میشن نہیں"),
+                _buildRadio("فید ان", "animation", "fade", "فید اینی میشن اثرات"),
+                _buildRadio("سلائیڈ ان", "animation", "slide", "سلائیڈ اینی میشن اثرات"),
+                _buildRadio("باؤنس", "animation", "bounce", "باؤنس اینی میشن اثرات"),
               ],
             ),
 
@@ -93,13 +103,13 @@ class _SelectionScreenState extends State<SelectionScreen> {
 
             // Font Section
             _buildSection(
-              title: "Font Style",
+              title: "فونٹ سٹائل",
               icon: Icons.font_download,
               children: [
-                _buildRadio("Default", "font", "default", "Use system default font"),
-                _buildRadio("Poppins", "font", "poppins", "Modern Poppins font"),
-                _buildRadio("Roboto", "font", "roboto", "Google Roboto font"),
-                _buildRadio("Custom", "font", "custom", "Upload your own font file"),
+                _buildRadio("ڈیفالٹ", "font", "default", "سسٹم ڈیفالٹ فونٹ استعمال کریں"),
+                _buildRadio("پوپنز", "font", "poppins", "جدید پوپنز فونٹ"),
+                _buildRadio("روبوتو", "font", "roboto", "گوگل روبوتو فونٹ"),
+                _buildRadio("اپنا فونٹ", "font", "custom", "اپنا فونٹ فائل اپ لوڈ کریں"),
               ],
             ),
 
@@ -107,12 +117,12 @@ class _SelectionScreenState extends State<SelectionScreen> {
 
             // API Section
             _buildSection(
-              title: "API Integration",
+              title: "API انٹیگریشن",
               icon: Icons.cloud,
               children: [
-                _buildRadio("None", "api", "none", "No API integration"),
-                _buildRadio("REST API", "api", "rest", "Connect to RESTful APIs"),
-                _buildRadio("Firebase", "api", "firebase", "Firebase backend services"),
+                _buildRadio("کوئی نہیں", "api", "none", "کوئی API انٹیگریشن نہیں"),
+                _buildRadio("REST API", "api", "rest", "RESTful APIs سے جڑیں"),
+                _buildRadio("فائر بیس", "api", "firebase", "فائر بیس بیکنڈ سروسز"),
               ],
             ),
 
@@ -128,7 +138,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
                 ),
                 onPressed: _saveSelection,
                 child: const Text(
-                  "Create Project",
+                  "پروجیکٹ بنائیں",
                   style: TextStyle(fontSize: 16),
                 ),
               ),
@@ -205,7 +215,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
               children: const [
                 Icon(Icons.code, color: Colors.deepPurple),
                 SizedBox(width: 10),
-                Text("Framework",
+                Text("فریم ورک",
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
@@ -214,8 +224,13 @@ class _SelectionScreenState extends State<SelectionScreen> {
             DropdownButton<String>(
               value: _framework,
               isExpanded: true,
-              items: ["Flutter", "React Native", "Kotlin", "Swift"]
-                  .map((fw) => DropdownMenuItem(value: fw, child: Text(fw)))
+              items: [
+                "Flutter", 
+                "React", 
+                "Vue", 
+                "Android Native", 
+                "HTML/CSS/JS" // ✅ نئے options
+              ].map((fw) => DropdownMenuItem(value: fw, child: Text(fw)))
                   .toList(),
               onChanged: (val) => setState(() => _framework = val!),
             ),
@@ -236,7 +251,7 @@ class _SelectionScreenState extends State<SelectionScreen> {
               children: const [
                 Icon(Icons.web, color: Colors.deepPurple),
                 SizedBox(width: 10),
-                Text("Web Build Type",
+                Text("ویب بلڈ قسم",
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
@@ -286,4 +301,3 @@ class _SelectionScreenState extends State<SelectionScreen> {
     }
   }
 }
-

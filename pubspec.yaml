@@ -20,7 +20,7 @@ dependencies:
   external_path: ^1.0.0
   
   # 🌟 نئی packages Gemini + GitHub کے لیے
-  flutter_highlight: ^5.0.0        # ✅ کوڈ syntax highlighting
+  flutter_highlight: ^0.7.0        # ✅ کوڈ syntax highlighting
   google_generative_ai: ^0.2.0     # ✅ Gemini AI official package
   github: ^9.0.0                   # ✅ GitHub API integration
   shared_preferences: ^2.2.2       # ✅ API keys ذخیرہ کرنے کے لیے

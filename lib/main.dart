@@ -209,7 +209,7 @@ class AladdinApp extends StatelessWidget {
                 onPressed: () {
                   // ہوم پر واپس جائیں
                   Navigator.pushNamedAndRemoveUntil(
-                    navigator!.context, 
+            Navigator.of(context), 
                     '/home', 
                     (route) => false
                   );

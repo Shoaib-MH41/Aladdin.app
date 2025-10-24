@@ -346,4 +346,4 @@ API URL: ${apiTemplate.url}
                 CircleAvatar(
                   backgroundColor: Colors.blue,
                   child: IconButton(
-                    icon: Icon(Icons.send, color: Colors.white.Fatal error: Failed to write to connection!
+                    icon: Icon(Icons.send, color: Colors.white).Fatal error: Failed to write to connection!

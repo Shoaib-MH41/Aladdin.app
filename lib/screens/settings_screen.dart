@@ -298,12 +298,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            _connectionStatus ? 'کنکشن کامیاب' : 'کنکشن ناکام',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: _connectionStatus ? Colors.green : Colors.orange,
-                            ),
-                          ),
+  _connectionStatus ? 'کنکشن کامیاب' : 'API جوڑے',  // ✅ "ناکام" کو "جوڑے" سے بدلیں
+  style: TextStyle(
+    fontWeight: FontWeight.bold,
+    color: _connectionStatus ? Colors.green : Colors.blue, // ✅ رنگ بھی بدلیں
+  ),
+),
                         ],
                       ),
                       SizedBox(height: 8),

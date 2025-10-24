@@ -109,9 +109,9 @@ class AladdinApp extends StatelessWidget {
 
         // 💬 چیٹ سکرین
         '/chat': (context) => ChatScreen(
-              geminiService: geminiService,
-              githubService: githubService,
-            ),
+      geminiService: geminiService,
+      githubService: githubService,
+    ),
 
         // ⚙️ سیٹنگز سکرین
         '/settings': (context) => SettingsScreen(
@@ -207,13 +207,11 @@ class AladdinApp extends StatelessWidget {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // ہوم پر واپس جائیں
-                  Navigator.pushNamedAndRemoveUntil(
-            Navigator.of(context), 
-                    '/home', 
-                    (route) => false
-                  );
-                },
+  Navigator.of(context).pushNamedAndRemoveUntil(
+    '/home', 
+    (route) => false
+  );
+},
                 child: Text('ہوم پر واپس جائیں'),
               ),
             ],

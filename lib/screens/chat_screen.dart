@@ -5,6 +5,7 @@ import '../models/project_model.dart';
 import '../models/chat_model.dart';
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
+import '../screens/api_integration_screen.dart';
 
 // API ٹیمپلیٹ ماڈل
 class ApiTemplate {
@@ -249,6 +250,84 @@ API URL: ${apiTemplate.url}
     _sendMessage(prompt);
   }
 
+  // میسج ببل بنانے کا فنکشن
+  Widget _buildMessageBubble(ChatMessage msg) {
+    final isUser = msg.sender == "user";
+    
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isUser)
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.blue,
+              child: Icon(Icons.auto_awesome, size: 16, color: Colors.white),
+            ),
+          SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isUser ? Colors.blue.shade100 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: msg.isCode
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.code, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'کوڈ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black87,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: HighlightView(
+                            msg.text,
+                            language: _project.framework.toLowerCase(),
+                            theme: githubTheme,
+                            padding: EdgeInsets.all(8),
+                            textStyle: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      msg.text,
+                      style: TextStyle(fontSize: 14),
+                    ),
+            ),
+          ),
+          if (isUser)
+            SizedBox(width: 8),
+          if (isUser)
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.green,
+              child: Icon(Icons.person, size: 16, color: Colors.white),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -346,4 +425,15 @@ API URL: ${apiTemplate.url}
                 CircleAvatar(
                   backgroundColor: Colors.blue,
                   child: IconButton(
-                    icon: Icon(Icons.send, color: Colors.white).Fatal error: Failed to write to connection!
+                    icon: Icon(Icons.send, color: Colors.white),
+                    onPressed: () => _sendMessage(_controller.text),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

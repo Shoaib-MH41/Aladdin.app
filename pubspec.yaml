@@ -6,26 +6,19 @@ version: 1.0.0+1
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
-  dependencies:
+dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  file_picker: ^6.1.1
+  file_picker: ^6.1.1                    # ✅ صرف ایک بار
   permission_handler: ^11.0.0
-  
-  # 🌟 ضروری packages
-  http: ^1.1.0
-  file_picker: ^6.1.1
-  url_launcher: ^6.2.0
-  
-  # 🌟 Termux integration کے لیے
-  external_path: ^1.0.0
-  
-  # 🌟 نئی packages Gemini + GitHub کے لیے
-  flutter_highlight: ^0.7.0        # ✅ کوڈ syntax highlighting
-  google_generative_ai: ^0.2.0     # ✅ Gemini AI official package
-  github: ^9.0.0                   # ✅ GitHub API integration
-  shared_preferences: ^2.2.2       # ✅ API keys ذخیرہ کرنے کے لیے
+  http: ^1.1.0                           # ✅ یہ نئی package
+  url_launcher: ^6.2.0                   # ✅ یہ نئی package
+  external_path: ^1.0.0                  # ✅ یہ نئی package
+  flutter_highlight: ^0.7.0              # ✅ یہ نئی package
+  google_generative_ai: ^0.2.0           # ✅ یہ نئی package
+  github: ^9.0.0                         # ✅ یہ نئی package
+  shared_preferences: ^2.2.2             # ✅ یہ نئی package
 
 dev_dependencies:
   flutter_test:

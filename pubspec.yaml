@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
+  file_picker: ^5.6.1        # ✅ یہ شامل کریں
+  permission_handler: ^11.0.0 # ✅ یہ شامل کریں
   
   # 🌟 ضروری packages
   http: ^1.1.0

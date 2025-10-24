@@ -6,8 +6,10 @@ import 'screens/upload_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/api_integration_screen.dart'; // ✅ نیا import شامل کریں
 import 'services/gemini_service.dart';
 import 'services/github_service.dart';
+import 'services/api_service.dart'; // ✅ نیا import شامل کریں
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,7 @@ class AladdinApp extends StatelessWidget {
     // ✅ Services initialize کریں
     final geminiService = GeminiService();
     final githubService = GitHubService();
+    final apiService = ApiService(); // ✅ نیا service شامل کریں
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
@@ -48,8 +51,8 @@ class AladdinApp extends StatelessWidget {
               githubService: githubService,
             ),
         '/projects': (context) => ProjectScreen(
-              geminiService: geminiService, // ✅ درست parameter
-              githubService: githubService, // ✅ درست parameter
+              geminiService: geminiService,
+              githubService: githubService,
             ),
         '/select': (context) => SelectionScreen(
               geminiService: geminiService,
@@ -64,6 +67,21 @@ class AladdinApp extends StatelessWidget {
               geminiService: geminiService,
               githubService: githubService,
             ),
+        '/api-integration': (context) { // ✅ نیا route شامل کریں
+          final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          
+          if (arguments == null) {
+            return Scaffold(
+              appBar: AppBar(title: Text('خرابی')),
+              body: Center(child: Text('API انٹیگریشن کے لیے ڈیٹا نہیں ملا')),
+            );
+          }
+          
+          return ApiIntegrationScreen(
+            apiTemplate: arguments['apiTemplate'],
+            onApiKeySubmitted: arguments['onApiKeySubmitted'],
+          );
+        },
         '/build': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           
@@ -77,7 +95,7 @@ class AladdinApp extends StatelessWidget {
           return BuildScreen(
             generatedCode: arguments['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
             projectName: arguments['projectName'] ?? 'نیا پروجیکٹ',
-            framework: arguments['framework'] ?? 'Flutter', // ✅ نیا parameter
+            framework: arguments['framework'] ?? 'Flutter',
           );
         },
       },

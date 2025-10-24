@@ -15,7 +15,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
     required this.geminiService,
-    required this.geminiService,
+required this.githubService,
   });
 
   @override

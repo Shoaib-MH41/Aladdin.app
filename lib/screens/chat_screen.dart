@@ -345,6 +345,7 @@ API URL: ${apiTemplate.url}
                 ? null
                 : () {
                     _startApiIntegration(ApiTemplate(
+  id: 'sample_api_${DateTime.now().millisecondsSinceEpoch}',
                       name: 'Sample API',
                       provider: 'Sample Provider',
                       url: 'https://api.sample.com',

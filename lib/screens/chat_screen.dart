@@ -3,18 +3,10 @@ import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
 import '../models/project_model.dart';
 import '../models/chat_model.dart';
+import '../models/api_template_model.dart'; // ✅ نیا امپورٹ شامل کیا
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
 import '../screens/api_integration_screen.dart';
-
-// API ٹیمپلیٹ ماڈل
-class ApiTemplate {
-  final String name;
-  final String provider;
-  final String url;
-
-  ApiTemplate({required this.name, required this.provider, required this.url});
-}
 
 class ChatScreen extends StatefulWidget {
   final GeminiService geminiService;
@@ -23,7 +15,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
     required this.geminiService,
-    required this.githubService,
+    required this.geminiService,
   });
 
   @override

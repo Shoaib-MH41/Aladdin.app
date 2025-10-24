@@ -4,7 +4,8 @@ import 'package:flutter/services.dart'; // ✅ Clipboard کے لیے شامل ک
 
 class BuildScreen extends StatefulWidget {
   final String generatedCode;
-  final String projectName;
+  final String 
+  ;
   final String? framework; // ✅ نیا parameter
   
   const BuildScreen({

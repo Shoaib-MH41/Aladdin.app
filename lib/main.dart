@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ میموری مینجمنٹ کے لیے
 
 // سکرینز کے امپورٹس
 import 'screens/home_screen.dart';
@@ -9,7 +10,7 @@ import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/api_integration_screen.dart';
-import 'screens/publish_guide_screen.dart'; // ✅ نیا شامل کیا
+import 'screens/publish_guide_screen.dart';
 
 // سروسز کے امپورٹس
 import 'services/gemini_service.dart';
@@ -17,8 +18,34 @@ import 'services/github_service.dart';
 import 'services/api_service.dart';
 
 void main() {
+  // ✅ پہلے Flutter انجن کو تیار کریں
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // ✅ میموری مینجمنٹ کو بہتر بنائیں
+  _optimizePerformance();
+  
+  // ✅ ایپ کو چلائیں
   runApp(const AladdinApp());
+}
+
+// ✅ میموری اور performance کو بہتر بنانے کے لیے فنکشن
+void _optimizePerformance() {
+  // 1. میموری کلیئرنس کو فعال کریں
+  SystemChannels.skia.invokeMethod('webGCTest');
+  
+  // 2. orientation کو لاک کریں (optional)
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
+  // 3. status bar کو transparent بنائیں
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
 }
 
 class AladdinApp extends StatelessWidget {
@@ -33,7 +60,9 @@ class AladdinApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false, // ✅ ڈیبگ بینر ہٹائیں
+      
+      // ✅ تھیم سیٹنگز
       themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
@@ -41,7 +70,7 @@ class AladdinApp extends StatelessWidget {
           seedColor: Colors.blue,
           brightness: Brightness.light,
         ),
-        fontFamily: 'Urdu', // ✅ اردو فونٹ کے لیے
+        fontFamily: 'Urdu',
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -49,9 +78,13 @@ class AladdinApp extends StatelessWidget {
           seedColor: Colors.blue,
           brightness: Brightness.dark,
         ),
-        fontFamily: 'Urdu', // ✅ اردو فونٹ کے لیے
+        fontFamily: 'Urdu',
       ),
+      
+      // ✅ ابتدائی روٹ
       initialRoute: '/home',
+      
+      // ✅ تمام روٹس
       routes: {
         // 🏠 ہوم سکرین
         '/home': (context) => HomeScreen(
@@ -91,10 +124,7 @@ class AladdinApp extends StatelessWidget {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           
           if (arguments == null) {
-            return Scaffold(
-              appBar: AppBar(title: Text('خرابی')),
-              body: Center(child: Text('API انٹیگریشن کے لیے ڈیٹا نہیں ملا')),
-            );
+            return _buildErrorScreen('API انٹیگریشن کے لیے ڈیٹا نہیں ملا');
           }
           
           return ApiIntegrationScreen(
@@ -121,15 +151,12 @@ class AladdinApp extends StatelessWidget {
           );
         },
 
-        // 🏪 پبلش گائیڈ سکرین (نیا شامل کیا گیا)
+        // 🏪 پبلش گائیڈ سکرین
         '/publish-guide': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           
           if (arguments == null) {
-            return Scaffold(
-              appBar: AppBar(title: Text('خرابی')),
-              body: Center(child: Text('پبلش گائیڈ کے لیے ڈیٹا نہیں ملا')),
-            );
+            return _buildErrorScreen('پبلش گائیڈ کے لیے ڈیٹا نہیں ملا');
           }
           
           return PublishGuideScreen(
@@ -140,7 +167,7 @@ class AladdinApp extends StatelessWidget {
         },
       },
 
-      // 🏠 ڈیفالٹ ہوم اگر کوئی روٹ نہیں ملا
+      // ❌ اگر کوئی روٹ نہیں ملا تو
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
           builder: (context) => HomeScreen(
@@ -149,6 +176,50 @@ class AladdinApp extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  // ✅ ایرر سکرین بنانے کا فنکشن
+  Widget _buildErrorScreen(String message) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('خرابی'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              SizedBox(height: 20),
+              Text(
+                message,
+                style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  // ہوم پر واپس جائیں
+                  Navigator.pushNamedAndRemoveUntil(
+                    navigator!.context, 
+                    '/home', 
+                    (route) => false
+                  );
+                },
+                child: Text('ہوم پر واپس جائیں'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

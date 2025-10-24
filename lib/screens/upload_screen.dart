@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/project_model.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -16,34 +17,46 @@ class _UploadScreenState extends State<UploadScreen> {
   File? _fontFile;
 
   Future<void> _pickFile(String type) async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: _getAllowedExtensions(type),
-      );
-
-      if (result != null && result.files.single.path != null) {
-        PlatformFile file = result.files.first;
-        setState(() {
-          if (type == 'Animation') {
-            _animationFile = File(file.path!);
-          } else if (type == 'Icon') {
-            _iconFile = File(file.path!);
-          } else if (type == 'Font') {
-            _fontFile = File(file.path!);
-          }
-        });
-
+  try {
+    // ✅ Permission چیک کریں
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+      if (!status.isGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$type فائل منتخب ہو گئی: ${file.name}")),
+          SnackBar(content: Text("Storage permission denied")),
         );
+        return;
       }
-    } catch (e) {
+    }
+
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _getAllowedExtensions(type),
+    );
+
+    if (result != null && result.files.single.path != null) {
+      PlatformFile file = result.files.first;
+      setState(() {
+        if (type == 'Animation') {
+          _animationFile = File(file.path!);
+        } else if (type == 'Icon') {
+          _iconFile = File(file.path!);
+        } else if (type == 'Font') {
+          _fontFile = File(file.path!);
+        }
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("فائل منتخب کرنے میں خرابی: $e")),
+        SnackBar(content: Text("$type فائل منتخب ہو گئی: ${file.name}")),
       );
     }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("فائل منتخب کرنے میں خرابی: $e")),
+    );
   }
+}
 
   List<String> _getAllowedExtensions(String type) {
     switch (type) {

@@ -350,7 +350,9 @@ API URL: ${apiTemplate.url}
     provider: 'Sample Provider',
     url: 'https://api.sample.com',
     description: 'Sample API integration',
-    keyRequired: true, // ✅ یہ لائن شامل کریں
+    keyRequired: true,
+    freeTierInfo: '1000 requests per month',
+    category: 'General',
   ));
 },
           ),

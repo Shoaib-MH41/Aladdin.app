@@ -206,13 +206,8 @@ class AladdinApp extends StatelessWidget {
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-  Navigator.of(context).pushNamedAndRemoveUntil(
-    '/home', 
-    (route) => false
-  );
-},
-                child: Text('ہوم پر واپس جائیں'),
+               onPressed: () {},
+child: Text('ہوم پر واپس جائیں'), ,
               ),
             ],
           ),

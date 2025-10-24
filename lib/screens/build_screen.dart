@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/services.dart'; // ✅ Clipboard کے لیے شامل کریں
+import 'package:flutter/services.dart';
+
+// نئی فائلیں شامل کریں
+import '../services/app_publisher.dart';
+import '../screens/publish_guide_screen.dart';
 
 class BuildScreen extends StatefulWidget {
   final String generatedCode;
-  final String 
-  ;
-  final String? framework; // ✅ نیا parameter
+  final String projectName;
+  final String? framework;
   
   const BuildScreen({
     super.key, 
     required this.generatedCode,
-    this.projectName = 'MyApp',
-    this.framework = 'Flutter', // ✅ ڈیفالٹ ویلیو
+    required this.projectName,
+    this.framework = 'Flutter',
   });
 
   @override
@@ -23,7 +26,7 @@ class _BuildScreenState extends State<BuildScreen> {
   bool _isCopying = false;
   String _copyResult = '';
 
-  // ✅ Clipboard functionality درست کریں
+  // ✅ کوڈ کاپی کرنے کا فنکشن
   void _copyCodeToClipboard() async {
     setState(() {
       _isCopying = true;
@@ -31,7 +34,6 @@ class _BuildScreenState extends State<BuildScreen> {
     });
 
     try {
-      // کوڈ کو clipboard میں کاپی کریں
       await Clipboard.setData(ClipboardData(text: widget.generatedCode));
       
       setState(() {
@@ -39,7 +41,7 @@ class _BuildScreenState extends State<BuildScreen> {
         _copyResult = '✅ کوڈ کاپی ہو گیا! اب آپ اسے اپنے پروجیکٹ میں پیسٹ کر سکتے ہیں۔';
       });
 
-      // 3 سیکنڈ بعد message غائب ہو جائے
+      // 3 سیکنڈ بعد میسج غائب ہو جائے
       Future.delayed(Duration(seconds: 3), () {
         if (mounted) {
           setState(() {
@@ -55,7 +57,7 @@ class _BuildScreenState extends State<BuildScreen> {
     }
   }
 
-  // ✅ Termux کھولنے کے لیے درست method
+  // ✅ Termux کھولنے کا فنکشن
   void _openTermux() async {
     const url = 'termux://';
     if (await canLaunchUrl(Uri.parse(url))) {
@@ -67,7 +69,16 @@ class _BuildScreenState extends State<BuildScreen> {
     }
   }
 
-  // ✅ فریم ورک کے مطابق instructions
+  // ✅ پلے اسٹور کے لیے تیار کرنے کا فنکشن
+  void _prepareForPlayStore() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => PublishGuideScreen(
+      appName: widget.projectName,
+      generatedCode: widget.generatedCode,
+      framework: widget.framework ?? 'Flutter',
+    )));
+  }
+
+  // ✅ فریم ورک کے مطابق ہدایات
   List<Widget> _getFrameworkInstructions() {
     switch (widget.framework?.toLowerCase()) {
       case 'react':
@@ -114,13 +125,14 @@ class _BuildScreenState extends State<BuildScreen> {
       appBar: AppBar(
         title: Text('کوڈ - ${widget.projectName}'),
         backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 📋 Instructions - فریم ورک کے مطابق
+            // 📋 ہدایات کا کارڈ
             Card(
               color: Colors.blue[50],
               child: Padding(
@@ -154,7 +166,7 @@ class _BuildScreenState extends State<BuildScreen> {
 
             SizedBox(height: 20),
 
-            // 📋 Generated Code Preview
+            // 📋 جنریٹ شدہ کوڈ
             Row(
               children: [
                 Text(
@@ -189,7 +201,7 @@ class _BuildScreenState extends State<BuildScreen> {
             
             SizedBox(height: 20),
             
-            // 🔧 Action Buttons
+            // 🔧 پہلے دو بٹن (کاپی اور Termux)
             Row(
               children: [
                 Expanded(
@@ -207,13 +219,13 @@ class _BuildScreenState extends State<BuildScreen> {
                   ),
                 ),
                 SizedBox(width: 10),
-                if (widget.framework == 'Flutter') // ✅ صرف Flutter کے لیے Termux button
+                if (widget.framework == 'Flutter')
                   ElevatedButton.icon(
                     icon: Icon(Icons.terminal),
                     label: Text('Termux کھولیں'),
                     onPressed: _openTermux,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.green[700],
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 15),
                     ),
@@ -222,8 +234,25 @@ class _BuildScreenState extends State<BuildScreen> {
             ),
             
             SizedBox(height: 10),
+
+            // 🏪 پلے اسٹور بٹن (نیا شامل کیا گیا)
+            Container(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.shop, size: 24),
+                label: Text("پلے اسٹور کے لیے تیار کریں", style: TextStyle(fontSize: 16)),
+                onPressed: _prepareForPlayStore,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                ),
+              ),
+            ),
             
-            // 📝 Result Message
+            SizedBox(height: 10),
+            
+            // 📝 نتیجہ کا میسج
             if (_copyResult.isNotEmpty)
               AnimatedContainer(
                 duration: Duration(milliseconds: 300),
@@ -253,7 +282,7 @@ class _BuildScreenState extends State<BuildScreen> {
     );
   }
 
-  // 🌟 Step builder method
+  // 🌟 ہر قدم کو بنانے کا طریقہ
   Widget _buildStep(String step, String command) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),

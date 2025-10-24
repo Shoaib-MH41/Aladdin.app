@@ -159,14 +159,32 @@ $text
   }
 
   void _debugCurrentCode() async {
-    if (_messages.isEmpty) return;
+    if (_messages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(  // ✅ میسج شامل کریں
+        SnackBar(
+          content: Text('❌ پہلے کوڈ جنریٹ کریں'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     try {
       final lastAIMessage = _messages.lastWhere(
         (msg) => msg.sender == "ai" && msg.isCode,
       );
 
-      if (lastAIMessage.text.trim().isEmpty || lastAIMessage.text.startsWith('// ابھی تک')) return;
+      if (lastAIMessage.text.trim().isEmpty || lastAIMessage.text.startsWith('// ابھی تک')) {
+        ScaffoldMessenger.of(context).showSnackBar(  // ✅ میسج شامل کریں
+          SnackBar(
+            content: Text('❌ پہلے کوڈ جنریٹ کریں'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
 
       setState(() => _isAIThinking = true);
 

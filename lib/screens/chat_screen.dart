@@ -344,12 +344,13 @@ API URL: ${apiTemplate.url}
             onPressed: _isAIThinking
                 ? null
                 : () {
-                    _startApiIntegration(ApiTemplate(
-  id: 'sample_api_${DateTime.now().millisecondsSinceEpoch}',
-                      name: 'Sample API',
-                      provider: 'Sample Provider',
-                      url: 'https://api.sample.com',
-                    ));
+             _startApiIntegration(ApiTemplate(
+  id: 'sample_${DateTime.now().millisecondsSinceEpoch}',
+  name: 'Sample API',
+  provider: 'Sample Provider',
+  url: 'https://api.sample.com',
+  description: 'Sample API integration',
+)),       
                   },
           ),
         ],

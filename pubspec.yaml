@@ -6,12 +6,12 @@ version: 1.0.0+1
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
-dependencies:
+  dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  file_picker: ^5.6.1        # ✅ یہ شامل کریں
-  permission_handler: ^11.0.0 # ✅ یہ شامل کریں
+  file_picker: ^6.1.1
+  permission_handler: ^11.0.0
   
   # 🌟 ضروری packages
   http: ^1.1.0

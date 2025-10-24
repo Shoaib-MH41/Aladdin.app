@@ -344,14 +344,15 @@ API URL: ${apiTemplate.url}
             onPressed: _isAIThinking
                 ? null
                 : () {
-             _startApiIntegration(ApiTemplate(
-  id: 'sample_${DateTime.now().millisecondsSinceEpoch}',
-  name: 'Sample API',
-  provider: 'Sample Provider',
-  url: 'https://api.sample.com',
-  description: 'Sample API integration',
-)),       
-                  },
+  _startApiIntegration(ApiTemplate(
+    id: 'sample_${DateTime.now().millisecondsSinceEpoch}',
+    name: 'Sample API',
+    provider: 'Sample Provider',
+    url: 'https://api.sample.com',
+    description: 'Sample API integration',
+    keyRequired: true, // ✅ یہ لائن شامل کریں
+  ));
+},
           ),
         ],
       ),

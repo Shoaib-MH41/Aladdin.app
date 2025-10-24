@@ -3,7 +3,7 @@ import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
 import '../models/project_model.dart';
 import '../models/chat_model.dart';
-import '../models/api_template_model.dart'; // ✅ نیا امپورٹ شامل کیا
+import '../models/api_template_model.dart';
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
 import '../screens/api_integration_screen.dart';
@@ -15,7 +15,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
     required this.geminiService,
-required this.githubService,
+    required this.githubService,
   });
 
   @override
@@ -27,6 +27,32 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isAIThinking = false;
   late Project _project;
+
+  // ✅ نیا: کنکشن چیک ویری ایبلز
+  bool _isConnected = false;
+  String _connectionMessage = "⚠️ اپنا کنکشن جوڑیں";
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnection();
+  }
+
+  // ✅ کنکشن چیک کرنے والا فنکشن
+  Future<void> _checkConnection() async {
+    try {
+      await widget.githubService.checkConnection(); // یہ فنکشن GitHubService میں بناؤ
+      setState(() {
+        _isConnected = true;
+        _connectionMessage = "✅ کنکشن کامیاب ہے";
+      });
+    } catch (e) {
+      setState(() {
+        _isConnected = false;
+        _connectionMessage = "⚠️ اپنا کنکشن جوڑیں";
+      });
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -92,7 +118,7 @@ $text
 
       if (_isValidCode(generatedCode, _project.framework)) {
         final repoName = '${_project.name}_${DateTime.now().millisecondsSinceEpoch}';
-        final repoUrl = await widget.githubService.createRepository(repoName, generatedCode);
+        await widget.githubService.createRepository(repoName, generatedCode);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -158,9 +184,10 @@ $text
     );
   }
 
+  // ✅ ڈیبگ بٹن: اگر کوئی کوڈ نہیں تو میسج دکھاؤ
   void _debugCurrentCode() async {
     if (_messages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(  // ✅ میسج شامل کریں
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ پہلے کوڈ جنریٹ کریں'),
           backgroundColor: Colors.orange,
@@ -176,7 +203,7 @@ $text
       );
 
       if (lastAIMessage.text.trim().isEmpty || lastAIMessage.text.startsWith('// ابھی تک')) {
-        ScaffoldMessenger.of(context).showSnackBar(  // ✅ میسج شامل کریں
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ پہلے کوڈ جنریٹ کریں'),
             backgroundColor: Colors.orange,
@@ -227,7 +254,6 @@ ${lastAIMessage.text}
     }
   }
 
-  // API انٹیگریشن فنکشنز
   void _startApiIntegration(ApiTemplate apiTemplate) {
     Navigator.push(
       context,
@@ -260,10 +286,9 @@ API URL: ${apiTemplate.url}
     _sendMessage(prompt);
   }
 
-  // میسج ببل بنانے کا فنکشن
   Widget _buildMessageBubble(ChatMessage msg) {
     final isUser = msg.sender == "user";
-    
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: Row(
@@ -291,10 +316,7 @@ API URL: ${apiTemplate.url}
                           children: [
                             Icon(Icons.code, size: 16),
                             SizedBox(width: 4),
-                            Text(
-                              'کوڈ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                            Text('کوڈ', style: TextStyle(fontWeight: FontWeight.bold)),
                           ],
                         ),
                         SizedBox(height: 8),
@@ -319,10 +341,7 @@ API URL: ${apiTemplate.url}
                         ),
                       ],
                     )
-                  : Text(
-                      msg.text,
-                      style: TextStyle(fontSize: 14),
-                    ),
+                  : Text(msg.text, style: TextStyle(fontSize: 14)),
             ),
           ),
           if (isUser)
@@ -362,36 +381,63 @@ API URL: ${apiTemplate.url}
             onPressed: _isAIThinking
                 ? null
                 : () {
-  _startApiIntegration(ApiTemplate(
-    id: 'sample_${DateTime.now().millisecondsSinceEpoch}',
-    name: 'Sample API',
-    provider: 'Sample Provider',
-    url: 'https://api.sample.com',
-    description: 'Sample API integration',
-    keyRequired: true,
-    freeTierInfo: '1000 requests per month',
-    category: 'General',
-  ));
-},
+                    _startApiIntegration(
+                      ApiTemplate(
+                        id: 'sample_${DateTime.now().millisecondsSinceEpoch}',
+                        name: 'Sample API',
+                        provider: 'Sample Provider',
+                        url: 'https://api.sample.com',
+                        description: 'Sample API integration',
+                        keyRequired: true,
+                        freeTierInfo: '1000 requests per month',
+                        category: 'General',
+                      ),
+                    );
+                  },
           ),
         ],
       ),
       body: Column(
         children: [
+          // ✅ فریم ورک + کنکشن اسٹیٹس
           Container(
             padding: EdgeInsets.all(12),
             color: Colors.blue.shade50,
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info, color: Colors.blue, size: 16),
-                SizedBox(width: 8),
-                Text(
-                  "فریم ورک: ${_project.framework} | پلیٹ فارم: ${_project.platforms.join(', ')}",
-                  style: TextStyle(fontSize: 12, color: Colors.blue.shade800),
+                Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      "فریم ورک: ${_project.framework} | پلیٹ فارم: ${_project.platforms.join(', ')}",
+                      style: TextStyle(fontSize: 12, color: Colors.blue.shade800),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      _isConnected ? Icons.check_circle : Icons.warning,
+                      color: _isConnected ? Colors.green : Colors.red,
+                      size: 16,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      _connectionMessage,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _isConnected ? Colors.green.shade800 : Colors.red.shade800,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.all(8.0),

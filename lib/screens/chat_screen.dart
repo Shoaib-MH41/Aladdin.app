@@ -6,6 +6,15 @@ import '../models/chat_model.dart';
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
 
+// API ٹیمپلیٹ ماڈل
+class ApiTemplate {
+  final String name;
+  final String provider;
+  final String url;
+
+  ApiTemplate({required this.name, required this.provider, required this.url});
+}
+
 class ChatScreen extends StatefulWidget {
   final GeminiService geminiService;
   final GitHubService githubService;
@@ -49,7 +58,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
 
     try {
-      // درست prompt بنائیں
       String smartPrompt = """
 آپ ایک ${_project.framework} expert ہیں۔ مکمل، چلنے کے قابل کوڈ بنائیں۔
 
@@ -70,14 +78,12 @@ $text
 صرف کوڈ لوٹائیں:
 """;
 
-      // درست method استعمال کریں
       final String generatedCode = await widget.geminiService.generateCode(
         prompt: smartPrompt,
         framework: _project.framework,
         platforms: _project.platforms,
       );
 
-      // AI message بنائیں
       final aiMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         sender: "ai",
@@ -91,19 +97,17 @@ $text
         _isAIThinking = false;
       });
 
-      // GitHub پر automatically save کریں
       if (_isValidCode(generatedCode, _project.framework)) {
         final repoName = '${_project.name}_${DateTime.now().millisecondsSinceEpoch}';
         final repoUrl = await widget.githubService.createRepository(repoName, generatedCode);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ کوڈ GitHub پر محفوظ ہو گیا!'),
             backgroundColor: Colors.green,
-          )
+          ),
         );
       }
-
     } catch (e) {
       final errorMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -111,7 +115,7 @@ $text
         text: "❌ خرابی: $e\n\nبراہ کرم دوبارہ کوشش کریں یا مسئلہ واضح کریں۔",
         timestamp: DateTime.now(),
       );
-      
+
       setState(() {
         _messages.add(errorMsg);
         _isAIThinking = false;
@@ -138,43 +142,41 @@ $text
 
   void _viewGeneratedCode() {
     if (_messages.isEmpty) return;
-    
+
     final lastAIMessage = _messages.lastWhere(
       (msg) => msg.sender == "ai" && msg.isCode,
       orElse: () => ChatMessage(
-        id: '0', 
-        sender: 'ai', 
-        text: '// ابھی تک کوئی کوڈ جنریٹ نہیں ہوا\n// براہ کرم پہلے ایپ کی تفصیل لکھیں', 
+        id: '0',
+        sender: 'ai',
+        text: '// ابھی تک کوئی کوڈ جنریٹ نہیں ہوا\n// براہ کرم پہلے ایپ کی تفصیل لکھیں',
         timestamp: DateTime.now(),
         isCode: true,
       ),
     );
-    
+
     Navigator.pushNamed(
-      context, 
-      '/build', 
+      context,
+      '/build',
       arguments: {
         'code': lastAIMessage.text,
         'projectName': _project.name,
         'framework': _project.framework,
-      }
+      },
     );
   }
 
   void _debugCurrentCode() async {
     if (_messages.isEmpty) return;
-    
+
     try {
       final lastAIMessage = _messages.lastWhere(
         (msg) => msg.sender == "ai" && msg.isCode,
       );
-      
-      // کوڈ کی validation بہتر بنائیں
-      if (lastAIMessage.text.trim().isEmpty || 
-          lastAIMessage.text.startsWith('// ابھی تک')) return;
-      
+
+      if (lastAIMessage.text.trim().isEmpty || lastAIMessage.text.startsWith('// ابھی تک')) return;
+
       setState(() => _isAIThinking = true);
-      
+
       final debugPrompt = """
 اس ${_project.framework} کوڈ میں ممکنہ مسائل ڈھونڈیں اور بہتر بنائیں:
 
@@ -193,26 +195,58 @@ ${lastAIMessage.text}
         framework: _project.framework,
         platforms: _project.platforms,
       );
-      
+
       final debugMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        sender: "ai", 
+        sender: "ai",
         text: debuggedCode,
         timestamp: DateTime.now(),
         isCode: true,
       );
-      
+
       setState(() {
         _messages.add(debugMsg);
         _isAIThinking = false;
       });
-      
     } catch (e) {
       setState(() => _isAIThinking = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ڈیبگ ناکام: $e'))
+        SnackBar(content: Text('ڈیبگ ناکام: $e')),
       );
     }
+  }
+
+  // API انٹیگریشن فنکشنز
+  void _startApiIntegration(ApiTemplate apiTemplate) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ApiIntegrationScreen(
+          apiTemplate: apiTemplate,
+          onApiKeySubmitted: (apiKey) {
+            _handleApiKeySubmission(apiTemplate, apiKey);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _handleApiKeySubmission(ApiTemplate apiTemplate, String apiKey) {
+    String prompt = """
+میں نے ${apiTemplate.name} کی API key جمع کرا دی ہے۔
+براہ کرم ${apiTemplate.provider} API کے ساتھ مکمل کوڈ بنائیں۔
+
+API Key: $apiKey
+API URL: ${apiTemplate.url}
+
+ہدایات:
+1. مکمل functional app بنائیں
+2. API integration شامل کریں
+3. Error handling شامل کریں
+4. صرف کوڈ لوٹائیں
+""";
+
+    _sendMessage(prompt);
   }
 
   @override
@@ -233,6 +267,19 @@ ${lastAIMessage.text}
             tooltip: 'کوڈ ڈیبگ کریں',
             onPressed: _isAIThinking ? null : _debugCurrentCode,
           ),
+          IconButton(
+            icon: Icon(Icons.api),
+            tooltip: 'API انٹیگریشن',
+            onPressed: _isAIThinking
+                ? null
+                : () {
+                    _startApiIntegration(ApiTemplate(
+                      name: 'Sample API',
+                      provider: 'Sample Provider',
+                      url: 'https://api.sample.com',
+                    ));
+                  },
+          ),
         ],
       ),
       body: Column(
@@ -251,7 +298,6 @@ ${lastAIMessage.text}
               ],
             ),
           ),
-          
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.all(8.0),
@@ -262,7 +308,6 @@ ${lastAIMessage.text}
               },
             ),
           ),
-          
           if (_isAIThinking)
             Container(
               padding: EdgeInsets.all(8),
@@ -278,7 +323,6 @@ ${lastAIMessage.text}
                 ],
               ),
             ),
-          
           Padding(
             padding: EdgeInsets.all(8.0),
             child: Row(
@@ -302,123 +346,4 @@ ${lastAIMessage.text}
                 CircleAvatar(
                   backgroundColor: Colors.blue,
                   child: IconButton(
-                    icon: Icon(Icons.send, color: Colors.white),
-                    onPressed: _isAIThinking ? null : () => _sendMessage(_controller.text),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageBubble(ChatMessage msg) {
-    final isUser = msg.sender == "user";
-    
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
-        child: Card(
-          color: isUser ? Colors.blue : Colors.white,
-          elevation: 2,
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isUser ? "آپ" : "AI اسسٹنٹ",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isUser ? Colors.white : Colors.blue,
-                    fontSize: 12,
-                  ),
-                ),
-                SizedBox(height: 4),
-                
-                if (msg.isCode && !isUser)
-                  _buildCodeWidget(msg.text)
-                else
-                  Text(
-                    msg.text,
-                    style: TextStyle(
-                      color: isUser ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                
-                SizedBox(height: 4),
-                Text(
-                  "${msg.timestamp.hour}:${msg.timestamp.minute.toString().padLeft(2, '0')}",
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isUser ? Colors.white70 : Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCodeWidget(String code) {
-    // فریم ورک کے مطابق language select کریں
-    String language = 'dart';
-    switch (_project.framework.toLowerCase()) {
-      case 'flutter':
-        language = 'dart';
-        break;
-      case 'react':
-      case 'vue':
-        language = 'javascript';
-        break;
-      case 'android native':
-        language = 'kotlin';
-        break;
-      case 'html':
-        language = 'html';
-        break;
-      default:
-        language = 'dart';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: HighlightView(
-              code.length > 500 ? code.substring(0, 500) + "\n// ... مزید کوڈ" : code,
-              language: language,
-              theme: githubTheme,
-              padding: EdgeInsets.all(8),
-              textStyle: TextStyle(fontFamily: 'monospace', fontSize: 12),
-            ),
-          ),
-        ),
-        SizedBox(height: 8),
-        ElevatedButton.icon(
-          icon: Icon(Icons.visibility, size: 16),
-          label: Text("مکمل کوڈ دیکھیں"),
-          onPressed: _viewGeneratedCode,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue.shade50,
-            foregroundColor: Colors.blue,
-          ),
-        ),
-      ],
-    );
-  }
-}
+                    icon: Icon(Icons.send, color: Colors.white.Fatal error: Failed to write to connection!

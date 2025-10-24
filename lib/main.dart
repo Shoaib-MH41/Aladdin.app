@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+// سکرینز کے امپورٹس
 import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
@@ -6,10 +8,13 @@ import 'screens/upload_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/api_integration_screen.dart'; // ✅ نیا import شامل کریں
+import 'screens/api_integration_screen.dart';
+import 'screens/publish_guide_screen.dart'; // ✅ نیا شامل کیا
+
+// سروسز کے امپورٹس
 import 'services/gemini_service.dart';
 import 'services/github_service.dart';
-import 'services/api_service.dart'; // ✅ نیا import شامل کریں
+import 'services/api_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +26,10 @@ class AladdinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Services initialize کریں
+    // ✅ سروسز کو شروع کریں
     final geminiService = GeminiService();
     final githubService = GitHubService();
-    final apiService = ApiService(); // ✅ نیا service شامل کریں
+    final apiService = ApiService();
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
@@ -36,6 +41,7 @@ class AladdinApp extends StatelessWidget {
           seedColor: Colors.blue,
           brightness: Brightness.light,
         ),
+        fontFamily: 'Urdu', // ✅ اردو فونٹ کے لیے
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -43,31 +49,45 @@ class AladdinApp extends StatelessWidget {
           seedColor: Colors.blue,
           brightness: Brightness.dark,
         ),
+        fontFamily: 'Urdu', // ✅ اردو فونٹ کے لیے
       ),
       initialRoute: '/home',
       routes: {
+        // 🏠 ہوم سکرین
         '/home': (context) => HomeScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
+
+        // 📁 پروجیکٹ سکرین
         '/projects': (context) => ProjectScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
+
+        // 🎯 سلیکشن سکرین
         '/select': (context) => SelectionScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
+
+        // 📤 اپلوڈ سکرین
         '/upload': (context) => const UploadScreen(),
+
+        // 💬 چیٹ سکرین
         '/chat': (context) => ChatScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
+
+        // ⚙️ سیٹنگز سکرین
         '/settings': (context) => SettingsScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
-        '/api-integration': (context) { // ✅ نیا route شامل کریں
+
+        // 🔌 API انٹیگریشن سکرین
+        '/api-integration': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           
           if (arguments == null) {
@@ -82,6 +102,8 @@ class AladdinApp extends StatelessWidget {
             onApiKeySubmitted: arguments['onApiKeySubmitted'],
           );
         },
+
+        // 🛠️ بلڈ سکرین
         '/build': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           
@@ -98,6 +120,34 @@ class AladdinApp extends StatelessWidget {
             framework: arguments['framework'] ?? 'Flutter',
           );
         },
+
+        // 🏪 پبلش گائیڈ سکرین (نیا شامل کیا گیا)
+        '/publish-guide': (context) {
+          final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          
+          if (arguments == null) {
+            return Scaffold(
+              appBar: AppBar(title: Text('خرابی')),
+              body: Center(child: Text('پبلش گائیڈ کے لیے ڈیٹا نہیں ملا')),
+            );
+          }
+          
+          return PublishGuideScreen(
+            appName: arguments['appName'] ?? 'میرا ایپ',
+            generatedCode: arguments['generatedCode'] ?? '// کوئی کوڈ نہیں',
+            framework: arguments['framework'] ?? 'Flutter',
+          );
+        },
+      },
+
+      // 🏠 ڈیفالٹ ہوم اگر کوئی روٹ نہیں ملا
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            geminiService: geminiService,
+            githubService: githubService,
+          ),
+        );
       },
     );
   }

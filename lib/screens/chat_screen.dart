@@ -6,7 +6,9 @@ import '../models/chat_model.dart';
 import '../models/api_template_model.dart';
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
+import '../services/ai_api_finder.dart'; // ✅ نیا امپورٹ
 import '../screens/api_integration_screen.dart';
+import '../screens/api_discovery_screen.dart'; // ✅ نیا امپورٹ
 
 class ChatScreen extends StatefulWidget {
   final GeminiService geminiService;
@@ -27,6 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isAIThinking = false;
   late Project _project;
+  late AIApiFinder aiApiFinder; // ✅ نیا variable
 
   // ✅ نیا: کنکشن چیک ویری ایبلز
   bool _isConnected = false;
@@ -35,13 +38,15 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    aiApiFinder = AIApiFinder(geminiService: widget.geminiService); // ✅ initialize
     _checkConnection();
   }
 
   // ✅ کنکشن چیک کرنے والا فنکشن
   Future<void> _checkConnection() async {
     try {
-      await widget.githubService.checkConnection(); // یہ فنکشن GitHubService میں بناؤ
+      // Simple connection test - بس ایک test call
+      await widget.geminiService.testConnection();
       setState(() {
         _isConnected = true;
         _connectionMessage = "✅ کنکشن کامیاب ہے";
@@ -254,6 +259,48 @@ ${lastAIMessage.text}
     }
   }
 
+  // ✅ نیا: AI سے APIs ڈھونڈنے کا فنکشن
+  void _discoverApisWithAI() async {
+    if (_isAIThinking) return;
+
+    setState(() => _isAIThinking = true);
+
+    try {
+      // User کے آخری میسج سے ایپ کی تفصیل لیں
+      String appDescription = '';
+      if (_messages.isNotEmpty) {
+        final userMessages = _messages.where((msg) => msg.sender == "user");
+        if (userMessages.isNotEmpty) {
+          appDescription = userMessages.last.text;
+        }
+      }
+
+      final List<ApiTemplate> discoveredApis = await aiApiFinder.findRelevantApis(
+        appDescription: appDescription.isNotEmpty ? appDescription : _project.name,
+        framework: _project.framework,
+        appName: _project.name,
+      );
+
+      // API ڈسکوری اسکرین پر جائیں
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ApiDiscoveryScreen(
+            discoveredApis: discoveredApis,
+            projectName: _project.name,
+          ),
+        ),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('API ڈسکوری ناکام: $e')),
+      );
+    } finally {
+      setState(() => _isAIThinking = false);
+    }
+  }
+
   void _startApiIntegration(ApiTemplate apiTemplate) {
     Navigator.push(
       context,
@@ -365,6 +412,12 @@ API URL: ${apiTemplate.url}
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
+          // ✅ نیا: API ڈسکوری بٹن
+          IconButton(
+            icon: Icon(Icons.search),
+            tooltip: 'AI سے APIs ڈھونڈیں',
+            onPressed: _isAIThinking ? null : _discoverApisWithAI,
+          ),
           IconButton(
             icon: Icon(Icons.code),
             tooltip: 'جنریٹڈ کوڈ دیکھیں',
@@ -384,13 +437,13 @@ API URL: ${apiTemplate.url}
                     _startApiIntegration(
                       ApiTemplate(
                         id: 'sample_${DateTime.now().millisecondsSinceEpoch}',
-                        name: 'Sample API',
-                        provider: 'Sample Provider',
-                        url: 'https://api.sample.com',
-                        description: 'Sample API integration',
+                        name: 'Google Gemini AI',
+                        provider: 'Google',
+                        url: 'https://makersuite.google.com/app/apikey',
+                        description: 'مفت Gemini AI API key حاصل کریں',
                         keyRequired: true,
-                        freeTierInfo: '1000 requests per month',
-                        category: 'General',
+                        freeTierInfo: 'روزانہ 60 requests مفت',
+                        category: 'AI',
                       ),
                     );
                   },
@@ -487,7 +540,7 @@ API URL: ${apiTemplate.url}
                   backgroundColor: Colors.blue,
                   child: IconButton(
                     icon: Icon(Icons.send, color: Colors.white),
-                    onPressed: () => _sendMessage(_controller.text),
+                    onPressed: _isAIThinking ? null : () => _sendMessage(_controller.text),
                   ),
                 ),
               ],

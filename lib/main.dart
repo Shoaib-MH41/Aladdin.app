@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // ✅ میموری مینجمنٹ کے لیے
 
 // سکرینز کے امپورٹس
+import 'screens/pin_screen.dart'; // ✅ PIN Screen امپورٹ شامل کریں
 import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
@@ -81,11 +82,14 @@ class AladdinApp extends StatelessWidget {
         fontFamily: 'Urdu',
       ),
       
-      // ✅ ابتدائی روٹ
-      initialRoute: '/home',
+      // ✅ ابتدائی روٹ - PIN Screen سے شروع
+      initialRoute: '/pin',
       
       // ✅ تمام روٹس
       routes: {
+        // 🔒 PIN سکرین - نیا entry point
+        '/pin': (context) => PinScreen(),
+
         // 🏠 ہوم سکرین
         '/home': (context) => HomeScreen(
               geminiService: geminiService,
@@ -109,9 +113,9 @@ class AladdinApp extends StatelessWidget {
 
         // 💬 چیٹ سکرین
         '/chat': (context) => ChatScreen(
-      geminiService: geminiService,
-      githubService: githubService,
-    ),
+              geminiService: geminiService,
+              githubService: githubService,
+            ),
 
         // ⚙️ سیٹنگز سکرین
         '/settings': (context) => SettingsScreen(
@@ -167,13 +171,10 @@ class AladdinApp extends StatelessWidget {
         },
       },
 
-      // ❌ اگر کوئی روٹ نہیں ملا تو
+      // ❌ اگر کوئی روٹ نہیں ملا تو PIN پر جائے
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
-          builder: (context) => HomeScreen(
-            geminiService: geminiService,
-            githubService: githubService,
-          ),
+          builder: (context) => PinScreen(),
         );
       },
     );
@@ -205,14 +206,14 @@ class AladdinApp extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 20),
-ElevatedButton(
-  onPressed: () {},
-  child: Text('ہوم پر واپس جائیں'),
-),
-],
-),
-),
-),
-);
-}
+              ElevatedButton(
+                onPressed: () {},
+                child: Text('ہوم پر واپس جائیں'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

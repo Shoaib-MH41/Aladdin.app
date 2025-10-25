@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/gemini_service.dart';
 import '../services/github_service.dart';
+import '../utils/security_helper.dart'; // ✅ secure helper import
 
 class SettingsScreen extends StatefulWidget {
   final GeminiService geminiService;
@@ -19,39 +20,55 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _geminiApiKeyController = TextEditingController();
   final TextEditingController _githubTokenController = TextEditingController();
+
   bool _isTestingConnection = false;
   bool _connectionStatus = false;
   String _testMessage = '';
+  bool _isAuthenticated = false; // ✅ biometric status
 
   @override
   void initState() {
     super.initState();
-    _loadSavedSettings();
+    _authenticateAndLoad();
+  }
+
+  // ✅ Biometric authentication اور secure settings load کریں
+  void _authenticateAndLoad() async {
+    final isAuth = await SecurityHelper.authenticateUser();
+    if (!mounted) return;
+
+    if (isAuth) {
+      setState(() => _isAuthenticated = true);
+      _loadSavedSettings();
+    } else {
+      setState(() {
+        _isAuthenticated = false;
+        _testMessage = '🔒 رسائی محدود ہے، بایومیٹرک تصدیق درکار ہے';
+      });
+    }
   }
 
   // ✅ محفوظ شدہ settings لوڈ کریں
   void _loadSavedSettings() async {
-  try {
-    final savedGeminiKey = await widget.geminiService.getSavedApiKey();
-    final savedGithubToken = await widget.githubService.getSavedToken();
+    try {
+      final savedGeminiKey = await widget.geminiService.getSavedApiKey();
+      final savedGithubToken = await widget.githubService.getSavedToken();
 
-    if (!mounted) return; // 🔒 تاکہ setState اس وقت نہ چلے جب widget dispose ہو جائے
+      if (!mounted) return;
 
-    setState(() {
-      _geminiApiKeyController.text = savedGeminiKey ?? '';
-      _githubTokenController.text = savedGithubToken ?? '';
-    });
+      setState(() {
+        _geminiApiKeyController.text = savedGeminiKey ?? '';
+        _githubTokenController.text = savedGithubToken ?? '';
+      });
 
-    // 🔍 اگر Gemini Key موجود ہے تو کنکشن ٹیسٹ کریں
-    if ((savedGeminiKey ?? '').isNotEmpty) {
-      _testConnection();
+      if ((savedGeminiKey ?? '').isNotEmpty) {
+        _testConnection();
+      }
+    } catch (e, stack) {
+      debugPrint('⚠️ Settings load error: $e');
+      debugPrintStack(stackTrace: stack);
     }
-  } catch (e, stack) {
-    debugPrint('⚠️ Settings load error: $e');
-    debugPrintStack(stackTrace: stack);
   }
-}
-
 
   // ✅ API connection test کریں
   void _testConnection() async {
@@ -69,16 +86,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     try {
-      // ✅ پہلے نئی key سیو کریں
       await widget.geminiService.saveApiKey(_geminiApiKeyController.text);
-      
-      // ✅ connection test کریں
       final isConnected = await widget.geminiService.testConnection();
-      
+
       setState(() {
         _isTestingConnection = false;
         _connectionStatus = isConnected;
-        _testMessage = isConnected 
+        _testMessage = isConnected
             ? '✅ کنکشن کامیاب! Gemini API کام کر رہی ہے'
             : '❌ کنکشن ناکام! براہ کرم key چیک کریں';
       });
@@ -91,134 +105,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ✅ تمام settings سیو کریں
+  // ✅ محفوظ کریں (biometric confirmation + secure save)
   void _saveAllSettings() async {
+    final isAuth = await SecurityHelper.authenticateUser();
+    if (!isAuth) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('🔒 تصدیق ناکام۔ ڈیٹا محفوظ نہیں کیا گیا')),
+      );
+      return;
+    }
+
     try {
-      // ✅ Gemini API key سیو کریں
       if (_geminiApiKeyController.text.isNotEmpty) {
         await widget.geminiService.saveApiKey(_geminiApiKeyController.text);
       }
 
-      // ✅ GitHub token سیو کریں
       if (_githubTokenController.text.isNotEmpty) {
         await widget.githubService.saveToken(_githubTokenController.text);
       }
 
-      // ✅ connection دوبارہ test کریں
       _testConnection();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('✅ ترتیبات محفوظ ہو گئیں'),
           backgroundColor: Colors.green,
-        )
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ محفوظ کرنے میں ناکامی: $e'),
           backgroundColor: Colors.red,
-        )
+        ),
       );
     }
-  }
-
-  // ✅ API key حاصل کرنے کے لیے guide
-  void _showApiKeyGuide() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('API Key کیسے حاصل کریں'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildGuideStep('1.', 'https://aistudio.google.com/ پر جائیں'),
-              _buildGuideStep('2.', 'Google account سے login کریں'),
-              _buildGuideStep('3.', 'Get API key پر کلک کریں'),
-              _buildGuideStep('4.', 'Create API key پر کلک کریں'),
-              _buildGuideStep('5.', 'API key کو کاپی کریں'),
-              _buildGuideStep('6.', 'یہاں پیسٹ کریں'),
-              SizedBox(height: 16),
-              Text(
-                'نوٹ: API key مفت ہے اور روزانہ 60 requests تک',
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.orange,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('سمجھ گیا'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // browser open کرنے کا option
-            },
-            child: Text('ویب سائٹ کھولیں'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGuideStep(String number, String text) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(number, style: TextStyle(fontWeight: FontWeight.bold)),
-          SizedBox(width: 8),
-          Expanded(child: Text(text)),
-        ],
-      ),
-    );
-  }
-
-  // ✅ GitHub token guide
-  void _showGithubTokenGuide() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('GitHub Token کیسے بنائیں'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildGuideStep('1.', 'GitHub پر جائیں اور login کریں'),
-              _buildGuideStep('2.', 'Settings > Developer settings > Personal access tokens'),
-              _buildGuideStep('3.', 'Generate new token پر کلک کریں'),
-              _buildGuideStep('4.', 'Token name دیں (جیسے: AladdinApp)'),
-              _buildGuideStep('5.', 'repo کی permission چیک کریں'),
-              _buildGuideStep('6.', 'Generate token پر کلک کریں'),
-              _buildGuideStep('7.', 'Token کو کاپی کریں اور یہاں پیسٹ کریں'),
-              SizedBox(height: 16),
-              Text(
-                'انتباہ: Token کو محفوظ رکھیں، دوبارہ نہیں دکھائی دے گی',
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('سمجھ گیا'),
-          ),
-        ],
-      ),
-    );
   }
 
   // ✅ تمام ڈیٹا clear کریں
@@ -238,8 +159,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.pop(context);
               try {
                 await widget.geminiService.removeApiKey();
-                // GitHub token remove کا function بنانا ہوگا
-                
+                await widget.githubService.removeToken();
+
                 setState(() {
                   _geminiApiKeyController.clear();
                   _githubTokenController.clear();
@@ -248,11 +169,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 });
 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('✅ تمام ڈیٹا صاف ہو گیا'))
+                  SnackBar(content: Text('✅ تمام ڈیٹا صاف ہو گیا')),
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('❌ ڈیٹا صاف کرنے میں ناکامی: $e'))
+                  SnackBar(content: Text('❌ ڈیٹا صاف کرنے میں ناکامی: $e')),
                 );
               }
             },
@@ -263,20 +184,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ✅ UI Build
   @override
   Widget build(BuildContext context) {
+    if (!_isAuthenticated) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('ترتیبات'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Text(
+            _testMessage,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('ترتیبات'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.help_outline),
-            onPressed: _showApiKeyGuide,
-            tooltip: 'مدد',
-          ),
-        ],
       ),
       body: Padding(
         padding: EdgeInsets.all(16),
@@ -293,17 +225,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Row(
                         children: [
                           Icon(
-                            _connectionStatus ? Icons.check_circle : Icons.error,
-                            color: _connectionStatus ? Colors.green : Colors.orange,
+                            _connectionStatus
+                                ? Icons.check_circle
+                                : Icons.link_off,
+                            color:
+                                _connectionStatus ? Colors.green : Colors.blue,
                           ),
                           SizedBox(width: 8),
                           Text(
-  _connectionStatus ? 'کنکشن کامیاب' : 'API جوڑے',  // ✅ "ناکام" کو "جوڑے" سے بدلیں
-  style: TextStyle(
-    fontWeight: FontWeight.bold,
-    color: _connectionStatus ? Colors.green : Colors.blue, // ✅ رنگ بھی بدلیں
-  ),
-),
+                            _connectionStatus
+                                ? 'کنکشن کامیاب'
+                                : 'اپنا کنکشن جوڑیں',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _connectionStatus
+                                  ? Colors.green
+                                  : Colors.blue,
+                            ),
+                          ),
                         ],
                       ),
                       SizedBox(height: 8),
@@ -324,99 +263,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               SizedBox(height: 20),
 
-              // ✅ Gemini API Key Section
-              Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Gemini API Key',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Spacer(),
-                          IconButton(
-                            icon: Icon(Icons.help_outline, size: 18),
-                            onPressed: _showApiKeyGuide,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      TextField(
-                        controller: _geminiApiKeyController,
-                        decoration: InputDecoration(
-                          hintText: 'AIzaSyB... اپنی API key یہاں درج کریں',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        obscureText: true,
-                        maxLines: 1,
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Google AI Studio سے حاصل کی گئی API key',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
+              // ✅ Gemini API Key Field
+              _buildTextFieldCard(
+                title: 'Gemini API Key',
+                controller: _geminiApiKeyController,
+                hint: 'AIzaSy... اپنی API key درج کریں',
               ),
 
               SizedBox(height: 16),
 
-              // ✅ GitHub Token Section
-              Card(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'GitHub Token',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Spacer(),
-                          IconButton(
-                            icon: Icon(Icons.help_outline, size: 18),
-                            onPressed: _showGithubTokenGuide,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      TextField(
-                        controller: _githubTokenController,
-                        decoration: InputDecoration(
-                          hintText: 'ghp_... اپنی GitHub token یہاں درج کریں',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        obscureText: true,
-                        maxLines: 1,
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'GitHub سے حاصل کی گئی personal access token',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
+              // ✅ GitHub Token Field
+              _buildTextFieldCard(
+                title: 'GitHub Token',
+                controller: _githubTokenController,
+                hint: 'ghp_... اپنی GitHub token درج کریں',
               ),
 
               SizedBox(height: 24),
 
-              // ✅ Action Buttons
               Row(
                 children: [
                   Expanded(
@@ -427,16 +291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         foregroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: _isTestingConnection
-                          ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Text('کنکشن ٹیسٹ کریں'),
+                      child: Text('کنکشن ٹیسٹ کریں'),
                     ),
                   ),
                   SizedBox(width: 12),
@@ -456,7 +311,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               SizedBox(height: 12),
 
-              // ✅ Clear Data Button
               OutlinedButton(
                 onPressed: _clearAllData,
                 style: OutlinedButton.styleFrom(
@@ -465,38 +319,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: Text('تمام ڈیٹا صاف کریں'),
               ),
-
-              SizedBox(height: 20),
-
-              // ✅ Information Section
-              Card(
-                color: Colors.blue.shade50,
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'معلومات',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade800,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        '• Gemini API key مفت ہے\n'
-                        '• روزانہ 60 requests تک\n'
-                        '• GitHub token repositories بنانے کے لیے\n'
-                        '• دونوں keys محفوظ رکھیں',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextFieldCard({
+    required String title,
+    required TextEditingController controller,
+    required String hint,
+  }) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              obscureText: true,
+              decoration: InputDecoration(
+                hintText: hint,
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ],
         ),
       ),
     );

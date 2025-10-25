@@ -9,16 +9,30 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # 🔹 UI & Icons
   cupertino_icons: ^1.0.2
-  file_picker: ^6.1.1                    # ✅ صرف ایک بار
+
+  # 🔹 File & Storage Handling
+  file_picker: ^6.1.1
   permission_handler: ^11.0.0
-  http: ^1.1.0                           # ✅ یہ نئی package
-  url_launcher: ^6.2.0                   # ✅ یہ نئی package
-  external_path: ^1.0.0                  # ✅ یہ نئی package
-  flutter_highlight: ^0.7.0              # ✅ یہ نئی package
-  google_generative_ai: ^0.2.0           # ✅ یہ نئی package
-  github: ^9.0.0                         # ✅ یہ نئی package
-  shared_preferences: ^2.2.2             # ✅ یہ نئی package
+  external_path: ^1.0.0
+
+  # 🔹 Network & APIs
+  http: ^1.1.0
+  url_launcher: ^6.2.0
+  google_generative_ai: ^0.2.0
+  github: ^9.0.0
+
+  # 🔹 Local Storage
+  shared_preferences: ^2.2.2
+
+  # 🔹 Syntax Highlighting (Code Preview)
+  flutter_highlight: ^0.7.0
+
+  # 🔹 Secure Storage (PIN/Password Lock کیلئے بعد میں کام آئے گی)
+  flutter_secure_storage: ^9.0.0
+  local_auth: ^2.1.7
 
 dev_dependencies:
   flutter_test:
@@ -27,7 +41,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
-  # 🌟 Assets کو عارضی طور پر comment کریں
+
+  # 🌟 Assets فی الحال comment رہنے دیں
   # assets:
   #   - assets/images/
+

@@ -26,13 +26,13 @@ dependencies:
 
   # 🔹 Local Storage
   shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+
+  # 🔹 Authentication & Security
+  local_auth: ^2.1.7
 
   # 🔹 Syntax Highlighting (Code Preview)
   flutter_highlight: ^0.7.0
-
-  # 🔹 Secure Storage (PIN/Password Lock کیلئے بعد میں کام آئے گی)
-  flutter_secure_storage: ^9.0.0
-  local_auth: ^2.1.7
 
 dev_dependencies:
   flutter_test:
@@ -45,4 +45,3 @@ flutter:
   # 🌟 Assets فی الحال comment رہنے دیں
   # assets:
   #   - assets/images/
-

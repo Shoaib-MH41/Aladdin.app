@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 
-// نئی فائلیں شامل کریں
-import '../services/app_publisher.dart';
+// 🔹 نئی فائلیں
+import '../controllers/aladdin_controller.dart';
 import '../screens/publish_guide_screen.dart';
 
 class BuildScreen extends StatefulWidget {
   final String generatedCode;
   final String projectName;
   final String? framework;
-  
+
   const BuildScreen({
-    super.key, 
+    super.key,
     required this.generatedCode,
     required this.projectName,
     this.framework = 'Flutter',
@@ -23,8 +23,12 @@ class BuildScreen extends StatefulWidget {
 }
 
 class _BuildScreenState extends State<BuildScreen> {
+  final _controller = AladdinController();
+
   bool _isCopying = false;
+  bool _isBuilding = false;
   String _copyResult = '';
+  String _buildMessage = '';
 
   // ✅ کوڈ کاپی کرنے کا فنکشن
   void _copyCodeToClipboard() async {
@@ -35,19 +39,13 @@ class _BuildScreenState extends State<BuildScreen> {
 
     try {
       await Clipboard.setData(ClipboardData(text: widget.generatedCode));
-      
       setState(() {
         _isCopying = false;
         _copyResult = '✅ کوڈ کاپی ہو گیا! اب آپ اسے اپنے پروجیکٹ میں پیسٹ کر سکتے ہیں۔';
       });
 
-      // 3 سیکنڈ بعد میسج غائب ہو جائے
-      Future.delayed(Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _copyResult = '';
-          });
-        }
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _copyResult = '');
       });
     } catch (e) {
       setState(() {
@@ -64,18 +62,50 @@ class _BuildScreenState extends State<BuildScreen> {
       await launchUrl(Uri.parse(url));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Termux انسٹال نہیں ہے۔ پہلے Termux انسٹال کریں۔')),
+        const SnackBar(content: Text('⚠️ Termux انسٹال نہیں ہے۔ پہلے Termux انسٹال کریں۔')),
       );
     }
   }
 
   // ✅ پلے اسٹور کے لیے تیار کرنے کا فنکشن
   void _prepareForPlayStore() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => PublishGuideScreen(
-      appName: widget.projectName,
-      generatedCode: widget.generatedCode,
-      framework: widget.framework ?? 'Flutter',
-    )));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublishGuideScreen(
+          appName: widget.projectName,
+          generatedCode: widget.generatedCode,
+          framework: widget.framework ?? 'Flutter',
+        ),
+      ),
+    );
+  }
+
+  // ✅ GitHub پر اپلوڈ فنکشن
+  void _buildAndUploadApp() async {
+    setState(() {
+      _isBuilding = true;
+      _buildMessage = '⏳ ایپ تیار کی جا رہی ہے اور GitHub پر اپلوڈ ہو رہی ہے...';
+    });
+
+    try {
+      final repoUrl = await _controller.generateAndUploadApp(
+        prompt: 'Auto-generated app for ${widget.projectName}',
+        framework: widget.framework ?? 'Flutter',
+        platforms: ['Android'],
+        repoName: widget.projectName,
+      );
+
+      setState(() {
+        _buildMessage = '✅ ایپ GitHub پر اپلوڈ ہو گئی!\n🔗 $repoUrl';
+        _isBuilding = false;
+      });
+    } catch (e) {
+      setState(() {
+        _buildMessage = '❌ ناکام: $e';
+        _isBuilding = false;
+      });
+    }
   }
 
   // ✅ فریم ورک کے مطابق ہدایات
@@ -103,9 +133,9 @@ class _BuildScreenState extends State<BuildScreen> {
         ];
       case 'html':
         return [
-          _buildStep('1. نیا index.html فائل بنائیں', ''),
+          _buildStep('1. index.html فائل بنائیں', ''),
           _buildStep('2. کوڈ پیسٹ کریں', ''),
-          _buildStep('3. براؤزر میں کھولیں', 'دوبارہ کلک کریں index.html پر'),
+          _buildStep('3. براؤزر میں کھولیں', 'index.html'),
         ];
       case 'flutter':
       default:
@@ -123,7 +153,7 @@ class _BuildScreenState extends State<BuildScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('کوڈ - ${widget.projectName}'),
+        title: Text('🚀 ${widget.projectName} Build'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
@@ -132,7 +162,7 @@ class _BuildScreenState extends State<BuildScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 📋 ہدایات کا کارڈ
+            // 📘 ہدایات کارڈ
             Card(
               color: Colors.blue[50],
               child: Padding(
@@ -150,146 +180,148 @@ class _BuildScreenState extends State<BuildScreen> {
                             color: Colors.blue[800],
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Chip(
                           label: Text(widget.framework ?? 'Flutter'),
                           backgroundColor: Colors.blue[100],
                         ),
                       ],
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     ..._getFrameworkInstructions(),
                   ],
                 ),
               ),
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-            // 📋 جنریٹ شدہ کوڈ
+            // 📋 کوڈ کا حصہ
             Row(
               children: [
-                Text(
-                  'جنریٹ شدہ کوڈ:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(width: 8),
+                const Text('جنریٹ شدہ کوڈ:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
                 Chip(
                   label: Text('${widget.generatedCode.split('\n').length} لائنیں'),
                   backgroundColor: Colors.grey[300],
                 ),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Expanded(
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
+                  color: Colors.grey[100],
                   border: Border.all(color: Colors.grey),
                   borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
                 ),
                 child: SingleChildScrollView(
                   child: SelectableText(
                     widget.generatedCode,
-                    style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                   ),
                 ),
               ),
             ),
-            
-            SizedBox(height: 20),
-            
-            // 🔧 پہلے دو بٹن (کاپی اور Termux)
+
+            const SizedBox(height: 20),
+
+            // 🔘 بٹن
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    icon: _isCopying 
-                        ? SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(Icons.content_copy),
-                    label: Text(_isCopying ? 'کاپی ہو رہا...' : 'کوڈ کاپی کریں'),
+                    icon: _isCopying
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.copy),
+                    label: Text(_isCopying ? 'کاپی ہو رہا ہے...' : 'کوڈ کاپی کریں'),
                     onPressed: _isCopying ? null : _copyCodeToClipboard,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                     ),
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 if (widget.framework == 'Flutter')
                   ElevatedButton.icon(
-                    icon: Icon(Icons.terminal),
-                    label: Text('Termux کھولیں'),
+                    icon: const Icon(Icons.terminal),
+                    label: const Text('Termux کھولیں'),
                     onPressed: _openTermux,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[700],
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 15),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                     ),
                   ),
               ],
             ),
-            
-            SizedBox(height: 10),
 
-            // 🏪 پلے اسٹور بٹن (نیا شامل کیا گیا)
-            Container(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: Icon(Icons.shop, size: 24),
-                label: Text("پلے اسٹور کے لیے تیار کریں", style: TextStyle(fontSize: 16)),
-                onPressed: _prepareForPlayStore,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                ),
-              ),
-            ),
-            
-            SizedBox(height: 10),
-            
-            // 📝 نتیجہ کا میسج
-            if (_copyResult.isNotEmpty)
-              AnimatedContainer(
-                duration: Duration(milliseconds: 300),
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _copyResult.contains('✅') ? Colors.green[50] : Colors.red[50],
-                  border: Border.all(
-                    color: _copyResult.contains('✅') ? Colors.green : Colors.red,
+            const SizedBox(height: 10),
+
+            // 🏪 Play Store اور GitHub بٹن
+            Column(
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.shop),
+                  label: const Text("پلے اسٹور کے لیے تیار کریں"),
+                  onPressed: _prepareForPlayStore,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    minimumSize: const Size(double.infinity, 50),
                   ),
-                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _copyResult.contains('✅') ? Icons.check_circle : Icons.error,
-                      color: _copyResult.contains('✅') ? Colors.green : Colors.red,
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(child: Text(_copyResult)),
-                  ],
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  icon: _isBuilding
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cloud_upload),
+                  label: Text(_isBuilding ? "اپلوڈ ہو رہا ہے..." : "GitHub پر اپلوڈ کریں"),
+                  onPressed: _isBuilding ? null : _buildAndUploadApp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
                 ),
-              ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // 📝 نتائج
+            if (_copyResult.isNotEmpty)
+              _statusCard(_copyResult),
+            if (_buildMessage.isNotEmpty)
+              _statusCard(_buildMessage),
           ],
         ),
       ),
     );
   }
 
-  // 🌟 ہر قدم کو بنانے کا طریقہ
+  // 🌟 ہر قدم بنانے کا فنکشن
   Widget _buildStep(String step, String command) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,21 +329,38 @@ class _BuildScreenState extends State<BuildScreen> {
                 Text(step),
                 if (command.isNotEmpty)
                   Container(
-                    margin: EdgeInsets.only(top: 2),
-                    padding: EdgeInsets.all(6),
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: SelectableText(
                       command,
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 10),
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 10),
                     ),
                   ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _statusCard(String message) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: message.contains('✅') ? Colors.green[50] : Colors.red[50],
+        border: Border.all(color: message.contains('✅') ? Colors.green : Colors.red),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: SelectableText(
+        message,
+        style: const TextStyle(fontSize: 13),
       ),
     );
   }

@@ -123,7 +123,7 @@ $text
 
       if (_isValidCode(generatedCode, _project.framework)) {
         final repoName = '${_project.name}_${DateTime.now().millisecondsSinceEpoch}';
-        await widget.githubService.createRepository(repoName, generatedCode);
+        await widget.githubService.createRepository(repoName);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

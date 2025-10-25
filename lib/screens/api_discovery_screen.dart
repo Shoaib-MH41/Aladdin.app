@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/api_template_model.dart';
 import 'api_integration_screen.dart';
 
@@ -34,23 +35,23 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.search_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'کوئی APIs نہیں ملیں',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               'AI آپ کی ایپ کے لیے متعلقہ APIs نہیں ڈھونڈ سکا',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               child: Text('واپس جائیں'),
@@ -63,7 +64,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
 
   Widget _buildApiList() {
     return Padding(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -71,11 +72,11 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
           Card(
             color: Colors.purple[50],
             child: Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Icon(Icons.auto_awesome, color: Colors.purple),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +88,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
                             color: Colors.purple[800],
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           'آپ کی ایپ کے لیے متعلقہ APIs',
                           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -103,7 +104,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
               ),
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // APIs List
           Expanded(
@@ -123,9 +124,9 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
   Widget _buildApiCard(ApiTemplate api) {
     return Card(
       elevation: 2,
-      margin: EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -133,14 +134,14 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: _getCategoryColor(api.category),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.api, size: 20, color: Colors.white),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,7 +153,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
                         api.provider,
                         style: TextStyle(
@@ -165,7 +166,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
                 ),
                 if (api.keyRequired)
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange[100],
                       borderRadius: BorderRadius.circular(12),
@@ -182,7 +183,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
               ],
             ),
 
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
             // API Description
             Text(
@@ -190,20 +191,20 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
               style: TextStyle(fontSize: 14),
             ),
 
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
 
             // API Details
             Row(
               children: [
                 Icon(Icons.category, size: 14, color: Colors.grey),
-                SizedBox(width: 4),
+                const SizedBox(width: 4),
                 Text(
                   api.category,
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Icon(Icons.star, size: 14, color: Colors.grey),
-                SizedBox(width: 4),
+                const SizedBox(width: 4),
                 Text(
                   api.freeTierInfo,
                   style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -211,7 +212,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
               ],
             ),
 
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
             // Action Buttons
             Row(
@@ -223,7 +224,7 @@ class _ApiDiscoveryScreenState extends State<ApiDiscoveryScreen> {
                     onPressed: () => _openWebsite(api.url),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: Icon(Icons.integration_instructions, size: 16),

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // ✅ میموری مینجمنٹ کے لیے
+import 'package:flutter/services.dart';
+
+// سروسز کے امپورٹس
+import 'services/gemini_service.dart';
+import 'services/github_service.dart';
+import 'services/api_service.dart';
+import 'services/security_service.dart'; // ✅ نیا امپورٹ شامل کریں
 
 // سکرینز کے امپورٹس
-import 'screens/pin_screen.dart'; // ✅ PIN Screen امپورٹ شامل کریں
+import 'screens/pin_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
@@ -11,40 +17,26 @@ import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/api_integration_screen.dart';
-import 'screens/api_discovery_screen.dart'; // ✅ نیا API Discovery Screen شامل کریں
+import 'screens/api_discovery_screen.dart';
 import 'screens/publish_guide_screen.dart';
 
-// سروسز کے امپورٹس
-import 'services/gemini_service.dart';
-import 'services/github_service.dart';
-import 'services/api_service.dart';
-
 // ماڈلز کے امپورٹس
-import 'models/api_template_model.dart'; // ✅ API ماڈل کے لیے
+import 'models/api_template_model.dart';
 
 void main() {
-  // ✅ پہلے Flutter انجن کو تیار کریں
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // ✅ میموری مینجمنٹ کو بہتر بنائیں
   _optimizePerformance();
-  
-  // ✅ ایپ کو چلائیں
   runApp(const AladdinApp());
 }
 
-// ✅ میموری اور performance کو بہتر بنانے کے لیے فنکشن
 void _optimizePerformance() {
-  // 1. میموری کلیئرنس کو فعال کریں
-  SystemChannels.skia.invokeMethod('webGCTest');
-  
-  // 2. orientation کو لاک کریں (optional)
+  // orientation کو لاک کریں
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
   
-  // 3. status bar کو transparent بنائیں
+  // status bar کو transparent بنائیں
   SystemChrome.setSystemUIOverlayStyle(
     SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -58,16 +50,16 @@ class AladdinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ سروسز کو شروع کریں
+    // ✅ تمام سروسز کو شروع کریں
     final geminiService = GeminiService();
     final githubService = GitHubService();
     final apiService = ApiService();
+    final securityService = SecurityService(); // ✅ نیا سروس شامل کریں
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
-      debugShowCheckedModeBanner: false, // ✅ ڈیبگ بینر ہٹائیں
+      debugShowCheckedModeBanner: false,
       
-      // ✅ تھیم سیٹنگز
       themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
@@ -86,13 +78,16 @@ class AladdinApp extends StatelessWidget {
         fontFamily: 'Urdu',
       ),
       
-      // ✅ ابتدائی روٹ - PIN Screen سے شروع
       initialRoute: '/pin',
       
-      // ✅ تمام روٹس
       routes: {
-        // 🔒 PIN سکرین - نیا entry point
-        '/pin': (context) => PinScreen(),
+        // 🔒 PIN سکرین - درست parameters کے ساتھ
+        '/pin': (context) => PinScreen(
+              securityService: securityService, // ✅ securityService شامل کریں
+              onUnlocked: () {
+                Navigator.pushReplacementNamed(context, '/home');
+              },
+            ),
 
         // 🏠 ہوم سکرین
         '/home': (context) => HomeScreen(
@@ -121,70 +116,44 @@ class AladdinApp extends StatelessWidget {
               githubService: githubService,
             ),
 
-        // ⚙️ سیٹنگز سکرین
-        '/settings': (context) => SettingsScreen(
-              geminiService: geminiService,
-              githubService: githubService,
-            ),
+        // ⚙️ سیٹنگز سکرین - اگر parameters نہیں چاہیے تو
+        '/settings': (context) => SettingsScreen(), // ✅ parameters ہٹائیں
 
-        // 🔍 API ڈسکوری سکرین - نیا روٹ
+        // 🔍 API ڈسکوری سکرین
         '/api-discovery': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          
-          if (arguments == null) {
-            return _buildErrorScreen('API ڈسکوری کے لیے ڈیٹا نہیں ملا');
-          }
-          
           return ApiDiscoveryScreen(
-            discoveredApis: arguments['discoveredApis'] ?? <ApiTemplate>[],
-            projectName: arguments['projectName'] ?? 'نیا پروجیکٹ',
+            discoveredApis: arguments?['discoveredApis'] ?? [],
+            projectName: arguments?['projectName'] ?? 'نیا پروجیکٹ',
           );
         },
 
         // 🔌 API انٹیگریشن سکرین
         '/api-integration': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          
-          if (arguments == null) {
-            return _buildErrorScreen('API انٹیگریشن کے لیے ڈیٹا نہیں ملا');
-          }
-          
           return ApiIntegrationScreen(
-            apiTemplate: arguments['apiTemplate'],
-            onApiKeySubmitted: arguments['onApiKeySubmitted'],
+            apiTemplate: arguments?['apiTemplate'],
+            onApiKeySubmitted: arguments?['onApiKeySubmitted'],
           );
         },
 
         // 🛠️ بلڈ سکرین
         '/build': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          
-          if (arguments == null) {
-            return const BuildScreen(
-              generatedCode: '// کوئی کوڈ نہیں ملا',
-              projectName: 'نا معلوم پروجیکٹ',
-            );
-          }
-          
           return BuildScreen(
-            generatedCode: arguments['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
-            projectName: arguments['projectName'] ?? 'نیا پروجیکٹ',
-            framework: arguments['framework'] ?? 'Flutter',
+            generatedCode: arguments?['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
+            projectName: arguments?['projectName'] ?? 'نیا پروجیکٹ',
+            framework: arguments?['framework'] ?? 'Flutter',
           );
         },
 
         // 🏪 پبلش گائیڈ سکرین
         '/publish-guide': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          
-          if (arguments == null) {
-            return _buildErrorScreen('پبلش گائیڈ کے لیے ڈیٹا نہیں ملا');
-          }
-          
           return PublishGuideScreen(
-            appName: arguments['appName'] ?? 'میرا ایپ',
-            generatedCode: arguments['generatedCode'] ?? '// کوئی کوڈ نہیں',
-            framework: arguments['framework'] ?? 'Flutter',
+            appName: arguments?['appName'] ?? 'میرا ایپ',
+            generatedCode: arguments?['generatedCode'] ?? '// کوئی کوڈ نہیں',
+            framework: arguments?['framework'] ?? 'Flutter',
           );
         },
       },
@@ -192,7 +161,12 @@ class AladdinApp extends StatelessWidget {
       // ❌ اگر کوئی روٹ نہیں ملا تو PIN پر جائے
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
-          builder: (context) => PinScreen(),
+          builder: (context) => PinScreen(
+            securityService: securityService, // ✅ securityService شامل کریں
+            onUnlocked: () {
+              Navigator.pushReplacementNamed(context, '/home');
+            },
+          ),
         );
       },
     );
@@ -217,18 +191,18 @@ class AladdinApp extends StatelessWidget {
                 size: 64,
                 color: Colors.red,
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Text(
                 message,
-                style: TextStyle(fontSize: 18),
+                style: const TextStyle(fontSize: 18),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // ہوم پر واپس جانے کا منطق
+                  Navigator.pushReplacementNamed(context, '/home');
                 },
-                child: Text('ہوم پر واپس جائیں'),
+                child: const Text('ہوم پر واپس جائیں'),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import '../models/api_template_model.dart';
+import 'gemini_service.dart'; // ✅ یہ امپورٹ شامل کریں
 
 class AIApiFinder {
   final GeminiService geminiService;

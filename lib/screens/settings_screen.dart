@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/gemini_service.dart';
 import '../services/github_service.dart';
 
@@ -19,6 +20,10 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _geminiApiKeyController = TextEditingController();
   final TextEditingController _githubTokenController = TextEditingController();
+
+  final _secureStorage = const FlutterSecureStorage();
+  bool _useSecureStorage = true;
+
   bool _isTestingConnection = false;
   bool _connectionStatus = false;
   String _testMessage = '';
@@ -33,15 +38,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // 🔹 Settings لوڈ کریں
   void _loadSavedSettings() async {
     try {
-      final savedGeminiKey = await widget.geminiService.getSavedApiKey();
-      final savedGithubToken = await widget.githubService.getSavedToken();
+      String? savedGeminiKey;
+      String? savedGithubToken;
+
+      try {
+        // پہلے secure storage سے کوشش
+        savedGeminiKey = await _secureStorage.read(key: 'gemini_api_key');
+        savedGithubToken = await _secureStorage.read(key: 'github_token');
+      } catch (_) {
+        // fallback SharedPreferences پر
+        savedGeminiKey = await widget.geminiService.getSavedApiKey();
+        savedGithubToken = await widget.githubService.getSavedToken();
+        _useSecureStorage = false;
+      }
 
       if (!mounted) return;
 
       setState(() {
         _geminiApiKeyController.text = savedGeminiKey ?? '';
         _githubTokenController.text = savedGithubToken ?? '';
-        _isSecureStorageActive = true; // future-proofing
+        _isSecureStorageActive = _useSecureStorage;
       });
 
       if ((savedGeminiKey ?? '').isNotEmpty) {
@@ -89,15 +105,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // 🔹 Save All Settings
+  // 🔹 Save All Settings (Secure + Fallback)
   void _saveAllSettings() async {
     try {
       if (_geminiApiKeyController.text.isNotEmpty) {
-        await widget.geminiService.saveApiKey(_geminiApiKeyController.text);
+        if (_useSecureStorage) {
+          await _secureStorage.write(
+            key: 'gemini_api_key',
+            value: _geminiApiKeyController.text.trim(),
+          );
+        } else {
+          await widget.geminiService.saveApiKey(_geminiApiKeyController.text);
+        }
       }
 
       if (_githubTokenController.text.isNotEmpty) {
-        await widget.githubService.saveToken(_githubTokenController.text);
+        if (_useSecureStorage) {
+          await _secureStorage.write(
+            key: 'github_token',
+            value: _githubTokenController.text.trim(),
+          );
+        } else {
+          await widget.githubService.saveToken(_githubTokenController.text);
+        }
       }
 
       _testConnection();
@@ -134,6 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
+                await _secureStorage.deleteAll();
                 await widget.geminiService.removeApiKey();
                 await widget.githubService.removeToken();
 
@@ -301,7 +332,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 16),
 
-              // 🔹 Gemini API Key Section
               _buildKeyCard(
                 title: 'Gemini API Key',
                 controller: _geminiApiKeyController,
@@ -311,7 +341,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 16),
 
-              // 🔹 GitHub Token Section
               _buildKeyCard(
                 title: 'GitHub Token',
                 controller: _githubTokenController,
@@ -321,7 +350,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 24),
 
-              // 🔹 Buttons
               Row(
                 children: [
                   Expanded(
@@ -363,6 +391,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: const Text('تمام ڈیٹا صاف کریں'),
               ),
+
+              const SizedBox(height: 12),
+
+              // 🔹 Future PIN Lock Button
+              OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('🔒 PIN Lock فیچر جلد آرہا ہے'),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.lock_outline),
+                label: const Text('PIN Lock فعال کریں'),
+              ),
             ],
           ),
         ),
@@ -379,14 +422,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    style:
+                        const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Spacer(),
                 IconButton(icon: const Icon(Icons.help_outline, size: 18), onPressed: help),
               ],

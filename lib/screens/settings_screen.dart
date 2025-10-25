@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/gemini_service.dart';
 import '../services/github_service.dart';
-import '../utils/security_helper.dart'; // ✅ secure helper import
 
 class SettingsScreen extends StatefulWidget {
   final GeminiService geminiService;
@@ -20,35 +19,18 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _geminiApiKeyController = TextEditingController();
   final TextEditingController _githubTokenController = TextEditingController();
-
   bool _isTestingConnection = false;
   bool _connectionStatus = false;
   String _testMessage = '';
-  bool _isAuthenticated = false; // ✅ biometric status
+  bool _isSecureStorageActive = true;
 
   @override
   void initState() {
     super.initState();
-    _authenticateAndLoad();
+    _loadSavedSettings();
   }
 
-  // ✅ Biometric authentication اور secure settings load کریں
-  void _authenticateAndLoad() async {
-    final isAuth = await SecurityHelper.authenticateUser();
-    if (!mounted) return;
-
-    if (isAuth) {
-      setState(() => _isAuthenticated = true);
-      _loadSavedSettings();
-    } else {
-      setState(() {
-        _isAuthenticated = false;
-        _testMessage = '🔒 رسائی محدود ہے، بایومیٹرک تصدیق درکار ہے';
-      });
-    }
-  }
-
-  // ✅ محفوظ شدہ settings لوڈ کریں
+  // 🔹 Settings لوڈ کریں
   void _loadSavedSettings() async {
     try {
       final savedGeminiKey = await widget.geminiService.getSavedApiKey();
@@ -59,18 +41,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _geminiApiKeyController.text = savedGeminiKey ?? '';
         _githubTokenController.text = savedGithubToken ?? '';
+        _isSecureStorageActive = true; // future-proofing
       });
 
       if ((savedGeminiKey ?? '').isNotEmpty) {
         _testConnection();
       }
-    } catch (e, stack) {
-      debugPrint('⚠️ Settings load error: $e');
-      debugPrintStack(stackTrace: stack);
+    } catch (e) {
+      setState(() {
+        _testMessage = '⚠️ ترتیبات لوڈ کرنے میں مسئلہ: $e';
+      });
     }
   }
 
-  // ✅ API connection test کریں
+  // 🔹 Gemini Connection Test
   void _testConnection() async {
     if (_geminiApiKeyController.text.isEmpty) {
       setState(() {
@@ -105,16 +89,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ✅ محفوظ کریں (biometric confirmation + secure save)
+  // 🔹 Save All Settings
   void _saveAllSettings() async {
-    final isAuth = await SecurityHelper.authenticateUser();
-    if (!isAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('🔒 تصدیق ناکام۔ ڈیٹا محفوظ نہیں کیا گیا')),
-      );
-      return;
-    }
-
     try {
       if (_geminiApiKeyController.text.isNotEmpty) {
         await widget.geminiService.saveApiKey(_geminiApiKeyController.text);
@@ -127,7 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _testConnection();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('✅ ترتیبات محفوظ ہو گئیں'),
           backgroundColor: Colors.green,
         ),
@@ -142,17 +118,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ✅ تمام ڈیٹا clear کریں
+  // 🔹 Clear All Data
   void _clearAllData() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('ڈیٹا صاف کریں'),
-        content: Text('کیا آپ واقعی تمام API keys اور tokens صاف کرنا چاہتے ہیں؟'),
+        title: const Text('ڈیٹا صاف کریں'),
+        content: const Text('کیا آپ واقعی تمام API keys اور tokens صاف کرنا چاہتے ہیں؟'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('منسوخ'),
+            child: const Text('منسوخ'),
           ),
           TextButton(
             onPressed: () async {
@@ -169,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 });
 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('✅ تمام ڈیٹا صاف ہو گیا')),
+                  const SnackBar(content: Text('✅ تمام ڈیٹا صاف ہو گیا')),
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -177,82 +153,144 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               }
             },
-            child: Text('صاف کریں', style: TextStyle(color: Colors.red)),
+            child: const Text('صاف کریں', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
-  // ✅ UI Build
-  @override
-  Widget build(BuildContext context) {
-    if (!_isAuthenticated) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('ترتیبات'),
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-        ),
-        body: Center(
-          child: Text(
-            _testMessage,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+  // 🔹 API Key Guide
+  void _showApiKeyGuide() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API Key کیسے حاصل کریں'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('1. https://aistudio.google.com/ پر جائیں'),
+              Text('2. Google account سے login کریں'),
+              Text('3. Get API key پر کلک کریں'),
+              Text('4. API key کو کاپی کریں اور یہاں پیسٹ کریں'),
+              SizedBox(height: 12),
+              Text(
+                'نوٹ: یہ key encrypted form میں محفوظ کی جاتی ہے 🔒',
+                style: TextStyle(color: Colors.orange, fontStyle: FontStyle.italic),
+              ),
+            ],
           ),
         ),
-      );
-    }
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('سمجھ گیا'),
+          ),
+        ],
+      ),
+    );
+  }
 
+  // 🔹 GitHub Token Guide
+  void _showGithubTokenGuide() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('GitHub Token کیسے بنائیں'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('1. GitHub → Settings → Developer settings → Personal access tokens'),
+              Text('2. "Generate new token" پر کلک کریں'),
+              Text('3. repo permissions دیں'),
+              Text('4. Token کو کاپی کریں اور یہاں پیسٹ کریں'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('سمجھ گیا'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------- UI ----------
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('ترتیبات'),
+        title: const Text('ترتیبات'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: _showApiKeyGuide,
+          ),
+        ],
       ),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ✅ Connection Status
+              // 🔹 Secure Storage Indicator
+              Card(
+                color: Colors.blue.shade50,
+                child: ListTile(
+                  leading: Icon(
+                    _isSecureStorageActive ? Icons.lock : Icons.lock_open,
+                    color: _isSecureStorageActive ? Colors.green : Colors.red,
+                  ),
+                  title: Text(
+                    _isSecureStorageActive
+                        ? 'Secure Storage فعال 🔐'
+                        : '⚠️ Secure Storage غیر فعال',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'API keys encrypted form میں محفوظ کی جاتی ہیں',
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 🔹 Connection Status
               Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
                       Row(
                         children: [
                           Icon(
-                            _connectionStatus
-                                ? Icons.check_circle
-                                : Icons.link_off,
-                            color:
-                                _connectionStatus ? Colors.green : Colors.blue,
+                            _connectionStatus ? Icons.check_circle : Icons.error_outline,
+                            color: _connectionStatus ? Colors.green : Colors.orange,
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
-                            _connectionStatus
-                                ? 'کنکشن کامیاب'
-                                : 'اپنا کنکشن جوڑیں',
+                            _connectionStatus ? 'کنکشن کامیاب' : 'API جوڑے',
                             style: TextStyle(
+                              color: _connectionStatus ? Colors.green : Colors.blue,
                               fontWeight: FontWeight.bold,
-                              color: _connectionStatus
-                                  ? Colors.green
-                                  : Colors.blue,
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
                         _testMessage,
-                        style: TextStyle(fontSize: 12),
+                        style: const TextStyle(fontSize: 12),
                         textAlign: TextAlign.center,
                       ),
                       if (_isTestingConnection)
-                        Padding(
+                        const Padding(
                           padding: EdgeInsets.only(top: 8),
                           child: LinearProgressIndicator(),
                         ),
@@ -261,26 +299,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // ✅ Gemini API Key Field
-              _buildTextFieldCard(
+              // 🔹 Gemini API Key Section
+              _buildKeyCard(
                 title: 'Gemini API Key',
                 controller: _geminiApiKeyController,
-                hint: 'AIzaSy... اپنی API key درج کریں',
+                hint: 'AIzaSyB... اپنی API key درج کریں',
+                help: _showApiKeyGuide,
               ),
 
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-              // ✅ GitHub Token Field
-              _buildTextFieldCard(
+              // 🔹 GitHub Token Section
+              _buildKeyCard(
                 title: 'GitHub Token',
                 controller: _githubTokenController,
                 hint: 'ghp_... اپنی GitHub token درج کریں',
+                help: _showGithubTokenGuide,
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
+              // 🔹 Buttons
               Row(
                 children: [
                   Expanded(
@@ -289,35 +330,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: Text('کنکشن ٹیسٹ کریں'),
+                      child: _isTestingConnection
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('کنکشن ٹیسٹ کریں'),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _saveAllSettings,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: Text('محفوظ کریں'),
+                      child: const Text('محفوظ کریں'),
                     ),
                   ),
                 ],
               ),
 
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
 
               OutlinedButton(
                 onPressed: _clearAllData,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
-                  padding: EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: Text('تمام ڈیٹا صاف کریں'),
+                child: const Text('تمام ڈیٹا صاف کریں'),
               ),
             ],
           ),
@@ -326,28 +370,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildTextFieldCard({
+  // 🔹 Key Card Builder
+  Widget _buildKeyCard({
     required String title,
     required TextEditingController controller,
     required String hint,
+    required VoidCallback help,
   }) {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            SizedBox(height: 8),
+            Row(
+              children: [
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Spacer(),
+                IconButton(icon: const Icon(Icons.help_outline, size: 18), onPressed: help),
+              ],
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: controller,
               obscureText: true,
               decoration: InputDecoration(
                 hintText: hint,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ],

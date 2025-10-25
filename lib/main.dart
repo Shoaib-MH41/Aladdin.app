@@ -11,12 +11,16 @@ import 'screens/chat_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/api_integration_screen.dart';
+import 'screens/api_discovery_screen.dart'; // ✅ نیا API Discovery Screen شامل کریں
 import 'screens/publish_guide_screen.dart';
 
 // سروسز کے امپورٹس
 import 'services/gemini_service.dart';
 import 'services/github_service.dart';
 import 'services/api_service.dart';
+
+// ماڈلز کے امپورٹس
+import 'models/api_template_model.dart'; // ✅ API ماڈل کے لیے
 
 void main() {
   // ✅ پہلے Flutter انجن کو تیار کریں
@@ -123,6 +127,20 @@ class AladdinApp extends StatelessWidget {
               githubService: githubService,
             ),
 
+        // 🔍 API ڈسکوری سکرین - نیا روٹ
+        '/api-discovery': (context) {
+          final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          
+          if (arguments == null) {
+            return _buildErrorScreen('API ڈسکوری کے لیے ڈیٹا نہیں ملا');
+          }
+          
+          return ApiDiscoveryScreen(
+            discoveredApis: arguments['discoveredApis'] ?? <ApiTemplate>[],
+            projectName: arguments['projectName'] ?? 'نیا پروجیکٹ',
+          );
+        },
+
         // 🔌 API انٹیگریشن سکرین
         '/api-integration': (context) {
           final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
@@ -207,7 +225,9 @@ class AladdinApp extends StatelessWidget {
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  // ہوم پر واپس جانے کا منطق
+                },
                 child: Text('ہوم پر واپس جائیں'),
               ),
             ],

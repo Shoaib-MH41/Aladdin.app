@@ -173,41 +173,40 @@ class AladdinApp extends StatelessWidget {
   }
 
   // ✅ ایرر سکرین بنانے کا فنکشن
-  Widget _buildErrorScreen(String message) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('خرابی'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                message,
-                style: const TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/home');
-                },
-                child: const Text('ہوم پر واپس جائیں'),
-              ),
-            ],
-          ),
+Widget _buildErrorScreen(BuildContext context, String message) { // ✅ context کو بطور parameter شامل کریں
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('خرابی'),
+      backgroundColor: Colors.red,
+      foregroundColor: Colors.white,
+    ),
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/home'); // ✅ اب context یہاں دستیاب ہے
+              },
+              child: const Text('ہوم پر واپس جائیں'),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }

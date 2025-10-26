@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// سروسز کے امپورٹس
+// ✅ سروسز کے امپورٹس
 import 'services/gemini_service.dart';
 import 'services/github_service.dart';
 import 'services/api_service.dart';
-import 'services/security_service.dart'; // ✅ نیا امپورٹ شامل کریں
+import 'services/security_service.dart';
 
-// سکرینز کے امپورٹس
+// ✅ سکرینز کے امپورٹس
 import 'screens/pin_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
@@ -20,7 +20,7 @@ import 'screens/api_integration_screen.dart';
 import 'screens/api_discovery_screen.dart';
 import 'screens/publish_guide_screen.dart';
 
-// ماڈلز کے امپورٹس
+// ✅ ماڈلز کے امپورٹس
 import 'models/api_template_model.dart';
 
 void main() {
@@ -30,15 +30,15 @@ void main() {
 }
 
 void _optimizePerformance() {
-  // orientation کو لاک کریں
+  // اسکرین کا orientation صرف portrait پر رکھیں
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
-  // status bar کو transparent بنائیں
+
+  // Status bar کو شفاف (transparent) بنائیں
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
+    const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
     ),
@@ -50,16 +50,16 @@ class AladdinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ تمام سروسز کو شروع کریں
+    // ✅ تمام سروسز initialize کریں
     final geminiService = GeminiService();
     final githubService = GitHubService();
     final apiService = ApiService();
-    final securityService = SecurityService(); // ✅ نیا سروس شامل کریں
+    final securityService = SecurityService();
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
       debugShowCheckedModeBanner: false,
-      
+
       themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
@@ -77,136 +77,123 @@ class AladdinApp extends StatelessWidget {
         ),
         fontFamily: 'Urdu',
       ),
-      
+
+      // 🔒 لاک اسکرین سے شروعات کریں
       initialRoute: '/pin',
-      
+
+      // ✅ تمام روٹس یہاں define کریں
       routes: {
-        // 🔒 PIN سکرین - درست parameters کے ساتھ
         '/pin': (context) => PinScreen(
-              securityService: securityService, // ✅ securityService شامل کریں
-              onUnlocked: () {
-                Navigator.pushReplacementNamed(context, '/home');
-              },
+              securityService: securityService,
+              onUnlocked: () =>
+                  Navigator.pushReplacementNamed(context, '/home'),
             ),
 
-        // 🏠 ہوم سکرین
         '/home': (context) => HomeScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
 
-        // 📁 پروجیکٹ سکرین
         '/projects': (context) => ProjectScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
 
-        // 🎯 سلیکشن سکرین
         '/select': (context) => SelectionScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
 
-        // 📤 اپلوڈ سکرین
         '/upload': (context) => const UploadScreen(),
 
-        // 💬 چیٹ سکرین
         '/chat': (context) => ChatScreen(
               geminiService: geminiService,
               githubService: githubService,
             ),
 
-        // ⚙️ سیٹنگز سکرین - اگر parameters نہیں چاہیے تو
-        '/settings': (context) => SettingsScreen(), // ✅ parameters ہٹائیں
+        '/settings': (context) => SettingsScreen(),
 
-        // 🔍 API ڈسکوری سکرین
         '/api-discovery': (context) {
-          final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          final args = ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?;
           return ApiDiscoveryScreen(
-            discoveredApis: arguments?['discoveredApis'] ?? [],
-            projectName: arguments?['projectName'] ?? 'نیا پروجیکٹ',
+            discoveredApis: args?['discoveredApis'] ?? [],
+            projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
           );
         },
 
-        // 🔌 API انٹیگریشن سکرین
         '/api-integration': (context) {
-          final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          final args = ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?;
           return ApiIntegrationScreen(
-            apiTemplate: arguments?['apiTemplate'],
-            onApiKeySubmitted: arguments?['onApiKeySubmitted'],
+            apiTemplate: args?['apiTemplate'],
+            onApiKeySubmitted: args?['onApiKeySubmitted'],
           );
         },
 
-        // 🛠️ بلڈ سکرین
         '/build': (context) {
-          final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          final args = ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?;
           return BuildScreen(
-            generatedCode: arguments?['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
-            projectName: arguments?['projectName'] ?? 'نیا پروجیکٹ',
-            framework: arguments?['framework'] ?? 'Flutter',
+            generatedCode: args?['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
+            projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
+            framework: args?['framework'] ?? 'Flutter',
           );
         },
 
-        // 🏪 پبلش گائیڈ سکرین
         '/publish-guide': (context) {
-          final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          final args = ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?;
           return PublishGuideScreen(
-            appName: arguments?['appName'] ?? 'میرا ایپ',
-            generatedCode: arguments?['generatedCode'] ?? '// کوئی کوڈ نہیں',
-            framework: arguments?['framework'] ?? 'Flutter',
+            appName: args?['appName'] ?? 'میرا ایپ',
+            generatedCode: args?['generatedCode'] ?? '// کوئی کوڈ نہیں',
+            framework: args?['framework'] ?? 'Flutter',
           );
         },
       },
 
-      // ❌ اگر کوئی روٹ نہیں ملا تو PIN پر جائے
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => PinScreen(
-            securityService: securityService, // ✅ securityService شامل کریں
-            onUnlocked: () {
-              Navigator.pushReplacementNamed(context, '/home');
-            },
-          ),
-        );
-      },
+      // ❌ اگر کوئی route نہیں ملا
+      onUnknownRoute: (settings) => MaterialPageRoute(
+        builder: (context) => PinScreen(
+          securityService: securityService,
+          onUnlocked: () =>
+              Navigator.pushReplacementNamed(context, '/home'),
+        ),
+      ),
     );
   }
 
-  // ✅ ایرر سکرین بنانے کا فنکشن
-Widget _buildErrorScreen(BuildContext context, String message) { // ✅ context کو بطور parameter شامل کریں
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('خرابی'),
-      backgroundColor: Colors.red,
-      foregroundColor: Colors.white,
-    ),
-    body: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 18),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/home'); // ✅ اب context یہاں دستیاب ہے
-              },
-              child: const Text('ہوم پر واپس جائیں'),
-            ),
-          ],
+  // ✅ ایرر سکرین (Error Screen)
+  Widget _buildErrorScreen(BuildContext context, String message) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('خرابی'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 20),
+              Text(
+                message,
+                style: const TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () =>
+                    Navigator.pushReplacementNamed(context, '/home'),
+                child: const Text('ہوم پر واپس جائیں'),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+} 

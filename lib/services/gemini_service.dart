@@ -4,20 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// 🔗 Link Helper - ویب سائٹ کھولنے کیلئے
+/// 🔗 Link Helper - ویب سائٹ یا کنسول لنک کھولنے کیلئے
 class LinkHelper {
   static Future<void> openLink(String url) async {
     try {
       final Uri uri = Uri.parse(url.trim());
-
-      if (!await canLaunchUrl(uri)) {
-        throw 'Cannot launch URL: $url';
-      }
-
-      await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      if (!await canLaunchUrl(uri)) throw 'Cannot launch URL: $url';
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       print('⚠️ Error opening link: $e');
     }
@@ -41,15 +34,12 @@ class GeminiService {
       final savedKey = await getSavedApiKey();
 
       if (savedKey != null && savedKey.isNotEmpty) {
-        _model = GenerativeModel(
-          model: 'gemini-pro',
-          apiKey: savedKey,
-        );
+        _model = GenerativeModel(model: 'gemini-pro', apiKey: savedKey);
         _isInitialized = true;
         print('✅ Gemini model initialized successfully');
       } else {
         _isInitialized = false;
-        print('⚠️ Gemini API key not found. Please set it in Settings.');
+        print('⚠️ Gemini API key not found.');
       }
     } catch (e) {
       _isInitialized = false;
@@ -76,7 +66,7 @@ class GeminiService {
     }
   }
 
-  /// 🔹 Save API Key
+  /// 🔹 Save API Key securely
   Future<void> saveApiKey(String apiKey) async {
     try {
       await _secureStorage.write(key: _apiKeyKey, value: apiKey.trim());
@@ -102,23 +92,20 @@ class GeminiService {
   bool isInitialized() => _isInitialized;
 
   // ==============================================================
-  // 🚀 CORE FUNCTIONALITY
+  // 🚀 CORE AI FUNCTIONS
   // ==============================================================
 
-  /// 🔹 Generate Code using Gemini
+  /// 🔹 General Code Generation
   Future<String> generateCode({
     required String prompt,
     required String framework,
     required List<String> platforms,
   }) async {
-    if (!_isInitialized) {
-      throw Exception('Gemini service not initialized. Please set your API key.');
-    }
+    if (!_isInitialized) throw Exception('Gemini not initialized. Set API key first.');
 
     try {
       String frameworkPrompt = _buildFrameworkPrompt(prompt, framework, platforms);
-      final content = Content.text(frameworkPrompt);
-      final response = await _model.generateContent([content]);
+      final response = await _model.generateContent([Content.text(frameworkPrompt)]);
       String generatedCode = response.text?.trim() ?? '';
 
       if (generatedCode.isEmpty) {
@@ -131,21 +118,19 @@ class GeminiService {
     }
   }
 
-  /// 🔹 Debug & Fix Code using AI
+  /// 🔹 Debugging Helper
   Future<String> debugCode({
     required String faultyCode,
     required String errorDescription,
     required String framework,
     required String originalPrompt,
   }) async {
-    if (!_isInitialized) {
-      throw Exception('Gemini service not initialized.');
-    }
+    if (!_isInitialized) throw Exception('Gemini service not initialized.');
 
     try {
       final debugPrompt = """
 You are an expert $framework developer.
-Fix the code based on the following details:
+Fix this code based on the details below:
 
 ORIGINAL PROMPT:
 $originalPrompt
@@ -157,10 +142,8 @@ ERROR:
 $errorDescription
 
 RULES:
-- Fix the bug
-- Return ONLY the corrected code
-- No explanations or markdown
-- Maintain structure and logic
+- Return ONLY corrected code (no explanation)
+- Maintain same logic & structure.
 """;
 
       final response = await _model.generateContent([Content.text(debugPrompt)]);
@@ -171,15 +154,81 @@ RULES:
     }
   }
 
-  /// 🔹 Test API Connection
+  // ==============================================================
+  // 🧠 GUIDE SYSTEM (AI Knowledge)
+  // ==============================================================
+
+  /// 🔹 Suggest best API with links and setup guide
+  Future<String> getApiSuggestion(String category) async {
+    final prompt = """
+You are an API expert.
+Suggest top APIs for "$category" use case.
+
+Provide in this format:
+🔹 API Name:
+🔹 Website Link:
+🔹 Free/Paid Info:
+🔹 How to get API Key:
+""";
+    final response = await _model.generateContent([Content.text(prompt)]);
+    return response.text ?? 'No suggestion available.';
+  }
+
+  /// 🔹 Firebase Authentication Guide
+  Future<String> getFirebaseAuthGuide() async {
+    final prompt = """
+Explain step-by-step how to add Firebase Authentication to a Flutter app.
+Include:
+1️⃣ How to open Firebase Console.
+2️⃣ How to register Android App.
+3️⃣ Where to place google-services.json.
+4️⃣ Which dependencies to use (firebase_auth, firebase_core).
+5️⃣ Simple example code for Email/Password login.
+
+If credit card is needed, mention that user must handle it manually.
+""";
+    final response = await _model.generateContent([Content.text(prompt)]);
+    return response.text ?? 'Guide unavailable.';
+  }
+
+  /// 🔹 Firebase Firestore Database Guide
+  Future<String> getFirebaseDatabaseGuide() async {
+    final prompt = """
+Explain step-by-step how to connect Firebase Firestore in Flutter.
+Include:
+1️⃣ Enabling Firestore in Firebase Console.
+2️⃣ Dependencies to add.
+3️⃣ Example of Add & Read Data in Flutter.
+""";
+    final response = await _model.generateContent([Content.text(prompt)]);
+    return response.text ?? 'Guide unavailable.';
+  }
+
+  // ==============================================================
+  // 🔗 Gemini Link Generator
+  // ==============================================================
+
+  Future<String> generateGeminiLink(String topic, {bool open = false}) async {
+    final key = await getSavedApiKey();
+    if (key == null || key.isEmpty) throw Exception('Gemini API key not found.');
+
+    final encodedPrompt = Uri.encodeComponent(topic);
+    final link = "https://aistudio.google.com/app/prompts/new?prompt=$encodedPrompt";
+
+    if (open) await LinkHelper.openLink(link);
+    return link;
+  }
+
+  // ==============================================================
+  // 🔍 Connection Test
+  // ==============================================================
+
   Future<bool> testConnection() async {
     if (!_isInitialized) return false;
 
     try {
-      final test = Content.text("Say only 'Hello World'");
-      final response = await _model.generateContent([test]);
-      final text = response.text ?? '';
-      return text.toLowerCase().contains('hello');
+      final response = await _model.generateContent([Content.text("Say only: OK")]);
+      return response.text?.toLowerCase().contains("ok") ?? false;
     } catch (e) {
       print('⚠️ Gemini connection test failed: $e');
       return false;
@@ -187,91 +236,49 @@ RULES:
   }
 
   // ==============================================================
-  // 🔗 Gemini Link (For User’s Generated Code)
+  // 🧩 Helpers
   // ==============================================================
 
-  /// 🔹 Generate a shareable Gemini link and optionally open it
-  Future<String> generateGeminiLink(String prompt, {bool open = false}) async {
-    final key = await getSavedApiKey();
-    if (key == null || key.isEmpty) {
-      throw Exception('Gemini API key not found.');
-    }
-
-    final encodedPrompt = Uri.encodeComponent(prompt);
-    final link = "https://aistudio.google.com/app/prompts/new?prompt=$encodedPrompt";
-
-    if (open) {
-      await LinkHelper.openLink(link);
-    }
-
-    return link;
-  }
-
-  // ==============================================================
-  // 🧠 Helper Methods
-  // ==============================================================
-
-  String _buildFrameworkPrompt(
-    String userPrompt,
-    String framework,
-    List<String> platforms,
-  ) {
+  String _buildFrameworkPrompt(String userPrompt, String framework, List<String> platforms) {
     final platformList = platforms.join(', ');
 
     switch (framework.toLowerCase()) {
       case 'react':
-        return '''
-You are a React.js expert. Generate COMPLETE React code.
-
-USER REQUIREMENT:
+        return """
+You are a React.js expert.
+Generate COMPLETE React code for:
 $userPrompt
-
-SPECIFICATIONS:
-- Framework: React.js (functional components)
-- Platforms: $platformList
-- Use Hooks, modern UI, responsive layout
-- Include imports, and ensure no syntax errors
-
-RETURN ONLY CODE:
-''';
-
+Platforms: $platformList
+Use hooks and responsive layout.
+RETURN ONLY CODE.
+""";
       case 'vue':
-        return '''
-You are a Vue.js 3 expert. Generate COMPLETE Vue code.
-
-USER REQUIREMENT:
+        return """
+You are a Vue.js 3 expert.
+Generate COMPLETE Vue code for:
 $userPrompt
 Platforms: $platformList
-
-Use <template>, <script setup>, <style> blocks.
-RETURN ONLY CODE:
-''';
-
+RETURN ONLY CODE.
+""";
       case 'html':
-        return '''
-You are a web expert. Generate COMPLETE HTML/JS/CSS webpage.
-
-USER REQUIREMENT:
+        return """
+You are a web expert.
+Generate COMPLETE HTML/JS/CSS webpage for:
 $userPrompt
 Platforms: $platformList
-
-RETURN ONLY THE CODE:
-''';
-
+RETURN ONLY CODE.
+""";
       default:
-        return '''
-You are a Flutter expert. Generate COMPLETE Flutter code.
-
-USER REQUIREMENT:
+        return """
+You are a Flutter expert.
+Generate COMPLETE Flutter code for:
 $userPrompt
 Platforms: $platformList
-
-RETURN ONLY THE CODE:
-''';
+RETURN ONLY CODE.
+""";
     }
   }
 
-  /// 🔹 Remove markdown or unnecessary wrappers
   String _cleanGeneratedCode(String code, String framework) {
     code = code.replaceAll(RegExp(r'```[a-z]*\n'), '');
     code = code.replaceAll('```', '');

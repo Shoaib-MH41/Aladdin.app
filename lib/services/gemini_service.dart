@@ -118,32 +118,43 @@ class GeminiService {
     }
   }
 
-  /// 🔹 Debugging Helper
+  /// 🔹 Smart Debugging Helper (Enhanced)
   Future<String> debugCode({
     required String faultyCode,
     required String errorDescription,
     required String framework,
     required String originalPrompt,
   }) async {
-    if (!_isInitialized) throw Exception('Gemini service not initialized.');
+    if (!_isInitialized) {
+      throw Exception('Gemini service not initialized.');
+    }
 
     try {
       final debugPrompt = """
-You are an expert $framework developer.
-Fix this code based on the details below:
+You are a senior $framework developer and debugging assistant.
+Your task is to fix the given code strictly based on the context and error details.
 
-ORIGINAL PROMPT:
+======================
+🧩 ORIGINAL PROMPT:
 $originalPrompt
-
-CODE:
+======================
+📄 FAULTY CODE:
 $faultyCode
-
-ERROR:
+======================
+⚠️ ERROR / ISSUE:
 $errorDescription
+======================
 
-RULES:
-- Return ONLY corrected code (no explanation)
-- Maintain same logic & structure.
+🎯 OBJECTIVE:
+- Correct the error and make the code functional.
+- Preserve all existing logic, structure, and comments.
+- Use proper $framework best practices.
+- Do NOT simplify, remove or re-architect anything unnecessarily.
+
+📜 OUTPUT RULES:
+- Return ONLY the corrected code (no markdown, no explanation, no comments outside code).
+- Ensure the code compiles successfully.
+- Do not include backticks or JSON wrappers.
 """;
 
       final response = await _model.generateContent([Content.text(debugPrompt)]);
@@ -153,6 +164,8 @@ RULES:
       throw Exception('Debugging failed: $e');
     }
   }
+
+
 
   // ==============================================================
   // 🧠 GUIDE SYSTEM (AI Knowledge)

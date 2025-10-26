@@ -2,6 +2,27 @@ import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+/// 🔗 Link Helper - ویب سائٹ کھولنے کیلئے
+class LinkHelper {
+  static Future<void> openLink(String url) async {
+    try {
+      final Uri uri = Uri.parse(url.trim());
+
+      if (!await canLaunchUrl(uri)) {
+        throw 'Cannot launch URL: $url';
+      }
+
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      print('⚠️ Error opening link: $e');
+    }
+  }
+}
 
 class GeminiService {
   static const String _apiKeyKey = 'gemini_api_key';
@@ -14,7 +35,7 @@ class GeminiService {
     _initializeModel();
   }
 
-  /// 🔹 Initialize Gemini model (if key exists)
+  /// 🔹 Initialize Gemini model
   Future<void> _initializeModel() async {
     try {
       final savedKey = await getSavedApiKey();
@@ -36,7 +57,7 @@ class GeminiService {
     }
   }
 
-  /// 🔹 Get Saved API Key (secure storage + migration)
+  /// 🔹 Get Saved API Key
   Future<String?> getSavedApiKey() async {
     try {
       String? key = await _secureStorage.read(key: _apiKeyKey);
@@ -55,7 +76,7 @@ class GeminiService {
     }
   }
 
-  /// 🔹 Save API Key (encrypted)
+  /// 🔹 Save API Key
   Future<void> saveApiKey(String apiKey) async {
     try {
       await _secureStorage.write(key: _apiKeyKey, value: apiKey.trim());
@@ -84,6 +105,7 @@ class GeminiService {
   // 🚀 CORE FUNCTIONALITY
   // ==============================================================
 
+  /// 🔹 Generate Code using Gemini
   Future<String> generateCode({
     required String prompt,
     required String framework,
@@ -109,6 +131,7 @@ class GeminiService {
     }
   }
 
+  /// 🔹 Debug & Fix Code using AI
   Future<String> debugCode({
     required String faultyCode,
     required String errorDescription,
@@ -148,6 +171,7 @@ RULES:
     }
   }
 
+  /// 🔹 Test API Connection
   Future<bool> testConnection() async {
     if (!_isInitialized) return false;
 
@@ -162,14 +186,25 @@ RULES:
     }
   }
 
-  Future<String> generateGeminiLink(String prompt) async {
+  // ==============================================================
+  // 🔗 Gemini Link (For User’s Generated Code)
+  // ==============================================================
+
+  /// 🔹 Generate a shareable Gemini link and optionally open it
+  Future<String> generateGeminiLink(String prompt, {bool open = false}) async {
     final key = await getSavedApiKey();
     if (key == null || key.isEmpty) {
       throw Exception('Gemini API key not found.');
     }
 
     final encodedPrompt = Uri.encodeComponent(prompt);
-    return "https://aistudio.google.com/app/prompts/new?prompt=$encodedPrompt";
+    final link = "https://aistudio.google.com/app/prompts/new?prompt=$encodedPrompt";
+
+    if (open) {
+      await LinkHelper.openLink(link);
+    }
+
+    return link;
   }
 
   // ==============================================================
@@ -236,51 +271,10 @@ RETURN ONLY THE CODE:
     }
   }
 
+  /// 🔹 Remove markdown or unnecessary wrappers
   String _cleanGeneratedCode(String code, String framework) {
     code = code.replaceAll(RegExp(r'```[a-z]*\n'), '');
     code = code.replaceAll('```', '');
     return code.trim();
-  }
-
-  // ==============================================================
-  // 🤖 SMART API SUGGESTION SYSTEM (New)
-  // ==============================================================
-
-  Future<Map<String, String>?> getApiSuggestion(String category) async {
-    if (!_isInitialized) {
-      throw Exception('Gemini service not initialized. Please set your API key.');
-    }
-
-    try {
-      final prompt = """
-You are an API research assistant.
-Suggest **one** reliable and mostly-free public API related to the category: "$category".
-
-Return JSON only, with the following fields:
-{
-  "name": "API name",
-  "url": "official website or documentation link",
-  "desc": "short explanation (in English, max 20 words)"
-}
-""";
-
-      final response = await _model.generateContent([Content.text(prompt)]);
-      final text = response.text?.trim();
-
-      if (text == null || text.isEmpty) return null;
-
-      final jsonMatch = RegExp(r'\{[\s\S]*\}').stringMatch(text);
-      if (jsonMatch == null) return null;
-
-      final data = json.decode(jsonMatch);
-      return {
-        "name": data["name"] ?? "",
-        "url": data["url"] ?? "",
-        "desc": data["desc"] ?? "",
-      };
-    } catch (e) {
-      print('⚠️ API suggestion failed: $e');
-      return null;
-    }
   }
 }

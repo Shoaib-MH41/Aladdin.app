@@ -165,14 +165,128 @@ $errorDescription
     }
   }
 
-
-
   // ==============================================================
-  // 🧠 GUIDE SYSTEM (AI Knowledge)
+  // 🔍 SMART API SUGGESTION SYSTEM (ChatGPT Version)
   // ==============================================================
 
-  /// 🔹 Suggest best API with links and setup guide
-  Future<String> getApiSuggestion(String category) async {
+  /// 🔹 Get AI-based API Suggestion (Smart Link Finder) - ChatGPT Version
+  Future<Map<String, dynamic>?> getApiSuggestion(String category) async {
+    if (!_isInitialized) {
+      throw Exception('Gemini service not initialized. Please set your API key.');
+    }
+
+    try {
+      final prompt = """
+You are an AI assistant that suggests API websites for app developers.
+Given the category: "$category"
+Find a suitable API service provider or console that offers APIs in this category.
+
+Return only one result in JSON format:
+{
+  "name": "Provider or Platform Name",
+  "url": "https://example.com",
+  "note": "Short instruction for how to get API key or use it."
+}
+
+Examples:
+Category: "Medical" → {
+  "name": "Health API - RapidAPI", 
+  "url": "https://rapidapi.com/collection/medical",
+  "note": "Sign up and get your API key."
+}
+
+Category: "Firebase" → {
+  "name": "Google Firebase",
+  "url": "https://console.firebase.google.com", 
+  "note": "Create project, enable API and get key."
+}
+
+Category: "Weather" → {
+  "name": "OpenWeather API",
+  "url": "https://openweathermap.org/api",
+  "note": "Free plan available with limited calls."
+}
+
+Category: "AI" → {
+  "name": "OpenAI API",
+  "url": "https://platform.openai.com/api-keys",
+  "note": "Create account and generate API key."
+}
+
+Category: "Authentication" → {
+  "name": "Auth0",
+  "url": "https://auth0.com",
+  "note": "Sign up and configure your application."
+}
+
+Return only valid JSON, no additional text.
+""";
+
+      final content = Content.text(prompt);
+      final response = await _model.generateContent([content]);
+      final text = response.text ?? '';
+      
+      // JSON کو صاف کریں
+      final cleanText = text.replaceAll('```json', '').replaceAll('```', '').trim();
+      final jsonStart = cleanText.indexOf('{');
+      final jsonEnd = cleanText.lastIndexOf('}');
+      
+      if (jsonStart == -1 || jsonEnd == -1) {
+        throw Exception('AI نے صحیح JSON format میں جواب نہیں دیا۔');
+      }
+      
+      final jsonString = cleanText.substring(jsonStart, jsonEnd + 1);
+      final data = json.decode(jsonString) as Map<String, dynamic>;
+      
+      print('✅ AI Suggested API: ${data['name']} - ${data['url']}');
+      return data;
+    } catch (e) {
+      print('⚠️ Error in getApiSuggestion: $e');
+      // Fallback suggestions
+      return _getFallbackSuggestion(category);
+    }
+  }
+
+  /// 🔹 Fallback suggestions if AI fails
+  Map<String, dynamic>? _getFallbackSuggestion(String category) {
+    final fallbacks = {
+      'ai': {
+        'name': 'OpenAI API',
+        'url': 'https://platform.openai.com/api-keys',
+        'note': 'Create account and generate API key'
+      },
+      'firebase': {
+        'name': 'Google Firebase',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Create project and enable APIs'
+      },
+      'weather': {
+        'name': 'OpenWeather Map',
+        'url': 'https://openweathermap.org/api',
+        'note': 'Free tier available with signup'
+      },
+      'authentication': {
+        'name': 'Firebase Auth',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Authentication in Firebase Console'
+      },
+      'database': {
+        'name': 'Firebase Firestore',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Firestore in Firebase Console'
+      }
+    };
+    
+    final key = category.toLowerCase();
+    return fallbacks[key] ?? fallbacks['ai'];
+  }
+
+  // ==============================================================
+  // 🧠 GUIDE SYSTEM (AI Knowledge) - Existing Methods
+  // ==============================================================
+
+  /// 🔹 Suggest best API with links and setup guide (Legacy - Keep for compatibility)
+  Future<String> getApiSuggestionLegacy(String category) async {
     final prompt = """
 You are an API expert.
 Suggest top APIs for "$category" use case.

@@ -18,16 +18,40 @@ class PinScreen extends StatefulWidget {
 class _PinScreenState extends State<PinScreen> {
   final TextEditingController _pinController = TextEditingController();
   String _message = '';
+  bool _isSettingUp = false;
 
-  void _unlock() async {
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingPin();
+  }
+
+  void _checkExistingPin() async {
+    final hasPin = await widget.securityService.hasPin();
+    setState(() {
+      _isSettingUp = !hasPin; // اگر PIN نہیں ہے تو setup mode میں جائیں
+    });
+  }
+
+  void _handlePin() async {
     final pin = _pinController.text.trim();
-    if (pin.isEmpty) return;
+    if (pin.length != 4) {
+      setState(() => _message = '❌ PIN 4 ہندسوں کی ہونی چاہیے');
+      return;
+    }
 
-    final ok = await widget.securityService.verifyPin(pin);
-    if (ok) {
+    if (_isSettingUp) {
+      // نیا PIN سیٹ کریں
+      await widget.securityService.savePin(pin);
       widget.onUnlocked();
     } else {
-      setState(() => _message = '❌ غلط PIN، دوبارہ کوشش کریں');
+      // موجودہ PIN چیک کریں
+      final ok = await widget.securityService.verifyPin(pin);
+      if (ok) {
+        widget.onUnlocked();
+      } else {
+        setState(() => _message = '❌ غلط PIN، دوبارہ کوشش کریں');
+      }
     }
   }
 
@@ -45,28 +69,28 @@ class _PinScreenState extends State<PinScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  '🔐 PIN درج کریں',
+                Text(
+                  _isSettingUp ? '🔐 نیا PIN سیٹ کریں' : '🔐 PIN درج کریں',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 TextField(
                   controller: _pinController,
                   keyboardType: TextInputType.number,
                   obscureText: true,
                   maxLength: 4,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: '4-digit PIN',
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: _unlock,
-                  child: const Text('انلاک کریں'),
+                  onPressed: _handlePin,
+                  child: Text(_isSettingUp ? 'PIN سیٹ کریں' : 'انلاک کریں'),
                 ),
-                const SizedBox(height: 8),
-                Text(_message, style: const TextStyle(color: Colors.red)),
+                SizedBox(height: 8),
+                Text(_message, style: TextStyle(color: Colors.red)),
               ],
             ),
           ),
@@ -75,4 +99,3 @@ class _PinScreenState extends State<PinScreen> {
     );
   }
 }
-

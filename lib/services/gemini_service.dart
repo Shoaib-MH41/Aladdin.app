@@ -39,11 +39,9 @@ class GeminiService {
   /// 🔹 Get Saved API Key (secure storage + migration)
   Future<String?> getSavedApiKey() async {
     try {
-      // Check Secure Storage first
       String? key = await _secureStorage.read(key: _apiKeyKey);
       if (key != null && key.isNotEmpty) return key;
 
-      // Fallback: migrate old key from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       key = prefs.getString(_apiKeyKey);
       if (key != null && key.isNotEmpty) {
@@ -86,7 +84,6 @@ class GeminiService {
   // 🚀 CORE FUNCTIONALITY
   // ==============================================================
 
-  /// 🔹 Generate Code using Gemini
   Future<String> generateCode({
     required String prompt,
     required String framework,
@@ -98,10 +95,8 @@ class GeminiService {
 
     try {
       String frameworkPrompt = _buildFrameworkPrompt(prompt, framework, platforms);
-
       final content = Content.text(frameworkPrompt);
       final response = await _model.generateContent([content]);
-
       String generatedCode = response.text?.trim() ?? '';
 
       if (generatedCode.isEmpty) {
@@ -114,7 +109,6 @@ class GeminiService {
     }
   }
 
-  /// 🔹 Debug & Fix Code using AI
   Future<String> debugCode({
     required String faultyCode,
     required String errorDescription,
@@ -154,7 +148,6 @@ RULES:
     }
   }
 
-  /// 🔹 Test API Connection
   Future<bool> testConnection() async {
     if (!_isInitialized) return false;
 
@@ -169,11 +162,6 @@ RULES:
     }
   }
 
-  // ==============================================================
-  // 🔗 Gemini Link (For User’s Generated Code)
-  // ==============================================================
-
-  /// 🔹 Generate a shareable Gemini link (for verification or follow-up)
   Future<String> generateGeminiLink(String prompt) async {
     final key = await getSavedApiKey();
     if (key == null || key.isEmpty) {
@@ -248,10 +236,51 @@ RETURN ONLY THE CODE:
     }
   }
 
-  /// 🔹 Remove markdown or unnecessary wrappers
   String _cleanGeneratedCode(String code, String framework) {
     code = code.replaceAll(RegExp(r'```[a-z]*\n'), '');
     code = code.replaceAll('```', '');
     return code.trim();
+  }
+
+  // ==============================================================
+  // 🤖 SMART API SUGGESTION SYSTEM (New)
+  // ==============================================================
+
+  Future<Map<String, String>?> getApiSuggestion(String category) async {
+    if (!_isInitialized) {
+      throw Exception('Gemini service not initialized. Please set your API key.');
+    }
+
+    try {
+      final prompt = """
+You are an API research assistant.
+Suggest **one** reliable and mostly-free public API related to the category: "$category".
+
+Return JSON only, with the following fields:
+{
+  "name": "API name",
+  "url": "official website or documentation link",
+  "desc": "short explanation (in English, max 20 words)"
+}
+""";
+
+      final response = await _model.generateContent([Content.text(prompt)]);
+      final text = response.text?.trim();
+
+      if (text == null || text.isEmpty) return null;
+
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').stringMatch(text);
+      if (jsonMatch == null) return null;
+
+      final data = json.decode(jsonMatch);
+      return {
+        "name": data["name"] ?? "",
+        "url": data["url"] ?? "",
+        "desc": data["desc"] ?? "",
+      };
+    } catch (e) {
+      print('⚠️ API suggestion failed: $e');
+      return null;
+    }
   }
 }

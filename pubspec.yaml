@@ -15,14 +15,14 @@ dependencies:
 
   # 🔹 File & Storage Handling
   file_picker: ^6.1.1
-  permission_handler: ^11.0.0
-  path_provider: ^2.1.1  # ✅ نیا شامل کریں
-  archive: ^3.3.6        # ✅ نیا شامل کریں - ZIP فائلز کے لیے
+  permission_handler: ^10.2.0  # ✅ پرانی stable version
+  path_provider: ^2.1.1
+  archive: ^3.3.6
 
   # 🔹 Network & APIs
   http: ^1.1.0
   url_launcher: ^6.2.0
-  google_generative_ai: ^0.2.1  # ✅ Version اپڈیٹ کریں
+  google_generative_ai: ^0.2.1
 
   # 🔹 Local Storage
   shared_preferences: ^2.2.2
@@ -35,8 +35,8 @@ dependencies:
   flutter_highlight: ^0.7.0
 
   # 🔹 Animations & UI
-  animations: ^2.0.7     # ✅ نیا شامل کریں - UploadScreen کے لیے
-  lottie: ^2.7.0         # ✅ نیا شامل کریں - Animation preview کے لیے
+  animations: ^2.0.7
+  lottie: ^2.7.0
 
 dev_dependencies:
   flutter_test:
@@ -45,7 +45,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  # 🌟 Assets فی الحال comment رہنے دیں
-  # assets:
-  #   - assets/images/

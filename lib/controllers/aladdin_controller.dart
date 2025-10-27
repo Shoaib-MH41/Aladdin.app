@@ -3,9 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:http/http.dart' as http;
 
-/// 🔮 AladdinController —
-/// یہ کلاس Gemini AI سے کوڈ جنریٹ کرتی ہے
-/// اور GitHub پر اپلوڈ کرتی ہے۔
+/// 🔮 AladdinController - Gemini AI سے کوڈ جنریٹ اور GitHub پر اپلوڈ
 class AladdinController {
   final _storage = const FlutterSecureStorage();
   static const _githubApi = 'https://api.github.com';
@@ -16,10 +14,9 @@ class AladdinController {
   }
 
   /// 💫 Gemini سے ایپ جنریٹ اور GitHub پر اپلوڈ کرنا
-  Future<String> generateAndUploadApp({
+  Future<Map<String, dynamic>> generateAndUploadApp({
     required String prompt,
     required String framework,
-    required List<String> platforms,
     required String repoName,
   }) async {
     final geminiKey = await _getApiKey('gemini_api_key');
@@ -33,18 +30,16 @@ class AladdinController {
       throw '⚠️ GitHub Token محفوظ نہیں ہے۔ براہ کرم Settings میں سیٹ کریں۔';
     }
 
-    // ✨ Gemini سے کوڈ حاصل کریں
-    final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: geminiKey);
-    final content = [
-      Content.text(
-        "Generate a complete $framework app for: $prompt\n"
-        "Platforms: ${platforms.join(', ')}\n"
-        "Include full source code with main file and assets if needed.\n"
-        "Return only the code without any explanations or markdown formatting."
-      ),
-    ];
-
     try {
+      // ✨ Gemini سے کوڈ حاصل کریں
+      final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: geminiKey);
+      final content = [
+        Content.text(
+          "Generate a complete $framework app for: $prompt\n"
+          "Return only the main code file without any explanations or markdown formatting."
+        ),
+      ];
+
       final response = await model.generateContent(content);
       final generatedCode = response.text ?? '';
 
@@ -56,14 +51,11 @@ class AladdinController {
       final repoUrl = await _createGitHubRepo(
         githubToken,
         repoName,
-        'Auto-created app from Aladdin System: $prompt',
+        'Auto-created $framework app from Aladdin System: $prompt',
       );
 
-      // 📦 فائل اپلوڈ کریں (main.dart یا index.html)
-      final fileName = framework.toLowerCase().contains('flutter')
-          ? 'lib/main.dart'
-          : 'index.html';
-
+      // 📦 مین فائل اپلوڈ کریں
+      final fileName = _getMainFileName(framework);
       await _uploadToGitHub(
         githubToken,
         repoName,
@@ -72,9 +64,37 @@ class AladdinController {
         'Initial commit: $prompt',
       );
 
-      return repoUrl;
+      // 📁 اضافی فائلیں بنائیں (framework کے مطابق)
+      await _createAdditionalFiles(githubToken, repoName, framework, prompt);
+
+      return {
+        'success': true,
+        'repoUrl': repoUrl,
+        'message': '✅ ایپ GitHub پر اپلوڈ ہو گئی!',
+        'code': generatedCode,
+      };
     } catch (e) {
-      throw '❌ Gemini سے کوڈ جنریٹ کرنے میں خرابی: $e';
+      return {
+        'success': false,
+        'error': '❌ خرابی: $e',
+        'repoUrl': null,
+      };
+    }
+  }
+
+  // 🔧 مین فائل کا نام طے کرنا
+  String _getMainFileName(String framework) {
+    switch (framework.toLowerCase()) {
+      case 'flutter':
+        return 'lib/main.dart';
+      case 'react':
+        return 'src/App.js';
+      case 'vue':
+        return 'src/App.vue';
+      case 'html':
+        return 'index.html';
+      default:
+        return 'main.dart';
     }
   }
 
@@ -96,7 +116,7 @@ class AladdinController {
           'name': repoName,
           'description': description,
           'private': false,
-          'auto_init': true, // README فائل خود بخود بن جائے گی
+          'auto_init': true,
         }),
       );
 
@@ -105,27 +125,31 @@ class AladdinController {
         return data['html_url'];
       } else if (response.statusCode == 422) {
         // ریپو پہلے سے موجود ہو تو لنک واپس کریں
-        // یوزرنیم حاصل کرنے کے لیے ایک API call کریں
-        final userResponse = await http.get(
-          Uri.parse('$_githubApi/user'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        );
-        
-        if (userResponse.statusCode == 200) {
-          final userData = jsonDecode(userResponse.body);
-          final username = userData['login'];
-          return 'https://github.com/$username/$repoName';
-        } else {
-          return 'https://github.com/your-username/$repoName';
-        }
+        final username = await _getGitHubUsername(token);
+        return 'https://github.com/$username/$repoName';
       } else {
-        throw '❌ GitHub Repo بنانے میں ناکامی (${response.statusCode}): ${response.body}';
+        throw '❌ GitHub Repo بنانے میں ناکامی (${response.statusCode})';
       }
     } catch (e) {
       throw '❌ GitHub سے رابطہ کرنے میں خرابی: $e';
+    }
+  }
+
+  // 👤 GitHub username حاصل کرنا
+  Future<String> _getGitHubUsername(String token) async {
+    final response = await http.get(
+      Uri.parse('$_githubApi/user'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final userData = jsonDecode(response.body);
+      return userData['login'];
+    } else {
+      return 'your-username';
     }
   }
 
@@ -138,22 +162,7 @@ class AladdinController {
     String commitMessage,
   ) async {
     try {
-      // پہلے یوزرنیم حاصل کریں
-      final userResponse = await http.get(
-        Uri.parse('$_githubApi/user'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      );
-
-      if (userResponse.statusCode != 200) {
-        throw '❌ GitHub user info حاصل نہیں ہو سکی';
-      }
-
-      final userData = jsonDecode(userResponse.body);
-      final username = userData['login'];
-
+      final username = await _getGitHubUsername(token);
       final encodedContent = base64Encode(utf8.encode(content));
       
       final response = await http.put(
@@ -170,11 +179,103 @@ class AladdinController {
       );
 
       if (response.statusCode != 201) {
-        final errorBody = jsonDecode(response.body);
-        throw '❌ فائل اپلوڈ نہیں ہو سکی (${response.statusCode}): ${errorBody['message'] ?? response.body}';
+        throw '❌ فائل اپلوڈ نہیں ہو سکی (${response.statusCode})';
       }
     } catch (e) {
       throw '❌ GitHub پر فائل اپلوڈ کرنے میں خرابی: $e';
+    }
+  }
+
+  // 📁 اضافی فائلیں بنانا
+  Future<void> _createAdditionalFiles(
+    String token,
+    String repoName,
+    String framework,
+    String prompt,
+  ) async {
+    try {
+      final username = await _getGitHubUsername(token);
+      
+      // README.md فائل
+      final readmeContent = '''
+# $repoName
+
+$framework ایپ جو Aladdin System کے ذریعے خودکار بنائی گئی۔
+
+## تفصیل
+$prompt
+
+## انسٹالیشن
+\`\`\`bash
+git clone https://github.com/$username/$repoName.git
+cd $repoName
+\`\`\'
+
+## چلانے کا طریقہ
+${_getRunInstructions(framework)}
+''';
+
+      await _uploadToGitHub(
+        token,
+        repoName,
+        'README.md',
+        readmeContent,
+        'Add README.md',
+      );
+
+      // Flutter کے لیے pubspec.yaml
+      if (framework.toLowerCase() == 'flutter') {
+        final pubspecContent = '''
+name: $repoName
+description: A Flutter app generated by Aladdin System.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+''';
+
+        await _uploadToGitHub(
+          token,
+          repoName,
+          'pubspec.yaml',
+          pubspecContent,
+          'Add pubspec.yaml',
+        );
+      }
+
+    } catch (e) {
+      // اضافی فائلیں نہ بن سکیں تو صرف ignore کریں
+      print('⚠️ اضافی فائلیں نہیں بن سکیں: $e');
+    }
+  }
+
+  // 🏃‍♂️ چلانے کی ہدایات
+  String _getRunInstructions(String framework) {
+    switch (framework.toLowerCase()) {
+      case 'flutter':
+        return 'flutter pub get && flutter run';
+      case 'react':
+        return 'npm install && npm start';
+      case 'vue':
+        return 'npm install && npm run dev';
+      case 'html':
+        return 'براؤزر میں index.html کھولیں';
+      default:
+        return 'دیکھیں README.md';
     }
   }
 
@@ -211,7 +312,6 @@ class AladdinController {
       final response = await model.generateContent(content);
       final jsonText = response.text ?? '[]';
       
-      // JSON کو صاف کریں (اگر Gemini نے اضافی متن دیا ہو)
       final cleanJson = jsonText.replaceAll('```json', '').replaceAll('```', '').trim();
       
       final List<dynamic> jsonList = jsonDecode(cleanJson);

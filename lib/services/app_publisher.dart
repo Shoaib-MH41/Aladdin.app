@@ -1,106 +1,89 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-import 'package:archive/archive_io.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class AppPublisher {
-  Future<Map<String, dynamic>> prepareForPlayStore({
+class PublishService {
+  /// 🔹 Save generated app code (as ZIP or text file) in local storage
+  Future<String?> saveAppLocally({
     required String appName,
     required String generatedCode,
-    required String framework,
-  }) async {
-    return {
-      "package_name": "com.${appName.toLowerCase().replaceAll(' ', '_')}.app",
-      "permissions": ["INTERNET", "READ_EXTERNAL_STORAGE"],
-      "privacy_policy":
-          "https://yourdomain.com/${appName.toLowerCase()}_privacy_policy.html",
-      "app_icon": ["512x512 PNG", "1024x1024 Icon"],
-      "generated_code": generatedCode,
-    };
-  }
-
-  String getBuildCommands(String appName, {required String framework}) {
-    if (framework.toLowerCase() == "flutter") {
-      return '''
-# Build APK for Release
-flutter build apk --release
-
-# Output Path
-build/app/outputs/flutter-apk/app-release.apk
-''';
-    } else {
-      return '# Add your $framework build command here';
-    }
-  }
-
-  Future<String> exportToZip(Map<String, dynamic> publishData, String appName) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final exportDir = Directory(p.join(dir.path, appName));
-    if (!exportDir.existsSync()) exportDir.createSync(recursive: true);
-
-    File(p.join(exportDir.path, "publish_info.json"))
-        .writeAsStringSync(jsonEncode(publishData));
-
-    final zipPath = p.join(dir.path, "$appName-Package.zip");
-    final encoder = ZipFileEncoder();
-    encoder.create(zipPath);
-    encoder.addDirectory(exportDir);
-    encoder.close();
-    return zipPath;
-  }
-
-  Future<String> uploadToPlayStore({
-    required String serviceAccountPath,
-    required String packageName,
   }) async {
     try {
-      final credentials = jsonDecode(File(serviceAccountPath).readAsStringSync());
-      final clientEmail = credentials['client_email'];
-      final privateKey = credentials['private_key'];
+      final dir = await getApplicationDocumentsDirectory();
+      final filePath = '${dir.path}/${appName}_release.zip';
+      final file = File(filePath);
 
-      final jwtHeader = base64UrlEncode(utf8.encode(jsonEncode({
-        "alg": "RS256",
-        "typ": "JWT",
-      })));
-
-      final iat = (DateTime.now().millisecondsSinceEpoch / 1000).floor();
-      final exp = iat + 3600;
-
-      final jwtClaim = base64UrlEncode(utf8.encode(jsonEncode({
-        "iss": clientEmail,
-        "scope": "https://www.googleapis.com/auth/androidpublisher",
-        "aud": "https://oauth2.googleapis.com/token",
-        "exp": exp,
-        "iat": iat,
-      })));
-
-      final jwtSignature = _fakeSignJwt("$jwtHeader.$jwtClaim", privateKey);
-      final jwt = "$jwtHeader.$jwtClaim.$jwtSignature";
-
-      final tokenResponse = await http.post(
-        Uri.parse("https://oauth2.googleapis.com/token"),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {
-          "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-          "assertion": jwt,
-        },
-      );
-
-      if (tokenResponse.statusCode != 200) {
-        throw Exception("Failed to get access token: ${tokenResponse.body}");
-      }
-
-      return "✅ Token generated successfully! Ready for upload of $packageName";
+      await file.writeAsString(generatedCode);
+      debugPrint('✅ File saved at: $filePath');
+      return filePath;
     } catch (e) {
-      throw Exception("Upload failed: $e");
+      debugPrint('❌ Error saving file: $e');
+      return null;
     }
   }
 
-  String _fakeSignJwt(String input, String privateKey) {
-    // Placeholder signature – real signing requires RSA implementation
-    return base64UrlEncode(utf8.encode("fake_signature"));
+  /// 🔹 Share locally saved file (for quick export or backup)
+  Future<void> shareAppFile(String filePath) async {
+    try {
+      if (await File(filePath).exists()) {
+        await Share.shareFiles([filePath],
+            text: 'Check out my generated Flutter App 🚀');
+      } else {
+        debugPrint('❌ File does not exist: $filePath');
+      }
+    } catch (e) {
+      debugPrint('❌ Error sharing file: $e');
+    }
+  }
+
+  /// 🔹 Open GitHub new repository page to manually upload file
+  Future<void> openGithubUploadPage() async {
+    const githubUrl = 'https://github.com/new';
+    final Uri url = Uri.parse(githubUrl);
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+        debugPrint('🌐 Opening GitHub repository creation page');
+      } else {
+        throw 'GitHub cannot be opened';
+      }
+    } catch (e) {
+      debugPrint('❌ Error launching GitHub: $e');
+    }
+  }
+
+  /// 🔹 (Optional) Future Upgrade: Automatic GitHub Upload via API
+  ///
+  /// You can later integrate with GitHub’s REST API to publish automatically.
+  /// That would require user’s GitHub Personal Access Token.
+  /// Example method for future use (disabled for now):
+  ///
+  /// Future<void> uploadToGithub(String token, String repoName, File file) async {
+  ///   // Using `http` package, send file as base64 to GitHub API
+  ///   // POST https://api.github.com/repos/{user}/{repo}/contents/{path}
+  ///   // Headers: Authorization: token {token}
+  ///   // Body: { message, content (base64 encoded) }
+  /// }
+
+  /// 🔹 Utility: Get app directory (helpful for debugging)
+  Future<String> getAppDirectoryPath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return dir.path;
+  }
+
+  /// 🔹 Delete previously saved app (cleanup option)
+  Future<void> deleteSavedApp(String appName) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/${appName}_release.zip');
+
+    if (await file.exists()) {
+      await file.delete();
+      debugPrint('🗑️ Deleted file: ${file.path}');
+    } else {
+      debugPrint('⚠️ File not found for deletion');
+    }
   }
 }
-

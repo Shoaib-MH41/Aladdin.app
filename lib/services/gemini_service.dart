@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,10 +21,11 @@ class GeminiService {
   late GenerativeModel _model;
   bool _isInitialized = false;
 
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorageStorage();
+  late final Future<void> _initialization;
 
   GeminiService() {
-    _initializeModel();
+    _initialization = _initializeModel();
   }
 
   /// 🔹 Initialize Gemini model
@@ -34,7 +34,7 @@ class GeminiService {
       final savedKey = await getSavedApiKey();
 
       if (savedKey != null && savedKey.isNotEmpty) {
-        _model = GenerativeModel(model: 'gemini-pro', apiKey: savedKey);
+        _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: savedKey);
         _isInitialized = true;
         print('✅ Gemini model initialized successfully');
       } else {
@@ -50,16 +50,7 @@ class GeminiService {
   /// 🔹 Get Saved API Key
   Future<String?> getSavedApiKey() async {
     try {
-      String? key = await _secureStorage.read(key: _apiKeyKey);
-      if (key != null && key.isNotEmpty) return key;
-
-      final prefs = await SharedPreferences.getInstance();
-      key = prefs.getString(_apiKeyKey);
-      if (key != null && key.isNotEmpty) {
-        await _secureStorage.write(key: _apiKeyKey, value: key);
-        await prefs.remove(_apiKeyKey);
-      }
-      return key;
+      return await _secureStorage.read(key: _apiKeyKey);
     } catch (e) {
       print('⚠️ Error reading API key: $e');
       return null;
@@ -70,8 +61,7 @@ class GeminiService {
   Future<void> saveApiKey(String apiKey) async {
     try {
       await _secureStorage.write(key: _apiKeyKey, value: apiKey.trim());
-      _model = GenerativeModel(model: 'gemini-pro', apiKey: apiKey.trim());
-      _isInitialized = true;
+      await _initializeModel(); // Re-initialize with new key
       print('🔐 Gemini API key securely saved.');
     } catch (e) {
       throw Exception('API key save failed: $e');
@@ -89,7 +79,10 @@ class GeminiService {
     }
   }
 
-  bool isInitialized() => _isInitialized;
+  Future<bool> isInitialized() async {
+    await _initialization;
+    return _isInitialized;
+  }
 
   // ==============================================================
   // 🚀 CORE AI FUNCTIONS
@@ -101,6 +94,7 @@ class GeminiService {
     required String framework,
     required List<String> platforms,
   }) async {
+    await _initialization;
     if (!_isInitialized) throw Exception('Gemini not initialized. Set API key first.');
 
     try {
@@ -114,17 +108,18 @@ class GeminiService {
 
       return _cleanGeneratedCode(generatedCode, framework);
     } catch (e) {
-      throw Exception('Code generation failed: $e');
+      throw Exception('کوڈ جنریشن ناکام: $e');
     }
   }
 
-  /// 🔹 Smart Debugging Helper (Enhanced)
+  /// 🔹 Smart Debugging Helper
   Future<String> debugCode({
     required String faultyCode,
     required String errorDescription,
     required String framework,
     required String originalPrompt,
   }) async {
+    await _initialization;
     if (!_isInitialized) {
       throw Exception('Gemini service not initialized.');
     }
@@ -134,25 +129,21 @@ class GeminiService {
 You are a senior $framework developer and debugging assistant.
 Your task is to fix the given code strictly based on the context and error details.
 
-======================
-🧩 ORIGINAL PROMPT:
-$originalPrompt
-======================
-📄 FAULTY CODE:
-$faultyCode
-======================
-⚠️ ERROR / ISSUE:
-$errorDescription
-======================
+ORIGINAL PROMPT: $originalPrompt
 
-🎯 OBJECTIVE:
+FAULTY CODE:
+$faultyCode
+
+ERROR / ISSUE:
+$errorDescription
+
+OBJECTIVE:
 - Correct the error and make the code functional.
 - Preserve all existing logic, structure, and comments.
 - Use proper $framework best practices.
-- Do NOT simplify, remove or re-architect anything unnecessarily.
 
-📜 OUTPUT RULES:
-- Return ONLY the corrected code (no markdown, no explanation, no comments outside code).
+OUTPUT RULES:
+- Return ONLY the corrected code (no markdown, no explanation).
 - Ensure the code compiles successfully.
 - Do not include backticks or JSON wrappers.
 """;
@@ -161,16 +152,17 @@ $errorDescription
       String fixedCode = response.text?.trim() ?? faultyCode;
       return _cleanGeneratedCode(fixedCode, framework);
     } catch (e) {
-      throw Exception('Debugging failed: $e');
+      throw Exception('ڈیبگنگ ناکام: $e');
     }
   }
 
   // ==============================================================
-  // 🔍 SMART API SUGGESTION SYSTEM (ChatGPT Version)
+  // 🔍 SMART API SUGGESTION SYSTEM
   // ==============================================================
 
-  /// 🔹 Get AI-based API Suggestion (Smart Link Finder) - ChatGPT Version
+  /// 🔹 Get AI-based API Suggestion
   Future<Map<String, dynamic>?> getApiSuggestion(String category) async {
+    await _initialization;
     if (!_isInitialized) {
       throw Exception('Gemini service not initialized. Please set your API key.');
     }
@@ -188,61 +180,31 @@ Return only one result in JSON format:
   "note": "Short instruction for how to get API key or use it."
 }
 
-Examples:
-Category: "Medical" → {
-  "name": "Health API - RapidAPI", 
-  "url": "https://rapidapi.com/collection/medical",
-  "note": "Sign up and get your API key."
-}
-
-Category: "Firebase" → {
-  "name": "Google Firebase",
-  "url": "https://console.firebase.google.com", 
-  "note": "Create project, enable API and get key."
-}
-
-Category: "Weather" → {
-  "name": "OpenWeather API",
-  "url": "https://openweathermap.org/api",
-  "note": "Free plan available with limited calls."
-}
-
-Category: "AI" → {
-  "name": "OpenAI API",
-  "url": "https://platform.openai.com/api-keys",
-  "note": "Create account and generate API key."
-}
-
-Category: "Authentication" → {
-  "name": "Auth0",
-  "url": "https://auth0.com",
-  "note": "Sign up and configure your application."
-}
-
 Return only valid JSON, no additional text.
 """;
 
-      final content = Content.text(prompt);
-      final response = await _model.generateContent([content]);
+      final response = await _model.generateContent([Content.text(prompt)]);
       final text = response.text ?? '';
       
-      // JSON کو صاف کریں
-      final cleanText = text.replaceAll('```json', '').replaceAll('```', '').trim();
-      final jsonStart = cleanText.indexOf('{');
-      final jsonEnd = cleanText.lastIndexOf('}');
+      // بہتر JSON parsing
+      String cleanText = text.replaceAll('```json', '').replaceAll('```', '').trim();
       
-      if (jsonStart == -1 || jsonEnd == -1) {
-        throw Exception('AI نے صحیح JSON format میں جواب نہیں دیا۔');
+      // JSON extract کریں
+      try {
+        final data = json.decode(cleanText) as Map<String, dynamic>;
+        print('✅ AI Suggested API: ${data['name']}');
+        return data;
+      } catch (e) {
+        // اگر JSON نہیں ملا تو text سے extract کریں
+        final jsonMatch = RegExp(r'\{[^{}]*\}').firstMatch(cleanText);
+        if (jsonMatch != null) {
+          final data = json.decode(jsonMatch.group(0)!) as Map<String, dynamic>;
+          return data;
+        }
+        throw Exception('AI نے صحیح JSON نہیں دیا');
       }
-      
-      final jsonString = cleanText.substring(jsonStart, jsonEnd + 1);
-      final data = json.decode(jsonString) as Map<String, dynamic>;
-      
-      print('✅ AI Suggested API: ${data['name']} - ${data['url']}');
-      return data;
     } catch (e) {
       print('⚠️ Error in getApiSuggestion: $e');
-      // Fallback suggestions
       return _getFallbackSuggestion(category);
     }
   }
@@ -282,37 +244,20 @@ Return only valid JSON, no additional text.
   }
 
   // ==============================================================
-  // 🧠 GUIDE SYSTEM (AI Knowledge) - Existing Methods
+  // 🧠 GUIDE SYSTEM
   // ==============================================================
-
-  /// 🔹 Suggest best API with links and setup guide (Legacy - Keep for compatibility)
-  Future<String> getApiSuggestionLegacy(String category) async {
-    final prompt = """
-You are an API expert.
-Suggest top APIs for "$category" use case.
-
-Provide in this format:
-🔹 API Name:
-🔹 Website Link:
-🔹 Free/Paid Info:
-🔹 How to get API Key:
-""";
-    final response = await _model.generateContent([Content.text(prompt)]);
-    return response.text ?? 'No suggestion available.';
-  }
 
   /// 🔹 Firebase Authentication Guide
   Future<String> getFirebaseAuthGuide() async {
+    await _initialization;
     final prompt = """
 Explain step-by-step how to add Firebase Authentication to a Flutter app.
 Include:
-1️⃣ How to open Firebase Console.
-2️⃣ How to register Android App.
-3️⃣ Where to place google-services.json.
-4️⃣ Which dependencies to use (firebase_auth, firebase_core).
-5️⃣ Simple example code for Email/Password login.
-
-If credit card is needed, mention that user must handle it manually.
+1. How to open Firebase Console
+2. How to register Android App
+3. Where to place google-services.json
+4. Which dependencies to use
+5. Simple example code for Email/Password login
 """;
     final response = await _model.generateContent([Content.text(prompt)]);
     return response.text ?? 'Guide unavailable.';
@@ -320,12 +265,13 @@ If credit card is needed, mention that user must handle it manually.
 
   /// 🔹 Firebase Firestore Database Guide
   Future<String> getFirebaseDatabaseGuide() async {
+    await _initialization;
     final prompt = """
 Explain step-by-step how to connect Firebase Firestore in Flutter.
 Include:
-1️⃣ Enabling Firestore in Firebase Console.
-2️⃣ Dependencies to add.
-3️⃣ Example of Add & Read Data in Flutter.
+1. Enabling Firestore in Firebase Console
+2. Dependencies to add
+3. Example of Add & Read Data in Flutter
 """;
     final response = await _model.generateContent([Content.text(prompt)]);
     return response.text ?? 'Guide unavailable.';
@@ -351,6 +297,7 @@ Include:
   // ==============================================================
 
   Future<bool> testConnection() async {
+    await _initialization;
     if (!_isInitialized) return false;
 
     try {
@@ -372,34 +319,26 @@ Include:
     switch (framework.toLowerCase()) {
       case 'react':
         return """
-You are a React.js expert.
-Generate COMPLETE React code for:
-$userPrompt
+Generate COMPLETE React code for: $userPrompt
 Platforms: $platformList
 Use hooks and responsive layout.
 RETURN ONLY CODE.
 """;
       case 'vue':
         return """
-You are a Vue.js 3 expert.
-Generate COMPLETE Vue code for:
-$userPrompt
+Generate COMPLETE Vue code for: $userPrompt
 Platforms: $platformList
 RETURN ONLY CODE.
 """;
       case 'html':
         return """
-You are a web expert.
-Generate COMPLETE HTML/JS/CSS webpage for:
-$userPrompt
+Generate COMPLETE HTML/JS/CSS webpage for: $userPrompt
 Platforms: $platformList
 RETURN ONLY CODE.
 """;
       default:
         return """
-You are a Flutter expert.
-Generate COMPLETE Flutter code for:
-$userPrompt
+Generate COMPLETE Flutter code for: $userPrompt
 Platforms: $platformList
 RETURN ONLY CODE.
 """;

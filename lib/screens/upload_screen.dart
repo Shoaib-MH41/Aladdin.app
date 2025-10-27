@@ -22,38 +22,44 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isPicking = false;
   String _currentOperation = '';
 
-  // ✅ نئی اور بہتر Permission Handling
+  // ✅ درست Permission Handling
   Future<bool> _requestFilePermission() async {
     try {
       if (Platform.isAndroid) {
-        // Android 13 (API 33) سے نیا permission system
-        if (await Permission.manageExternalStorage.isGranted) {
+        // پہلے چیک کریں کہ permission پہلے سے granted ہے
+        if (await Permission.storage.isGranted) {
+          print('✅ Storage permission already granted');
           return true;
         }
-
-        // Multiple permissions ایک ساتھ request کریں
-        Map<Permission, PermissionStatus> statuses = await [
-          Permission.storage,
-          if (await Permission.manageExternalStorage.isDenied)
-            Permission.manageExternalStorage,
-        ].request();
-
-        // اگر کوئی بھی permission granted ہے
-        if (statuses[Permission.storage]?.isGranted == true ||
-            statuses[Permission.manageExternalStorage]?.isGranted == true) {
+        
+        // Permission request کریں
+        print('🔐 Requesting storage permission...');
+        final status = await Permission.storage.request();
+        
+        if (status.isGranted) {
+          print('✅ Storage permission granted');
           return true;
         }
-
+        
+        // اگر user نے deny کر دیا
+        if (status.isDenied) {
+          print('❌ Storage permission denied');
+          _showPermissionDialog('Storage permission is required to select files from your device.');
+        }
+        
         // اگر permanently denied ہے تو settings میں لے جائیں
-        if (statuses[Permission.storage]?.isPermanentlyDenied == true ||
-            statuses[Permission.manageExternalStorage]?.isPermanentlyDenied == true) {
-          _showPermissionDialog();
-          return false;
+        if (status.isPermanentlyDenied) {
+          print('❌ Storage permission permanently denied');
+          _showPermissionSettingsDialog();
         }
-
+        
         return false;
       } else if (Platform.isIOS) {
         // iOS کے لیے photos permission
+        if (await Permission.photos.isGranted) {
+          return true;
+        }
+        
         final status = await Permission.photos.request();
         return status.isGranted;
       }
@@ -64,15 +70,32 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ Permission dialog
-  void _showPermissionDialog() {
+  // ✅ Simple permission dialog
+  void _showPermissionDialog(String message) {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('Storage Permission Required'),
+        title: const Text('Permission Required'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Permission settings dialog
+  void _showPermissionSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Storage Access Required'),
         content: const Text(
-          'Aladdin App needs access to your storage to select icons, fonts, and animations. '
-          'Please allow storage permission to continue.'
+          'Aladdin App needs access to your storage to select icons, fonts and animations.\n\n'
+          'Please allow "Storage" permission in app settings to continue.'
         ),
         actions: [
           TextButton(
@@ -82,7 +105,7 @@ class _UploadScreenState extends State<UploadScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              openAppSettings();
+              openAppSettings(); // Directly open app settings
             },
             child: const Text('Open Settings'),
           ),
@@ -99,33 +122,38 @@ class _UploadScreenState extends State<UploadScreen> {
       case 'font':
         return ['ttf', 'otf'];
       case 'animation':
-        return ['json', 'lottie'];
+        return ['json'];
       default:
         return [];
     }
   }
 
-  // ✅ نئی اور بہتر فائل pick کرنے کا فنکشن
+  // ✅ درست فائل pick کرنے کا فنکشن
   Future<void> _pickFiles(String type) async {
     try {
       setState(() {
         _isPicking = true;
-        _currentOperation = 'Selecting ${type}s...';
+        _currentOperation = 'Checking permissions...';
       });
 
       // Permission چیک کریں
       final hasPermission = await _requestFilePermission();
+      
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Permission denied. Please allow storage access in app settings.'),
+            content: Text('Permission denied. Please allow storage access to select files.'),
             duration: Duration(seconds: 4),
           ),
         );
         return;
       }
 
-      // File picker کو call کریں - بہتر settings کے ساتھ
+      setState(() {
+        _currentOperation = 'Opening file picker...';
+      });
+
+      // File picker کو call کریں
       FilePickerResult? result;
       try {
         result = await FilePicker.platform.pickFiles(
@@ -133,29 +161,24 @@ class _UploadScreenState extends State<UploadScreen> {
           type: FileType.custom,
           allowedExtensions: _allowedExtensions(type),
           withData: false,
-          allowCompression: true,
           dialogTitle: 'Select ${type} files',
         );
       } catch (e) {
         print('FilePicker Error: $e');
-        // اگر file picker fail ہو تو دوبارہ try کریں different settings کے ساتھ
-        try {
-          result = await FilePicker.platform.pickFiles(
-            allowMultiple: true,
-            type: FileType.any, // ✅ any type try کریں
-            withData: false,
-          );
-        } catch (e2) {
-          print('Second FilePicker attempt also failed: $e2');
-          throw e2;
-        }
+        // Fallback - بغیر specific extensions کے
+        result = await FilePicker.platform.pickFiles(
+          allowMultiple: true,
+          type: FileType.any,
+          withData: false,
+          dialogTitle: 'Select ${type} files',
+        );
       }
 
       if (result != null && result.files.isNotEmpty) {
+        // Files process کریں
         List<File> selectedFiles = [];
-        
         for (var platformFile in result.files) {
-          if (platformFile.path != null) {
+          if (platformFile.path != null && await File(platformFile.path!).exists()) {
             selectedFiles.add(File(platformFile.path!));
           }
         }
@@ -177,10 +200,23 @@ class _UploadScreenState extends State<UploadScreen> {
               duration: const Duration(seconds: 2),
             ),
           );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ No valid files selected'),
+              duration: Duration(seconds: 2),
+            ),
+          );
         }
       } else {
         // User نے cancel کیا ہو
         print('User cancelled file selection');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File selection cancelled'),
+            duration: Duration(seconds: 1),
+          ),
+        );
       }
 
     } catch (e) {
@@ -214,7 +250,7 @@ class _UploadScreenState extends State<UploadScreen> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ File saved to device storage'),
+          content: Text('✅ File saved to device'),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -501,6 +537,7 @@ class _UploadScreenState extends State<UploadScreen> {
           Text(
             _currentOperation,
             style: const TextStyle(fontSize: 16, color: Colors.grey),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -725,12 +762,11 @@ class _UploadScreenState extends State<UploadScreen> {
               Text('• Fonts: TTF, OTF'),
               Text('• Animations: Lottie JSON'),
               SizedBox(height: 16),
-              Text('Tips:'),
+              Text('Permission Note:'),
               SizedBox(height: 8),
-              Text('• Select multiple files at once'),
-              Text('• Tap files to preview'),
-              Text('• Required files are marked in orange'),
-              Text('• Save files to device for backup'),
+              Text('• Allow "Storage" permission when prompted'),
+              Text('• This allows selecting files from your device'),
+              Text('• You can manage permissions in app settings'),
             ],
           ),
         ),

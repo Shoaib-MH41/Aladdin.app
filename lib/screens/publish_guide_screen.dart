@@ -1,15 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/app_publisher.dart';
 
-class PublishGuideScreen extends StatefulWidget {
+class PublishScreen extends StatefulWidget {
   final String appName;
   final String generatedCode;
   final String framework;
 
-  const PublishGuideScreen({
+  const PublishScreen({
     super.key,
     required this.appName,
     required this.generatedCode,
@@ -17,178 +17,154 @@ class PublishGuideScreen extends StatefulWidget {
   });
 
   @override
-  State<PublishGuideScreen> createState() => _PublishGuideScreenState();
+  State<PublishScreen> createState() => _PublishScreenState();
 }
 
-class _PublishGuideScreenState extends State<PublishGuideScreen> {
+class _PublishScreenState extends State<PublishScreen> {
   final AppPublisher _publisher = AppPublisher();
-  bool _isLoading = true;
-  Map<String, dynamic>? _publishData;
-  String? _zipPath;
-  String? _uploadStatus;
+  bool _isSaving = false;
+  String? _savedFilePath;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
+  Future<void> _saveLocally() async {
+    setState(() => _isSaving = true);
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final filePath = '${dir.path}/${widget.appName}_release.zip';
+      final file = File(filePath);
+      await file.writeAsString(widget.generatedCode);
+      setState(() => _savedFilePath = filePath);
 
-  Future<void> _loadData() async {
-    final data = await _publisher.prepareForPlayStore(
-      appName: widget.appName,
-      generatedCode: widget.generatedCode,
-      framework: widget.framework,
-    );
-    setState(() {
-      _publishData = data;
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _copy(String text) async {
-    await Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Copied ✅")),
-    );
-  }
-
-  Future<void> _openUrl(String url) async {
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Cannot open URL")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فائل لوکل اسٹوریج میں محفوظ ہو گئی ✅')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خرابی: $e')),
+      );
+    } finally {
+      setState(() => _isSaving = false);
     }
   }
 
-  Future<void> _exportZip() async {
-    setState(() => _isLoading = true);
-    final path =
-        await _publisher.exportToZip(_publishData!, widget.appName);
-    setState(() {
-      _zipPath = path;
-      _isLoading = false;
-    });
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text("📦 Exported: $path")));
+  void _openGithubPage() async {
+    await _publisher.openGithubUpload();
   }
 
-  Future<void> _uploadToPlayStore() async {
-    setState(() {
-      _isLoading = true;
-      _uploadStatus = null;
-    });
-    try {
-      final result = await _publisher.uploadToPlayStore(
-        serviceAccountPath: '/storage/emulated/0/service_account.json',
-        packageName: _publishData!['package_name'],
+  void _shareFile() async {
+    if (_savedFilePath != null) {
+      await Share.shareFiles([_savedFilePath!], text: 'میرا Flutter App');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('پہلے فائل کو محفوظ کریں')),
       );
-      setState(() {
-        _uploadStatus = result;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _uploadStatus = "❌ Upload failed: $e";
-        _isLoading = false;
-      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading && _publishData == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text("Preparing...")),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    final data = _publishData!;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text("Publish Guide"),
-        backgroundColor: Colors.green,
+        title: const Text("📦 Publish App"),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
       ),
-      body: ListView(
-        padding: EdgeInsets.all(16),
-        children: [
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.apps, color: Colors.green),
-              title: Text(widget.appName,
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text("Package: ${data['package_name']}"),
-            ),
-          ),
-          SizedBox(height: 20),
-          _buildStep("1️⃣ Create Google Play Console Account",
-              "https://play.google.com/console"),
-          _buildStep("2️⃣ Add your app", ""),
-          _buildStep("3️⃣ Add Privacy Policy", data['privacy_policy']),
-          _buildStep("4️⃣ Build APK", "", copyText: _publisher.getBuildCommands(
-            widget.appName,
-            framework: widget.framework,
-          )),
-          SizedBox(height: 20),
-          ElevatedButton.icon(
-            icon: Icon(Icons.download),
-            label: Text("Export Project (ZIP)"),
-            onPressed: _exportZip,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          SizedBox(height: 10),
-          ElevatedButton.icon(
-            icon: Icon(Icons.cloud_upload),
-            label: Text("Upload to Play Store"),
-            onPressed: _uploadToPlayStore,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          if (_uploadStatus != null) ...[
-            SizedBox(height: 10),
-            Text(_uploadStatus!,
-                style: TextStyle(
-                    color: _uploadStatus!.contains("✅")
-                        ? Colors.green
-                        : Colors.red)),
-          ]
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep(String title, String url, {String? copyText}) {
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 6),
-      child: Padding(
-        padding: EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
           children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                if (url.isNotEmpty)
-                  TextButton.icon(
-                    icon: Icon(Icons.open_in_new),
-                    label: Text("Open"),
-                    onPressed: () => _openUrl(url),
-                  ),
-                if (copyText != null)
-                  TextButton.icon(
-                    icon: Icon(Icons.copy),
-                    label: Text("Copy"),
-                    onPressed: () => _copy(copyText),
-                  ),
-              ],
+            Card(
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.appName,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text("Framework: ${widget.framework}"),
+                    const SizedBox(height: 4),
+                    const Text(
+                        "یہ ایپ لوکل اسٹوریج میں محفوظ ہو کر GitHub پر اپلوڈ کے لیے تیار ہوگی۔"),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            ElevatedButton.icon(
+              icon: _isSaving
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.download),
+              label: Text(_isSaving ? "Saving..." : "Save Locally"),
+              onPressed: _isSaving ? null : _saveLocally,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.share),
+              label: const Text("Share / Export File"),
+              onPressed: _shareFile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.cloud_upload),
+              label: const Text("Open GitHub to Publish"),
+              onPressed: _openGithubPage,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Guide Section
+            Card(
+              color: Colors.orange[50],
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      "⚙️ Manual Publish Guide",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 10),
+                    Text("1️⃣ اوپر Save Locally دبائیں تاکہ فائل آپ کے موبائل میں محفوظ ہو جائے۔"),
+                    Text("2️⃣ پھر 'Open GitHub' دبائیں۔"),
+                    Text("3️⃣ GitHub پر نیا Repository بنائیں۔"),
+                    Text("4️⃣ محفوظ شدہ ZIP یا APK فائل اپلوڈ کریں۔"),
+                    Text("5️⃣ اپلوڈ مکمل ہونے پر GitHub آپ کو شیئر لنک دے گا۔"),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -196,3 +172,4 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     );
   }
 }
+

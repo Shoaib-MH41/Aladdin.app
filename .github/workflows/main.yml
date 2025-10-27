@@ -25,16 +25,21 @@ jobs:
           flutter-version: '3.19.5'
           channel: 'stable'
 
-      # ✅ Android project regenerate if old/unsupported
-      - name: Ensure valid Android project
+      # ✅ ہمیشہ نیا project بنائیں مگر icons کو restore کریں
+      - name: Create Flutter project
         run: |
-          if [ ! -d android ]; then
-            echo "android folder missing, creating new..."
-            flutter create --project-name aladdin_app .
-          else
-            echo "Re-creating android folder to fix Gradle issues..."
-            rm -rf android
-            flutter create --project-name aladdin_app .
+          # پہلے سے موجود android folder کو temporary location پر move کریں
+          if [ -d android ]; then
+            mv android /tmp/old_android
+          fi
+          
+          # نیا project بنائیں
+          flutter create --project-name aladdin_app .
+          
+          # پرانی icons کو restore کریں (اگر موجود ہوں)
+          if [ -d /tmp/old_android/app/src/main/res ]; then
+            echo "Restoring icons from previous build..."
+            cp -r /tmp/old_android/app/src/main/res android/app/src/main/
           fi
 
       - name: Get dependencies

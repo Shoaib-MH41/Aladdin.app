@@ -16,13 +16,13 @@ dependencies:
   # 🔹 File & Storage Handling
   file_picker: ^6.1.1
   permission_handler: ^11.0.0
-  external_path: ^1.0.0
+  path_provider: ^2.1.1  # ✅ نیا شامل کریں
+  archive: ^3.3.6        # ✅ نیا شامل کریں - ZIP فائلز کے لیے
 
   # 🔹 Network & APIs
   http: ^1.1.0
   url_launcher: ^6.2.0
-  google_generative_ai: ^0.2.0
-  github: ^9.0.0
+  google_generative_ai: ^0.2.1  # ✅ Version اپڈیٹ کریں
 
   # 🔹 Local Storage
   shared_preferences: ^2.2.2
@@ -33,6 +33,10 @@ dependencies:
 
   # 🔹 Syntax Highlighting (Code Preview)
   flutter_highlight: ^0.7.0
+
+  # 🔹 Animations & UI
+  animations: ^2.0.7     # ✅ نیا شامل کریں - UploadScreen کے لیے
+  lottie: ^2.7.0         # ✅ نیا شامل کریں - Animation preview کے لیے
 
 dev_dependencies:
   flutter_test:

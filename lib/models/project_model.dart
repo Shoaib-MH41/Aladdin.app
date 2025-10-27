@@ -1,10 +1,9 @@
-
 class Project {
   final String id;
   String name;
   String framework;
   List<String> platforms;
-  Map<String, String> assets;
+  Map<String, dynamic> assets;  // ✅ String سے dynamic میں تبدیل کریں
   Map<String, String> features;
   String? generatedCode;
   String? apkLink;
@@ -36,7 +35,7 @@ class Project {
       'name': name,
       'framework': framework,
       'platforms': platforms,
-      'assets': assets,
+      'assets': assets,  // ✅ یہی رہنے دیں
       'features': features,
       'generatedCode': generatedCode,
       'apkLink': apkLink,
@@ -54,7 +53,7 @@ class Project {
       name: map['name'],
       framework: map['framework'],
       platforms: List<String>.from(map['platforms']),
-      assets: Map<String, String>.from(map['assets']),
+      assets: Map<String, dynamic>.from(map['assets']),  // ✅ dynamic میں تبدیل کریں
       features: Map<String, String>.from(map['features'] ?? {}),
       generatedCode: map['generatedCode'],
       apkLink: map['apkLink'],

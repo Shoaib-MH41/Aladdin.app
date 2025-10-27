@@ -22,37 +22,41 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isPicking = false;
   String _currentOperation = '';
 
-  // ✅ درست Permission Handling
-  Future<bool> _requestPermissions() async {
+  // ✅ نئی اور بہتر Permission Handling
+  Future<bool> _requestFilePermission() async {
     try {
       if (Platform.isAndroid) {
-        // Android کے لیے storage permission
-        final storageStatus = await Permission.storage.status;
-        
-        if (storageStatus.isGranted) {
+        // Android 13 (API 33) سے نیا permission system
+        if (await Permission.manageExternalStorage.isGranted) {
           return true;
         }
-        
-        // Permission request کریں
-        final newStatus = await Permission.storage.request();
-        
-        if (newStatus.isGranted) {
+
+        // Multiple permissions ایک ساتھ request کریں
+        Map<Permission, PermissionStatus> statuses = await [
+          Permission.storage,
+          if (await Permission.manageExternalStorage.isDenied)
+            Permission.manageExternalStorage,
+        ].request();
+
+        // اگر کوئی بھی permission granted ہے
+        if (statuses[Permission.storage]?.isGranted == true ||
+            statuses[Permission.manageExternalStorage]?.isGranted == true) {
           return true;
         }
-        
-        // اگر permanently denied ہے تو settings کھولیں
-        if (newStatus.isPermanentlyDenied) {
-          _showPermissionSettingsDialog();
+
+        // اگر permanently denied ہے تو settings میں لے جائیں
+        if (statuses[Permission.storage]?.isPermanentlyDenied == true ||
+            statuses[Permission.manageExternalStorage]?.isPermanentlyDenied == true) {
+          _showPermissionDialog();
+          return false;
         }
-        
+
         return false;
-        
       } else if (Platform.isIOS) {
         // iOS کے لیے photos permission
-        final photosStatus = await Permission.photos.request();
-        return photosStatus.isGranted;
+        final status = await Permission.photos.request();
+        return status.isGranted;
       }
-      
       return true;
     } catch (e) {
       print('❌ Permission error: $e');
@@ -60,15 +64,15 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ Permission settings dialog
-  void _showPermissionSettingsDialog() {
+  // ✅ Permission dialog
+  void _showPermissionDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: const Text('Storage Permission Required'),
         content: const Text(
-          'Aladdin App needs storage permission to select files. '
-          'Please allow storage permission in app settings to continue.'
+          'Aladdin App needs access to your storage to select icons, fonts, and animations. '
+          'Please allow storage permission to continue.'
         ),
         actions: [
           TextButton(
@@ -101,7 +105,7 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ درست فائل pick کرنے کا فنکشن
+  // ✅ نئی اور بہتر فائل pick کرنے کا فنکشن
   Future<void> _pickFiles(String type) async {
     try {
       setState(() {
@@ -109,43 +113,74 @@ class _UploadScreenState extends State<UploadScreen> {
         _currentOperation = 'Selecting ${type}s...';
       });
 
-      final hasPermission = await _requestPermissions();
+      // Permission چیک کریں
+      final hasPermission = await _requestFilePermission();
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Storage permission is required to select files. Please allow permission in app settings.'),
+            content: Text('Permission denied. Please allow storage access in app settings.'),
             duration: Duration(seconds: 4),
           ),
         );
         return;
       }
 
-      // File picker کو call کریں - withData: false رکھیں
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: FileType.custom,
-        allowedExtensions: _allowedExtensions(type),
-        withData: false, // ✅ یہ false ہونا چاہیے
-      );
+      // File picker کو call کریں - بہتر settings کے ساتھ
+      FilePickerResult? result;
+      try {
+        result = await FilePicker.platform.pickFiles(
+          allowMultiple: true,
+          type: FileType.custom,
+          allowedExtensions: _allowedExtensions(type),
+          withData: false,
+          allowCompression: true,
+          dialogTitle: 'Select ${type} files',
+        );
+      } catch (e) {
+        print('FilePicker Error: $e');
+        // اگر file picker fail ہو تو دوبارہ try کریں different settings کے ساتھ
+        try {
+          result = await FilePicker.platform.pickFiles(
+            allowMultiple: true,
+            type: FileType.any, // ✅ any type try کریں
+            withData: false,
+          );
+        } catch (e2) {
+          print('Second FilePicker attempt also failed: $e2');
+          throw e2;
+        }
+      }
 
       if (result != null && result.files.isNotEmpty) {
-        final files = result.files
-            .where((file) => file.path != null)
-            .map((file) => File(file.path!))
-            .toList();
+        List<File> selectedFiles = [];
+        
+        for (var platformFile in result.files) {
+          if (platformFile.path != null) {
+            selectedFiles.add(File(platformFile.path!));
+          }
+        }
 
-        setState(() {
-          if (type == 'icon') _iconFiles.addAll(files);
-          if (type == 'font') _fontFiles.addAll(files);
-          if (type == 'animation') _animationFiles.addAll(files);
-        });
+        if (selectedFiles.isNotEmpty) {
+          setState(() {
+            if (type == 'icon') {
+              _iconFiles.addAll(selectedFiles);
+            } else if (type == 'font') {
+              _fontFiles.addAll(selectedFiles);
+            } else if (type == 'animation') {
+              _animationFiles.addAll(selectedFiles);
+            }
+          });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ ${files.length} ${type}(s) selected successfully'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ ${selectedFiles.length} ${type}(s) selected successfully'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // User نے cancel کیا ہو
+        print('User cancelled file selection');
       }
 
     } catch (e) {
@@ -153,7 +188,7 @@ class _UploadScreenState extends State<UploadScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ Error: ${e.toString()}'),
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ),
       );
     } finally {
@@ -179,7 +214,7 @@ class _UploadScreenState extends State<UploadScreen> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ File saved to: ${destination.path}'),
+          content: Text('✅ File saved to device storage'),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -215,13 +250,11 @@ class _UploadScreenState extends State<UploadScreen> {
 
   // ✅ Continue button کے لیے condition
   bool _canContinue(Project project) {
-    // اگر animation feature ہے مگر کوئی animation فائل نہیں
     if ((project.features['animation'] ?? 'none') != 'none' &&
         _animationFiles.isEmpty) {
       return false;
     }
     
-    // اگر custom font feature ہے مگر کوئی font فائل نہیں
     if ((project.features['font'] ?? 'default') == 'custom' &&
         _fontFiles.isEmpty) {
       return false;
@@ -232,7 +265,6 @@ class _UploadScreenState extends State<UploadScreen> {
 
   // ✅ Continue کرنے پر
   void _continueToPublish(Project project) {
-    // Assets کو project میں شامل کریں
     if (_iconFiles.isNotEmpty) {
       project.assets['icons'] = _iconFiles.map((e) => e.path).toList();
     }
@@ -243,7 +275,6 @@ class _UploadScreenState extends State<UploadScreen> {
       project.assets['animations'] = _animationFiles.map((e) => e.path).toList();
     }
 
-    // Publish screen پر navigate کریں
     Navigator.pushNamed(context, '/publish', arguments: project);
   }
 
@@ -397,7 +428,6 @@ class _UploadScreenState extends State<UploadScreen> {
           },
         );
       } else {
-        // دیگر فائلوں کے لیے basic preview
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -483,11 +513,9 @@ class _UploadScreenState extends State<UploadScreen> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Project summary
           _buildProjectSummary(project),
           const SizedBox(height: 20),
           
-          // Assets sections
           Expanded(
             child: ListView(
               children: [
@@ -498,7 +526,6 @@ class _UploadScreenState extends State<UploadScreen> {
                 _buildAssetSection('🖼️ Icons', _iconFiles, 'icon', project),
                 const SizedBox(height: 20),
                 
-                // Continue button
                 _buildContinueButton(project),
               ],
             ),

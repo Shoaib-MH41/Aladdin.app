@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 
-// 🔹 نئی فائلیں
+// 🔹 درست import
 import '../controllers/aladdin_controller.dart';
-import '../screens/publish_guide_screen.dart';
+import 'publish_guide_screen.dart';
 
 class BuildScreen extends StatefulWidget {
   final String generatedCode;
@@ -81,7 +81,7 @@ class _BuildScreenState extends State<BuildScreen> {
     );
   }
 
-  // ✅ GitHub پر اپلوڈ فنکشن
+  // ✅ GitHub پر اپلوڈ فنکشن (درست)
   void _buildAndUploadApp() async {
     setState(() {
       _isBuilding = true;
@@ -89,20 +89,27 @@ class _BuildScreenState extends State<BuildScreen> {
     });
 
     try {
-      final repoUrl = await _controller.generateAndUploadApp(
+      // ✅ درست فنکشن کال
+      final result = await _controller.generateAndUploadApp(
         prompt: 'Auto-generated app for ${widget.projectName}',
         framework: widget.framework ?? 'Flutter',
-        platforms: ['Android'],
         repoName: widget.projectName,
       );
 
-      setState(() {
-        _buildMessage = '✅ ایپ GitHub پر اپلوڈ ہو گئی!\n🔗 $repoUrl';
-        _isBuilding = false;
-      });
+      if (result['success'] == true) {
+        setState(() {
+          _buildMessage = '✅ ${result['message']}\n🔗 ${result['repoUrl']}';
+          _isBuilding = false;
+        });
+      } else {
+        setState(() {
+          _buildMessage = '❌ ${result['error']}';
+          _isBuilding = false;
+        });
+      }
     } catch (e) {
       setState(() {
-        _buildMessage = '❌ ناکام: $e';
+        _buildMessage = '❌ خرابی: $e';
         _isBuilding = false;
       });
     }

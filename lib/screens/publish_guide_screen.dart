@@ -1,15 +1,13 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import '../services/app_publisher.dart';
 
-class PublishScreen extends StatefulWidget {
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class PublishGuideScreen extends StatefulWidget {
   final String appName;
   final String generatedCode;
   final String framework;
 
-  const PublishScreen({
+  const PublishGuideScreen({
     super.key,
     required this.appName,
     required this.generatedCode,
@@ -17,45 +15,76 @@ class PublishScreen extends StatefulWidget {
   });
 
   @override
-  State<PublishScreen> createState() => _PublishScreenState();
+  State<PublishGuideScreen> createState() => _PublishGuideScreenState();
 }
 
-class _PublishScreenState extends State<PublishScreen> {
-  final AppPublisher _publisher = AppPublisher();
-  bool _isSaving = false;
-  String? _savedFilePath;
+class _PublishGuideScreenState extends State<PublishGuideScreen> {
+  bool _isCreatingRepo = false;
+  String _repoStatus = '';
 
-  Future<void> _saveLocally() async {
-    setState(() => _isSaving = true);
+  // ✅ GitHub پر نیا ریپوزٹری بنانے کا لنک کھولیں
+  void _createGitHubRepo() async {
+    setState(() {
+      _isCreatingRepo = true;
+      _repoStatus = '⏳ GitHub کھول رہا ہے...';
+    });
+
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final filePath = '${dir.path}/${widget.appName}_release.zip';
-      final file = File(filePath);
-      await file.writeAsString(widget.generatedCode);
-      setState(() => _savedFilePath = filePath);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('فائل لوکل اسٹوریج میں محفوظ ہو گئی ✅')),
-      );
+      const githubUrl = 'https://github.com/new';
+      
+      if (await canLaunchUrl(Uri.parse(githubUrl))) {
+        await launchUrl(
+          Uri.parse(githubUrl),
+          mode: LaunchMode.externalApplication,
+        );
+        
+        setState(() {
+          _repoStatus = '✅ GitHub کھل گیا ہے۔ اب نیا ریپوزٹری بنائیں۔';
+        });
+      } else {
+        setState(() {
+          _repoStatus = '❌ GitHub نہیں کھل سکا۔';
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خرابی: $e')),
-      );
+      setState(() {
+        _repoStatus = '❌ خرابی: $e';
+      });
     } finally {
-      setState(() => _isSaving = false);
+      setState(() {
+        _isCreatingRepo = false;
+      });
     }
   }
 
-  void _openGithubPage() async {
-    await _publisher.openGithubUpload();
-  }
-
-  void _shareFile() async {
-    if (_savedFilePath != null) {
-      await Share.shareFiles([_savedFilePath!], text: 'میرا Flutter App');
+  // ✅ GitHub ڈیسکٹاپ کھولیں (فائل اپلوڈ کے لیے)
+  void _openGitHubDesktop() async {
+    const githubDesktopUrl = 'https://desktop.github.com/';
+    
+    if (await canLaunchUrl(Uri.parse(githubDesktopUrl))) {
+      await launchUrl(
+        Uri.parse(githubDesktopUrl),
+        mode: LaunchMode.externalApplication,
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('پہلے فائل کو محفوظ کریں')),
+        const SnackBar(content: Text('❌ GitHub Desktop ڈاؤنلوڈ پیج نہیں کھل سکا')),
+      );
+    }
+  }
+
+  // ✅ پلے اسٹور ڈویلپر اکاؤنٹ کھولیں
+  void _openPlayStoreConsole() async {
+    const playStoreUrl = 'https://play.google.com/console/';
+    
+    if (await canLaunchUrl(Uri.parse(playStoreUrl))) {
+      await launchUrl(
+        Uri.parse(playStoreUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ پلے اسٹور کنسول نہیں کھل سکا')),
       );
     }
   }
@@ -64,7 +93,7 @@ class _PublishScreenState extends State<PublishScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("📦 Publish App"),
+        title: const Text("🚀 پبلش گائیڈ"),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
       ),
@@ -72,6 +101,7 @@ class _PublishScreenState extends State<PublishScreen> {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
+            // 📱 ایپ انفو کارڈ
             Card(
               elevation: 3,
               child: Padding(
@@ -79,14 +109,21 @@ class _PublishScreenState extends State<PublishScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.appName,
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    Text("Framework: ${widget.framework}"),
-                    const SizedBox(height: 4),
+                    Text(
+                      widget.appName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text("فریم ورک: ${widget.framework}"),
+                    const SizedBox(height: 8),
                     const Text(
-                        "یہ ایپ لوکل اسٹوریج میں محفوظ ہو کر GitHub پر اپلوڈ کے لیے تیار ہوگی۔"),
+                      "آپ کی ایپ تیار ہو چکی ہے! اب اسے پبلش کریں۔",
+                      style: TextStyle(fontSize: 14),
+                    ),
                   ],
                 ),
               ),
@@ -94,74 +131,92 @@ class _PublishScreenState extends State<PublishScreen> {
 
             const SizedBox(height: 20),
 
-            ElevatedButton.icon(
-              icon: _isSaving
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.download),
-              label: Text(_isSaving ? "Saving..." : "Save Locally"),
-              onPressed: _isSaving ? null : _saveLocally,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
+            // 📋 گائیڈ سٹیپس
+            _buildStepCard(
+              stepNumber: 1,
+              title: "GitHub پر ریپوزٹری بنائیں",
+              description: "نیا ریپوزٹری بنائیں اور کوڈ اپلوڈ کریں",
+              buttonText: "ریپوزٹری بنائیں",
+              onPressed: _createGitHubRepo,
+              isLoading: _isCreatingRepo,
             ),
 
-            const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              icon: const Icon(Icons.share),
-              label: const Text("Share / Export File"),
-              onPressed: _shareFile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
+            _buildStepCard(
+              stepNumber: 2,
+              title: "کوڈ GitHub پر اپلوڈ کریں",
+              description: "اپنے کوڈ کو ریپوزٹری میں اپلوڈ کریں",
+              buttonText: "GitHub Desktop ڈاؤنلوڈ کریں",
+              onPressed: _openGitHubDesktop,
             ),
 
-            const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              icon: const Icon(Icons.cloud_upload),
-              label: const Text("Open GitHub to Publish"),
-              onPressed: _openGithubPage,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
+            _buildStepCard(
+              stepNumber: 3,
+              title: "APK فائل بنائیں",
+              description: "اپنے فریم ورک کے مطابق ریلیز APK بنائیں",
+              buttonText: "APK بنانے کی ہدایات",
+              onPressed: _showApkInstructions,
             ),
 
-            const SizedBox(height: 30),
+            _buildStepCard(
+              stepNumber: 4,
+              title: "پلے اسٹور پر اپلوڈ کریں",
+              description: "APK فائل پلے اسٹور کنسول پر اپلوڈ کریں",
+              buttonText: "پلے اسٹور کنسول کھولیں",
+              onPressed: _openPlayStoreConsole,
+            ),
 
-            // Guide Section
+            const SizedBox(height: 20),
+
+            // 📝 اسٹیٹس
+            if (_repoStatus.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _repoStatus.contains('✅') 
+                      ? Colors.green[50] 
+                      : _repoStatus.contains('❌')
+                          ? Colors.red[50]
+                          : Colors.blue[50],
+                  border: Border.all(
+                    color: _repoStatus.contains('✅') 
+                        ? Colors.green 
+                        : _repoStatus.contains('❌')
+                            ? Colors.red
+                            : Colors.blue,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _repoStatus,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            // 💡 اضافی ٹپس
             Card(
               color: Colors.orange[50],
-              elevation: 2,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      "⚙️ Manual Publish Guide",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  children: [
+                    const Text(
+                      "💡 اہم تجاویز",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
                     ),
-                    SizedBox(height: 10),
-                    Text("1️⃣ اوپر Save Locally دبائیں تاکہ فائل آپ کے موبائل میں محفوظ ہو جائے۔"),
-                    Text("2️⃣ پھر 'Open GitHub' دبائیں۔"),
-                    Text("3️⃣ GitHub پر نیا Repository بنائیں۔"),
-                    Text("4️⃣ محفوظ شدہ ZIP یا APK فائل اپلوڈ کریں۔"),
-                    Text("5️⃣ اپلوڈ مکمل ہونے پر GitHub آپ کو شیئر لنک دے گا۔"),
+                    const SizedBox(height: 10),
+                    _buildTip("ریپوزٹری کا نام آسان اور واضح رکھیں"),
+                    _buildTip("README.md فائل میں ایپ کی تفصیل لکھیں"),
+                    _buildTip("APK بناتے وقت signing key استعمال کریں"),
+                    _buildTip("پلے اسٹور کے لیے ایپ کی اسکرین شاٹس تیار کریں"),
+                    _buildTip("پرائیویسی پالیسی شامل کرنا نہ بھولیں"),
                   ],
                 ),
               ),
@@ -171,5 +226,198 @@ class _PublishScreenState extends State<PublishScreen> {
       ),
     );
   }
-}
 
+  // 🎯 ہر سٹیپ کا کارڈ
+  Widget _buildStepCard({
+    required int stepNumber,
+    required String title,
+    required String description,
+    required String buttonText,
+    required VoidCallback onPressed,
+    bool isLoading = false,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: const BoxDecoration(
+                    color: Colors.deepPurple,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      stepNumber.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(description),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : onPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(buttonText),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 💡 ٹپ آئٹم
+  Widget _buildTip(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lightbulb_outline, size: 16, color: Colors.orange),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+
+  // 📱 APK بنانے کی ہدایات
+  void _showApkInstructions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("📱 APK بنانے کی ہدایات"),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              _buildFrameworkInstructions(),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🔧 فریم ورک کے مطابق ہدایات
+  Widget _buildFrameworkInstructions() {
+    switch (widget.framework.toLowerCase()) {
+      case 'flutter':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInstructionStep("1. Termux یا کمانڈ لائن کھولیں"),
+            _buildInstructionStep("2. پروجیکٹ ڈائرکٹری میں جائیں", "cd ${widget.appName}"),
+            _buildInstructionStep("3. APK بنائیں", "flutter build apk --release"),
+            _buildInstructionStep("4. APK فائل ملے گی", "build/app/outputs/flutter-apk/app-release.apk"),
+          ],
+        );
+      
+      case 'react':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInstructionStep("1. کمانڈ لائن کھولیں"),
+            _buildInstructionStep("2. پروجیکٹ ڈائرکٹری میں جائیں", "cd ${widget.appName}"),
+            _buildInstructionStep("3. Build بنائیں", "npm run build"),
+            _buildInstructionStep("4. build/ فولڈر میں فائلیں ملیں گی"),
+          ],
+        );
+      
+      case 'android native':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInstructionStep("1. Android Studio کھولیں"),
+            _buildInstructionStep("2. پروجیکٹ ایمپورٹ کریں"),
+            _buildInstructionStep("3. Build > Generate Signed Bundle/APK"),
+            _buildInstructionStep("4. signing key بنائیں اور APK جنریٹ کریں"),
+          ],
+        );
+      
+      default:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInstructionStep("1. اپنے فریم ورک کے مطابق build کمانڈ استعمال کریں"),
+            _buildInstructionStep("2. production build بنائیں"),
+            _buildInstructionStep("3. output فولڈر میں فائلیں چیک کریں"),
+          ],
+        );
+    }
+  }
+
+  // 📝 ہدایت کا سٹیپ
+  Widget _buildInstructionStep(String step, [String? command]) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(step),
+          if (command != null)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: SelectableText(
+                command,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

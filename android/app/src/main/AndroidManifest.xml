@@ -3,34 +3,25 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.aladdin_app">
 
-    <!-- 🌟 ضروری Permissions شامل کریں -->
+    <!-- ضروری Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
-
-    <!-- 📁 Storage Permissions - درست طریقہ -->
-    <!-- Android 13+ (API 33+) کے لیے نئے permissions -->
+    
+    <!-- 📁 Storage Permissions -->
+    <!-- Android 13+ (API 33+) کے لیے -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     
-    <!-- Android 10-12 کے لیے legacy permissions -->
+    <!-- Android 10-12 کے لیے -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
         android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
-        android:maxSdkVersion="32" />
-    
-    <!-- ❌ MANAGE_EXTERNAL_STORAGE ہٹا دیں - یہ Google Play پر reject ہو جاتا ہے -->
-    <!-- <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" /> -->
 
     <application
         android:name="${applicationName}"
-        android:label="Aladdin AI App Factory"  <!-- ✅ English میں رکھیں -->
+        android:label="Aladdin AI App Factory"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:requestLegacyExternalStorage="true"  <!-- ✅ Android 10+ کے لیے ضروری -->
-        android:usesCleartextTraffic="true"
-        android:theme="@style/LaunchTheme">
+        android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true">
         
         <activity
             android:name=".MainActivity"
@@ -41,55 +32,15 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
             
-            <!-- 🌟 Main Launcher Intent -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- 🌟 Termux اور دیگر apps کے لیے deep linking -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="termux" />
-            </intent-filter>
-
-            <!-- 🌟 HTTP/HTTPS URLs کے لیے -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" />
-                <data android:scheme="https" />
-            </intent-filter>
-
-            <meta-data
-                android:name="io.flutter.embedding.android.SplashScreenDrawable"
-                android:resource="@drawable/launch_background" />
-                
-            <meta-data
-                android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme" />
-                
         </activity>
 
-        <!-- 🌟 Flutter Embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-
-        <!-- 🌟 File Provider - فائل sharing کے لیے -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
             
     </application>
-
 </manifest>

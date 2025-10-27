@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.aladdin_app">
 
     <!-- 🌟 ضروری Permissions شامل کریں -->
@@ -8,27 +9,28 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
-    <!-- 📁 Storage Permissions -->
+    <!-- 📁 Storage Permissions - درست طریقہ -->
     <!-- Android 13+ (API 33+) کے لیے نئے permissions -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     
     <!-- Android 10-12 کے لیے legacy permissions -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
     
-    <!-- Android 11+ کے لیے اضافی permission -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" 
-        android:minSdkVersion="30" 
-        tools:ignore="ScopedStorage" />
+    <!-- ❌ MANAGE_EXTERNAL_STORAGE ہٹا دیں - یہ Google Play پر reject ہو جاتا ہے -->
+    <!-- <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" /> -->
 
     <application
         android:name="${applicationName}"
-        android:label="علادین ایپ"
+        android:label="Aladdin AI App Factory"  <!-- ✅ English میں رکھیں -->
         android:icon="@mipmap/ic_launcher"
-        android:requestLegacyExternalStorage="true"
-        android:usesCleartextTraffic="true">
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:requestLegacyExternalStorage="true"  <!-- ✅ Android 10+ کے لیے ضروری -->
+        android:usesCleartextTraffic="true"
+        android:theme="@style/LaunchTheme">
         
         <activity
             android:name=".MainActivity"
@@ -40,7 +42,7 @@
             android:windowSoftInputMode="adjustResize">
             
             <!-- 🌟 Main Launcher Intent -->
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
@@ -53,7 +55,7 @@
                 <data android:scheme="termux" />
             </intent-filter>
 
-            <!-- 🌟 HTTP/HT URLs کے لیے -->
+            <!-- 🌟 HTTP/HTTPS URLs کے لیے -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -76,6 +78,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- 🌟 File Provider - فائل sharing کے لیے -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
             
     </application>
 

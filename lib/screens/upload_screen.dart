@@ -22,53 +22,57 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isPicking = false;
   String _currentOperation = '';
 
-  // ✅ درست Permission Handling
-  Future<bool> _requestFilePermission() async {
-    try {
-      if (Platform.isAndroid) {
-        // پہلے چیک کریں کہ permission پہلے سے granted ہے
-        if (await Permission.storage.isGranted) {
-          print('✅ Storage permission already granted');
-          return true;
-        }
-        
-        // Permission request کریں
-        print('🔐 Requesting storage permission...');
-        final status = await Permission.storage.request();
-        
-        if (status.isGranted) {
-          print('✅ Storage permission granted');
-          return true;
-        }
-        
-        // اگر user نے deny کر دیا
-        if (status.isDenied) {
-          print('❌ Storage permission denied');
-          _showPermissionDialog('Storage permission is required to select files from your device.');
-        }
-        
-        // اگر permanently denied ہے تو settings میں لے جائیں
-        if (status.isPermanentlyDenied) {
-          print('❌ Storage permission permanently denied');
-          _showPermissionSettingsDialog();
-        }
-        
-        return false;
-      } else if (Platform.isIOS) {
-        // iOS کے لیے photos permission
-        if (await Permission.photos.isGranted) {
-          return true;
-        }
-        
-        final status = await Permission.photos.request();
-        return status.isGranted;
+  // ✅ درست Permission Function for permission_handler ^10.2.0
+Future<bool> _requestFilePermission() async {
+  try {
+    if (Platform.isAndroid) {
+      // Android کے لیے storage permission
+      PermissionStatus status = await Permission.storage.status;
+      
+      if (status.isGranted) {
+        print('✅ Storage permission already granted');
+        return true;
       }
-      return true;
-    } catch (e) {
-      print('❌ Permission error: $e');
+      
+      // Permission request کریں
+      print('🔐 Requesting storage permission...');
+      status = await Permission.storage.request();
+      
+      if (status.isGranted) {
+        print('✅ Storage permission granted');
+        return true;
+      }
+      
+      // اگر user نے deny کر دیا
+      if (status.isDenied) {
+        print('❌ Storage permission denied');
+        _showPermissionDialog('Please allow storage permission to select files from your device.');
+      }
+      
+      // اگر permanently denied ہے
+      if (status.isPermanentlyDenied) {
+        print('❌ Storage permission permanently denied');
+        _showPermissionSettingsDialog();
+      }
+      
       return false;
+    } else if (Platform.isIOS) {
+      // iOS کے لیے photos permission
+      PermissionStatus status = await Permission.photos.status;
+      
+      if (status.isGranted) {
+        return true;
+      }
+      
+      status = await Permission.photos.request();
+      return status.isGranted;
     }
+    return true;
+  } catch (e) {
+    print('❌ Permission error: $e');
+    return false;
   }
+}
 
   // ✅ Simple permission dialog
   void _showPermissionDialog(String message) {

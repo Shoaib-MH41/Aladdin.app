@@ -25,25 +25,49 @@ jobs:
           flutter-version: '3.19.5'
           channel: 'stable'
 
-      # ✅ ہمیشہ نیا project بنائیں مگر icons کو restore کریں
-      - name: Create Flutter project
+      # ✅ صرف ضرورت پڑنے پر ہی project بنائیں
+      - name: Check and Fix Flutter Project
         run: |
-          # پہلے سے موجود android folder کو temporary location پر move کریں
-          if [ -d android ]; then
-            mv android /tmp/old_android
-          fi
-          
-          # نیا project بنائیں
-          flutter create --project-name aladdin_app .
-          
-          # پرانی icons کو restore کریں (اگر موجود ہوں)
-          if [ -d /tmp/old_android/app/src/main/res ]; then
-            echo "Restoring icons from previous build..."
-            cp -r /tmp/old_android/app/src/main/res android/app/src/main/
+          # صرف ضروری فائلیں چیک کریں
+          if [ ! -f "pubspec.yaml" ]; then
+            echo "❌ pubspec.yaml not found - creating new project"
+            flutter create --project-name aladdin_app .
+          elif [ ! -d "android" ] || [ ! -d "ios" ]; then
+            echo "⚠️ Missing platform folders - recreating..."
+            
+            # Important files کو backup کریں
+            if [ -d "android/app/src/main/res" ]; then
+              echo "Backing up Android icons..."
+              cp -r android/app/src/main/res /tmp/android_res_backup
+            fi
+            
+            if [ -d "ios/Runner/Assets.xcassets" ]; then
+              echo "Backing up iOS assets..."
+              cp -r ios/Runner/Assets.xcassets /tmp/ios_assets_backup
+            fi
+            
+            # صرف missing platform folders recreate کریں
+            flutter create --project-name aladdin_app .
+            
+            # Icons restore کریں
+            if [ -d "/tmp/android_res_backup" ]; then
+              echo "Restoring Android icons..."
+              cp -r /tmp/android_res_backup/* android/app/src/main/res/ || true
+            fi
+            
+            if [ -d "/tmp/ios_assets_backup" ]; then
+              echo "Restoring iOS assets..."
+              cp -r /tmp/ios_assets_backup/* ios/Runner/Assets.xcassets/ || true
+            fi
+          else
+            echo "✅ Project structure looks good"
           fi
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Clean project
+        run: flutter clean
 
       - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons
@@ -53,3 +77,10 @@ jobs:
         with:
           name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      # ✅ اضافی: Build info
+      - name: Display Build Info
+        run: |
+          echo "📱 APK Build Completed Successfully!"
+          echo "📦 APK Size: $(du -h build/app/outputs/flutter-apk/app-release.apk | cut -f1)"
+          echo "🚀 Uploaded as artifact: app-release.apk"

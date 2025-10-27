@@ -21,7 +21,7 @@ class GeminiService {
   late GenerativeModel _model;
   bool _isInitialized = false;
 
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorageStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   late final Future<void> _initialization;
 
   GeminiService() {

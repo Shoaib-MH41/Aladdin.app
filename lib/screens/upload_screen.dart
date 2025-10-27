@@ -22,27 +22,69 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isPicking = false;
   String _currentOperation = '';
 
-  // ✅ بہتر Permission Handling
+  // ✅ درست Permission Handling
   Future<bool> _requestPermissions() async {
     try {
       if (Platform.isAndroid) {
-        // Android 13+ کے لیے photos permission
-        final photosStatus = await Permission.photos.request();
-        if (photosStatus.isGranted) return true;
+        // Android کے لیے storage permission
+        final storageStatus = await Permission.storage.status;
         
-        // Legacy Android کے لیے storage permission
-        final storageStatus = await Permission.storage.request();
-        return storageStatus.isGranted;
+        if (storageStatus.isGranted) {
+          return true;
+        }
+        
+        // Permission request کریں
+        final newStatus = await Permission.storage.request();
+        
+        if (newStatus.isGranted) {
+          return true;
+        }
+        
+        // اگر permanently denied ہے تو settings کھولیں
+        if (newStatus.isPermanentlyDenied) {
+          _showPermissionSettingsDialog();
+        }
+        
+        return false;
+        
       } else if (Platform.isIOS) {
         // iOS کے لیے photos permission
         final photosStatus = await Permission.photos.request();
         return photosStatus.isGranted;
       }
+      
       return true;
     } catch (e) {
       print('❌ Permission error: $e');
       return false;
     }
+  }
+
+  // ✅ Permission settings dialog
+  void _showPermissionSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Storage Permission Required'),
+        content: const Text(
+          'Aladdin App needs storage permission to select files. '
+          'Please allow storage permission in app settings to continue.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ✅ فائل extensions کی فہرست
@@ -59,7 +101,7 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ فائل pick کرنے کا فنکشن
+  // ✅ درست فائل pick کرنے کا فنکشن
   Future<void> _pickFiles(String type) async {
     try {
       setState(() {
@@ -71,18 +113,19 @@ class _UploadScreenState extends State<UploadScreen> {
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Storage permission required to select files'),
-            duration: Duration(seconds: 3),
+            content: Text('Storage permission is required to select files. Please allow permission in app settings.'),
+            duration: Duration(seconds: 4),
           ),
         );
         return;
       }
 
+      // File picker کو call کریں - withData: false رکھیں
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
         allowedExtensions: _allowedExtensions(type),
-        withData: true, // فائل ڈیٹا memory میں لے لو
+        withData: false, // ✅ یہ false ہونا چاہیے
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -99,7 +142,7 @@ class _UploadScreenState extends State<UploadScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ ${files.length} ${type}(s) selected'),
+            content: Text('✅ ${files.length} ${type}(s) selected successfully'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -109,7 +152,7 @@ class _UploadScreenState extends State<UploadScreen> {
       print('❌ File pick error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Error selecting files: $e'),
+          content: Text('❌ Error: ${e.toString()}'),
           duration: const Duration(seconds: 3),
         ),
       );

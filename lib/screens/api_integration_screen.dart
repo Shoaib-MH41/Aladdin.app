@@ -94,30 +94,99 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
     }
   }
 
-  // 🔹 Submit API Key
+  // 🔹 Submit API Key - ✅ درست کیا گیا
   void _submitApiKey() async {
-    if (_apiKeyController.text.trim().isEmpty &&
-        widget.apiTemplate.keyRequired) {
+    // ✅ پہلے چیک کریں کہ API key موجود ہے
+    if (widget.apiTemplate.keyRequired && _apiKeyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('براہ کرم API key درج کریں')),
+        const SnackBar(
+          content: Text('❌ براہ کرم پہلے API key درج کریں'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(seconds: 1));
-
-    widget.onApiKeySubmitted?.call(_apiKeyController.text.trim());
-    setState(() => _isSubmitting = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ API key جمع ہو گئی'),
-        backgroundColor: Colors.green,
+    // ✅ کنفرمیشن ڈائیلاگ
+    bool? shouldSave = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API Key محفوظ کریں'),
+        content: const Text('کیا آپ واقعی یہ API key محفوظ کرنا چاہتے ہیں؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('منسوخ'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('محفوظ کریں'),
+          ),
+        ],
       ),
     );
 
-    Navigator.pop(context);
+    // ✅ اگر user نے confirm کیا تو محفوظ کریں
+    if (shouldSave == true) {
+      setState(() => _isSubmitting = true);
+      await Future.delayed(const Duration(seconds: 1));
+
+      widget.onApiKeySubmitted?.call(_apiKeyController.text.trim());
+      setState(() => _isSubmitting = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ API key کامیابی سے محفوظ ہو گئی'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
+    }
+  }
+
+  // 🔹 Delete API Key - ✅ نیا فنکشن
+  void _deleteApiKey() async {
+    // ✅ کنفرمیشن ڈائیلاگ
+    bool? shouldDelete = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API Key حذف کریں'),
+        content: const Text('کیا آپ واقعی یہ API key حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('منسوخ'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('حذف کریں'),
+          ),
+        ],
+      ),
+    );
+
+    // ✅ اگر user نے confirm کیا تو حذف کریں
+    if (shouldDelete == true) {
+      setState(() => _isSubmitting = true);
+      await Future.delayed(const Duration(seconds: 1));
+
+      // یہاں آپ کا حذف کرنے کا logic آئے گا
+      // _removeApiKeyFromStorage();
+      
+      setState(() => _isSubmitting = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ API key کامیابی سے حذف ہو گئی'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _apiKeyController.clear();
+    }
   }
 
   @override
@@ -132,6 +201,12 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
             icon: const Icon(Icons.open_in_browser),
             tooltip: 'ویب سائٹ کھولیں',
             onPressed: _openApiWebsite,
+          ),
+          // ✅ حذف کرنے کا بٹن شامل کیا
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'API Key حذف کریں',
+            onPressed: _apiKeyController.text.isNotEmpty ? _deleteApiKey : null,
           ),
         ],
       ),

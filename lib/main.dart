@@ -59,7 +59,8 @@ void _setupErrorHandling() {
   PlatformExceptionHandler? handler;
   try {
     handler = PlatformExceptionHandler.getInstance();
-    handler.setHandler((error, stackTrace) {
+    // ✅ درستی: ?. کا استعمال کریں
+    handler?.setHandler((error, stackTrace) {
       print('🚨 Platform Error: $error');
       print('📝 StackTrace: $stackTrace');
     });
@@ -143,7 +144,8 @@ class AladdinApp extends StatelessWidget {
         '/upload': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {
-            return UploadScreen(project: args);
+            // ✅ درستی: صرف UploadScreen() کال کریں
+            return UploadScreen();
           } else {
             // ✅ اگر Project argument نہیں ملا تو error handle کریں
             return _buildErrorScreen(

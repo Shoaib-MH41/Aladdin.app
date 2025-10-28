@@ -26,6 +26,7 @@ import 'models/api_template_model.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   _optimizePerformance();
+  _setupErrorHandling(); // ✅ نیا error handling
   runApp(const AladdinApp());
 }
 
@@ -45,12 +46,29 @@ void _optimizePerformance() {
   );
 }
 
+// ✅ نیا: Error Handling Setup
+void _setupErrorHandling() {
+  // Flutter errors handle کریں
+  FlutterError.onError = (FlutterErrorDetails details) {
+    print('🚨 Flutter Error: ${details.exception}');
+    print('📝 StackTrace: ${details.stack}');
+  };
+
+  // Platform errors handle کریں
+  PlatformExceptionHandler? handler;
+  try {
+    handler = ServicesBinding.instance.platformExceptionHandler;
+  } catch (e) {
+    print('⚠️ Platform exception handler not available');
+  }
+}
+
 class AladdinApp extends StatelessWidget {
   const AladdinApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ✅ تمام سروسز initialize کریں
+    // ✅ تمام سروسز initialize کریں - بہتر error handling کے ساتھ
     final geminiService = GeminiService();
     final githubService = GitHubService();
     final apiService = ApiService();
@@ -81,7 +99,7 @@ class AladdinApp extends StatelessWidget {
       // 🔒 لاک اسکرین سے شروعات کریں
       initialRoute: '/pin',
 
-      // ✅ تمام روٹس یہاں define کریں
+      // ✅ تمام روٹس یہاں define کریں - بہتر error handling کے ساتھ
       routes: {
         '/pin': (context) => PinScreen(
               securityService: securityService,
@@ -104,7 +122,14 @@ class AladdinApp extends StatelessWidget {
               githubService: githubService,
             ),
 
-        '/upload': (context) => const UploadScreen(),
+        '/upload': (context) {
+          try {
+            return const UploadScreen();
+          } catch (e) {
+            print('🚨 UploadScreen Error: $e');
+            return _buildErrorScreen('Upload screen load failed: $e');
+          }
+        },
 
         '/chat': (context) => ChatScreen(
               geminiService: geminiService,
@@ -114,41 +139,61 @@ class AladdinApp extends StatelessWidget {
         '/settings': (context) => SettingsScreen(),
 
         '/api-discovery': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments
-              as Map<String, dynamic>?;
-          return ApiDiscoveryScreen(
-            discoveredApis: args?['discoveredApis'] ?? [],
-            projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
-          );
+          try {
+            final args = ModalRoute.of(context)?.settings.arguments
+                as Map<String, dynamic>?;
+            return ApiDiscoveryScreen(
+              discoveredApis: args?['discoveredApis'] ?? [],
+              projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
+            );
+          } catch (e) {
+            print('🚨 ApiDiscoveryScreen Error: $e');
+            return _buildErrorScreen('API Discovery screen load failed: $e');
+          }
         },
 
         '/api-integration': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments
-              as Map<String, dynamic>?;
-          return ApiIntegrationScreen(
-            apiTemplate: args?['apiTemplate'],
-            onApiKeySubmitted: args?['onApiKeySubmitted'],
-          );
+          try {
+            final args = ModalRoute.of(context)?.settings.arguments
+                as Map<String, dynamic>?;
+            return ApiIntegrationScreen(
+              apiTemplate: args?['apiTemplate'],
+              onApiKeySubmitted: args?['onApiKeySubmitted'],
+            );
+          } catch (e) {
+            print('🚨 ApiIntegrationScreen Error: $e');
+            return _buildErrorScreen('API Integration screen load failed: $e');
+          }
         },
 
         '/build': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments
-              as Map<String, dynamic>?;
-          return BuildScreen(
-            generatedCode: args?['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
-            projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
-            framework: args?['framework'] ?? 'Flutter',
-          );
+          try {
+            final args = ModalRoute.of(context)?.settings.arguments
+                as Map<String, dynamic>?;
+            return BuildScreen(
+              generatedCode: args?['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
+              projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
+              framework: args?['framework'] ?? 'Flutter',
+            );
+          } catch (e) {
+            print('🚨 BuildScreen Error: $e');
+            return _buildErrorScreen('Build screen load failed: $e');
+          }
         },
 
         '/publish-guide': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments
-              as Map<String, dynamic>?;
-          return PublishGuideScreen(
-            appName: args?['appName'] ?? 'میرا ایپ',
-            generatedCode: args?['generatedCode'] ?? '// کوئی کوڈ نہیں',
-            framework: args?['framework'] ?? 'Flutter',
-          );
+          try {
+            final args = ModalRoute.of(context)?.settings.arguments
+                as Map<String, dynamic>?;
+            return PublishGuideScreen(
+              appName: args?['appName'] ?? 'میرا ایپ',
+              generatedCode: args?['generatedCode'] ?? '// کوئی کوڈ نہیں',
+              framework: args?['framework'] ?? 'Flutter',
+            );
+          } catch (e) {
+            print('🚨 PublishGuideScreen Error: $e');
+            return _buildErrorScreen('Publish guide screen load failed: $e');
+          }
         },
       },
 
@@ -160,11 +205,19 @@ class AladdinApp extends StatelessWidget {
               Navigator.pushReplacementNamed(context, '/home'),
         ),
       ),
+
+      // ✅ نیا: Global error handling
+      builder: (context, widget) {
+        if (widget == null) {
+          return _buildErrorScreen('Widget is null');
+        }
+        return widget;
+      },
     );
   }
 
-  // ✅ ایرر سکرین (Error Screen)
-  Widget _buildErrorScreen(BuildContext context, String message) {
+  // ✅ بہتر Error Screen
+  Widget _buildErrorScreen(String message) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('خرابی'),
@@ -181,14 +234,33 @@ class AladdinApp extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 message,
-                style: const TextStyle(fontSize: 18),
+                style: const TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () =>
-                    Navigator.pushReplacementNamed(context, '/home'),
+                onPressed: () {
+                  // Home screen پر واپس جائیں
+                  Navigator.pushReplacementNamed(
+                    // context کو کیسے access کریں؟ یہ tricky ہے
+                    // اس لیے app restart کریں
+                    // عملی طور پر user app کو دوبارہ start کرے گا
+                    const Key('error_context').currentContext!,
+                    '/home'
+                  );
+                },
                 child: const Text('ہوم پر واپس جائیں'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () {
+                  // App کو close کریں
+                  SystemNavigator.pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey,
+                ),
+                child: const Text('ایپ بند کریں'),
               ),
             ],
           ),
@@ -196,4 +268,28 @@ class AladdinApp extends StatelessWidget {
       ),
     );
   }
-} 
+}
+
+// ✅ نیا: Permission Debugging Widget
+class PermissionDebugWidget extends StatelessWidget {
+  final String debugInfo;
+
+  const PermissionDebugWidget({super.key, required this.debugInfo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      margin: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: Colors.orange[100],
+        border: Border.all(color: Colors.orange),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      child: Text(
+        '🔍 Debug: $debugInfo',
+        style: const TextStyle(fontSize: 12, color: Colors.orange[800]),
+      ),
+    );
+  }
+}

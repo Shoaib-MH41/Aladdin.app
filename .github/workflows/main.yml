@@ -12,9 +12,9 @@ jobs:
     name: 🔍 Android Permission & Build Log
     runs-on: ubuntu-latest
 
+    # ✅ صرف ضروری permissions رکھو
     permissions:
       contents: read
-      metadata: read
       packages: read
 
     steps:
@@ -47,7 +47,7 @@ jobs:
           grep "<uses-permission" android/app/src/main/AndroidManifest.xml > build/build.log || echo "⚠️ No permissions found in AndroidManifest.xml" > build/build.log
           cat build/build.log
 
-      # ✅ Step 6: Verify Gradle Wrapper (Optional but Safe)
+      # ✅ Step 6: Verify Gradle Wrapper
       - name: 🧰 Verify Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
 
@@ -74,3 +74,4 @@ jobs:
         with:
           name: AladdinAI-App-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+

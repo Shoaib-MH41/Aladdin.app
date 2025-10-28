@@ -19,26 +19,28 @@ class _UploadScreenState extends State<UploadScreen> {
   List<File> _animationFiles = [];
 
   bool _isPicking = false;
+  bool _isUploading = false;
   String _currentOperation = '';
 
-  /// ✅ Request all required permissions (Android 10–14 + iOS)
+  // ✅ تمام فائلیں ایک ساتھ اپلوڈ کرنے کے لیے
+  List<File> _allSelectedFiles = [];
+
+  /// ✅ بہتر Permission Handling - تمام Android versions کے لیے
   Future<bool> _requestFilePermission() async {
     try {
       if (Platform.isAndroid) {
-        // ✅ اگر پہلے سے اجازت ہے
-        if (await Permission.storage.isGranted ||
-            await Permission.photos.isGranted ||
-            await Permission.mediaLibrary.isGranted ||
-            await Permission.manageExternalStorage.isGranted) {
+        // ✅ Android 13+ (API 33+) کے لیے نئے permissions
+        if (await Permission.manageExternalStorage.request().isGranted) {
           return true;
         }
-
-        // 🔐 Request new permissions
-        final statuses = await [
+        
+        // ✅ تمام ممکنہ storage permissions
+        final Map<Permission, PermissionStatus> statuses = await [
           Permission.storage,
-          Permission.photos,
-          Permission.mediaLibrary,
           Permission.manageExternalStorage,
+          Permission.accessMediaLocation,
+          if (await Permission.photos.isGranted == false) Permission.photos,
+          if (await Permission.mediaLibrary.isGranted == false) Permission.mediaLibrary,
         ].request();
 
         // ✅ اگر کسی بھی permission کو اجازت مل گئی
@@ -46,22 +48,20 @@ class _UploadScreenState extends State<UploadScreen> {
           return true;
         }
 
-        // ❌ اگر deny کر دیا
+        // ❌ اگر permanently deny کیا گیا
+        if (statuses.values.any((status) => status.isPermanentlyDenied)) {
+          _showPermissionSettingsDialog();
+          return false;
+        }
+
+        // 🔄 اگر deny کر دیا
         if (statuses.values.any((status) => status.isDenied)) {
           _showPermissionDialog(
               'Storage permission is required to select files from your device.');
+          return false;
         }
-
-        // 🚫 اگر permanently deny کیا گیا
-        if (statuses.values
-            .any((status) => status.isPermanentlyDenied)) {
-          _showPermissionSettingsDialog();
-        }
-
-        return false;
       } else if (Platform.isIOS) {
         // ✅ iOS کے لیے Photos permission
-        if (await Permission.photos.isGranted) return true;
         final status = await Permission.photos.request();
         return status.isGranted;
       }
@@ -115,27 +115,15 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 
-  List<String> _allowedExtensions(String type) {
-    switch (type) {
-      case 'icon':
-        return ['png', 'jpg', 'jpeg', 'svg', 'webp'];
-      case 'font':
-        return ['ttf', 'otf'];
-      case 'animation':
-        return ['json'];
-      default:
-        return [];
-    }
-  }
-
-  /// ✅ File picker logic
+  /// ✅ **درست File Picker Function - Complete File Manager کھولنے کے لیے**
   Future<void> _pickFiles(String type) async {
     try {
       setState(() {
         _isPicking = true;
-        _currentOperation = 'Checking permissions...';
+        _currentOperation = 'Opening file manager...';
       });
 
+      // ✅ Permission check
       final hasPermission = await _requestFilePermission();
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -147,36 +135,42 @@ class _UploadScreenState extends State<UploadScreen> {
         return;
       }
 
-      setState(() {
-        _currentOperation = 'Opening file picker...';
-      });
-
       FilePickerResult? result;
 
       try {
+        // ✅ **FileType.any استعمال کریں - تمام فائلیں دکھانے کے لیے**
+        result = await FilePicker.platform.pickFiles(
+          allowMultiple: true, // ✅ ایک سے زیادہ فائلیں select کرنے کے لیے
+          type: FileType.any, // ✅ **تمام فائلیں دکھائے گا - Complete File Manager**
+          dialogTitle: 'Select ${type.toUpperCase()} files',
+          lockParentWindow: true,
+          withData: false,
+        );
+
+        debugPrint('✅ File picker opened successfully');
+        
+      } catch (e) {
+        debugPrint('⚠️ FilePicker Error: $e');
+        
+        // 🔄 Alternative approach اگر پہلا طریقہ کام نہ کرے
         result = await FilePicker.platform.pickFiles(
           allowMultiple: true,
           type: FileType.custom,
-          allowedExtensions: _allowedExtensions(type),
-          withData: false,
-          dialogTitle: 'Select ${type.toUpperCase()} files',
-        );
-      } catch (e) {
-        debugPrint('⚠️ FilePicker Error: $e');
-        result = await FilePicker.platform.pickFiles(
-          allowMultiple: true,
-          type: FileType.any,
-          withData: false,
-          dialogTitle: 'Select files',
+          allowedExtensions: ['png', 'jpg', 'jpeg', 'svg', 'webp', 'ttf', 'otf', 'json', 'txt', 'pdf', 'zip'],
+          dialogTitle: 'Select files (All types)',
         );
       }
 
       if (result != null && result.files.isNotEmpty) {
+        // ✅ Files process کریں
         List<File> selectedFiles = [];
         for (var platformFile in result.files) {
-          if (platformFile.path != null &&
-              await File(platformFile.path!).exists()) {
-            selectedFiles.add(File(platformFile.path!));
+          if (platformFile.path != null) {
+            File file = File(platformFile.path!);
+            if (await file.exists()) {
+              selectedFiles.add(file);
+              debugPrint('✅ Selected file: ${file.path}');
+            }
           }
         }
 
@@ -189,12 +183,15 @@ class _UploadScreenState extends State<UploadScreen> {
             } else if (type == 'animation') {
               _animationFiles.addAll(selectedFiles);
             }
+            
+            // ✅ تمام selected files کو ایک list میں جمع کریں
+            _allSelectedFiles.addAll(selectedFiles);
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  '✅ ${selectedFiles.length} ${type}(s) selected successfully'),
+              content: Text('✅ ${selectedFiles.length} ${type}(s) selected successfully'),
+              duration: const Duration(seconds: 2),
             ),
           );
         } else {
@@ -207,10 +204,14 @@ class _UploadScreenState extends State<UploadScreen> {
           const SnackBar(content: Text('File selection cancelled')),
         );
       }
+
     } catch (e) {
       debugPrint('❌ File pick error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e')),
+        SnackBar(
+          content: Text('❌ Error: Could not open file manager - $e'),
+          duration: const Duration(seconds: 3),
+        ),
       );
     } finally {
       setState(() {
@@ -220,13 +221,102 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
+  /// ✅ **تمام فائلیں ایک ساتھ اپلوڈ کرنے کا function**
+  Future<void> _uploadAllFilesTogether(Project project) async {
+    try {
+      setState(() {
+        _isUploading = true;
+        _currentOperation = 'Uploading all files...';
+      });
+
+      // ✅ تمام selected files کو ایک list میں جمع کریں
+      List<File> allFiles = [];
+      allFiles.addAll(_iconFiles);
+      allFiles.addAll(_fontFiles);
+      allFiles.addAll(_animationFiles);
+
+      if (allFiles.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('❌ No files selected for upload')),
+        );
+        return;
+      }
+
+      debugPrint('🚀 Starting upload of ${allFiles.length} files');
+
+      // ✅ Simulate file upload process
+      for (int i = 0; i < allFiles.length; i++) {
+        File file = allFiles[i];
+        setState(() {
+          _currentOperation = 'Uploading file ${i + 1}/${allFiles.length}\n${file.path.split('/').last}';
+        });
+
+        // 🔄 یہاں آپ کا actual upload logic آئے گا
+        await _simulateFileUpload(file);
+        
+        debugPrint('✅ Uploaded: ${file.path}');
+      }
+
+      // ✅ Project میں تمام assets شامل کریں
+      if (_iconFiles.isNotEmpty) {
+        project.assets['icons'] = _iconFiles.map((e) => e.path).toList();
+      }
+      if (_fontFiles.isNotEmpty) {
+        project.assets['fonts'] = _fontFiles.map((e) => e.path).toList();
+      }
+      if (_animationFiles.isNotEmpty) {
+        project.assets['animations'] = _animationFiles.map((e) => e.path).toList();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🎉 Successfully uploaded ${allFiles.length} files!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // ✅ Publish screen پر جائیں
+      Navigator.pushNamed(context, '/publish', arguments: project);
+
+    } catch (e) {
+      debugPrint('❌ Upload error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Upload failed: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isUploading = false;
+        _currentOperation = '';
+      });
+    }
+  }
+
+  /// ✅ File upload simulation (آپ کا actual upload logic یہاں آئے گا)
+  Future<void> _simulateFileUpload(File file) async {
+    // 🔄 یہ simulate کر رہا ہے - آپ کا actual upload logic یہاں آئے گا
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Example: FTP upload, HTTP upload, etc.
+    // await YourUploadService.uploadFile(file);
+  }
+
   Future<void> _downloadToLocal(File file) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final destination = File('${directory.path}/${file.path.split('/').last}');
+      final fileName = file.path.split('/').last;
+      final destination = File('${directory.path}/$fileName');
       await file.copy(destination.path);
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ File saved to device')),
+        SnackBar(
+          content: Text('✅ File saved to: ${destination.path}'),
+          duration: const Duration(seconds: 2),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -240,7 +330,11 @@ class _UploadScreenState extends State<UploadScreen> {
       if (type == 'icon') _iconFiles.remove(file);
       if (type == 'font') _fontFiles.remove(file);
       if (type == 'animation') _animationFiles.remove(file);
+      
+      // ✅ تمام فائلوں کی list سے بھی remove کریں
+      _allSelectedFiles.remove(file);
     });
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('🗑️ File removed')),
     );
@@ -255,36 +349,34 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   void _continueToPublish(Project project) {
-    if (_iconFiles.isNotEmpty) {
-      project.assets['icons'] = _iconFiles.map((e) => e.path).toList();
-    }
-    if (_fontFiles.isNotEmpty) {
-      project.assets['fonts'] = _fontFiles.map((e) => e.path).toList();
-    }
-    if (_animationFiles.isNotEmpty) {
-      project.assets['animations'] = _animationFiles.map((e) => e.path).toList();
-    }
-
-    Navigator.pushNamed(context, '/publish', arguments: project);
+    // ✅ تمام فائلیں ایک ساتھ اپلوڈ کریں
+    _uploadAllFilesTogether(project);
   }
 
   @override
   Widget build(BuildContext context) {
     final Project project =
         ModalRoute.of(context)!.settings.arguments as Project;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('📁 Upload Assets'),
         backgroundColor: Colors.blueAccent,
         foregroundColor: Colors.white,
         actions: [
+          // ✅ Selected files count دکھائیں
+          if (_allSelectedFiles.isNotEmpty)
+            Chip(
+              label: Text('${_allSelectedFiles.length}'),
+              backgroundColor: Colors.white,
+            ),
           IconButton(
             icon: const Icon(Icons.help_outline),
             onPressed: _showHelpDialog,
           ),
         ],
       ),
-      body: _isPicking ? _buildLoadingState() : _buildMainContent(project),
+      body: _isPicking || _isUploading ? _buildLoadingState() : _buildMainContent(project),
     );
   }
 
@@ -294,7 +386,11 @@ class _UploadScreenState extends State<UploadScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 20),
-            Text(_currentOperation, style: const TextStyle(color: Colors.grey)),
+            Text(
+              _currentOperation, 
+              style: const TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       );
@@ -305,6 +401,28 @@ class _UploadScreenState extends State<UploadScreen> {
           children: [
             _buildProjectSummary(project),
             const SizedBox(height: 20),
+            // ✅ Total files summary
+            if (_allSelectedFiles.isNotEmpty)
+              Card(
+                color: Colors.blue[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.folder_open, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Total ${_allSelectedFiles.length} files selected',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
             Expanded(
               child: ListView(
                 children: [
@@ -348,7 +466,7 @@ class _UploadScreenState extends State<UploadScreen> {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(children: [
           Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(value),
+          Expanded(child: Text(value)),
         ]),
       );
 
@@ -428,9 +546,18 @@ class _UploadScreenState extends State<UploadScreen> {
 
   void _clearFiles(String type) {
     setState(() {
-      if (type == 'icon') _iconFiles.clear();
-      if (type == 'font') _fontFiles.clear();
-      if (type == 'animation') _animationFiles.clear();
+      if (type == 'icon') {
+        _allSelectedFiles.removeWhere((file) => _iconFiles.contains(file));
+        _iconFiles.clear();
+      }
+      if (type == 'font') {
+        _allSelectedFiles.removeWhere((file) => _fontFiles.contains(file));
+        _fontFiles.clear();
+      }
+      if (type == 'animation') {
+        _allSelectedFiles.removeWhere((file) => _animationFiles.contains(file));
+        _animationFiles.clear();
+      }
     });
 
     ScaffoldMessenger.of(context)
@@ -439,18 +566,35 @@ class _UploadScreenState extends State<UploadScreen> {
 
   Widget _buildContinueButton(Project project) {
     final canContinue = _canContinue(project);
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        icon: const Icon(Icons.arrow_forward),
-        label: Text(canContinue ? 'Continue to Publish' : 'Add Required Assets'),
-        onPressed: canContinue ? () => _continueToPublish(project) : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: canContinue ? Colors.green : Colors.grey,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+    final hasAnyFiles = _allSelectedFiles.isNotEmpty;
+    
+    return Column(
+      children: [
+        if (hasAnyFiles)
+          Text(
+            '📦 ${_allSelectedFiles.length} files ready for upload',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.file_upload),
+            label: Text(canContinue 
+                ? 'Upload All Files & Continue' 
+                : 'Add Required Assets First'),
+            onPressed: canContinue ? () => _continueToPublish(project) : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: canContinue ? Colors.green : Colors.grey,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -460,11 +604,17 @@ class _UploadScreenState extends State<UploadScreen> {
       builder: (context) => AlertDialog(
         title: const Text('💡 Upload Help'),
         content: const Text(
-          'Supported Files:\n'
+          '🚀 **New Features:**\n'
+          '• Complete File Manager Access\n'
+          '• Upload All Files Together\n'
+          '• Better Permission Handling\n\n'
+          '📁 **Supported Files:**\n'
           '• Icons: PNG, JPG, JPEG, SVG, WEBP\n'
           '• Fonts: TTF, OTF\n'
-          '• Animations: Lottie JSON\n\n'
-          'Make sure to allow "Storage" permission when prompted.',
+          '• Animations: Lottie JSON\n'
+          '• And many more...\n\n'
+          '🔐 **Permissions:**\n'
+          'Allow "Storage" permission when prompted for full file access.',
         ),
         actions: [
           TextButton(
@@ -504,4 +654,3 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 }
-

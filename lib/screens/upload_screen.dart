@@ -125,9 +125,6 @@ class _UploadScreenState extends State<UploadScreen> {
         _currentOperation = 'Opening file manager...';
       });
 
-      bool granted = await _requestFilePermission();
-      if (!granted) return;
-
       FilePickerResult? result;
       try {
         result = await FilePicker.platform.pickFiles(

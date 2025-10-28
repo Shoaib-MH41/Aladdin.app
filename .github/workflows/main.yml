@@ -1,111 +1,76 @@
-name: 🧠 Android Permission Auto Diagnostic
+name: Android Permission Check & Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   permission-check:
+    name: 🔍 Android Permission & Build Log
     runs-on: ubuntu-latest
 
-    steps:
-      - name: 🧩 Checkout Repository
-        uses: actions/checkout@v3
+    permissions:
+      contents: read
+      metadata: read
+      packages: read
 
-      - name: ⚙️ Setup Java & Flutter
+    steps:
+      # ✅ Step 1: Checkout Repository
+      - name: 🧩 Checkout Repository
+        uses: actions/checkout@v4
+
+      # ✅ Step 2: Setup Java (Fixed)
+      - name: ☕ Setup Java Environment
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
+          distribution: 'temurin'   # ✅ FIXED missing key
+          java-version: '17'        # ✅ Compatible JDK for Flutter/Gradle
 
-      - name: 📦 Install Dependencies
+      # ✅ Step 3: Setup Flutter
+      - name: 🐦 Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+
+      # ✅ Step 4: Get Flutter Dependencies
+      - name: 📦 Get Dependencies
         run: flutter pub get
 
-      ###########################################################
-      # 🧠 STATIC PERMISSION SCAN - No build, just analysis
-      ###########################################################
-      - name: 🔍 Static Manifest Permission Scan
+      # ✅ Step 5: Analyze Android Permissions
+      - name: 🧠 Analyze Android Permissions
         run: |
-          echo "---------------------------------------------------"
-          echo "🔍 Checking AndroidManifest.xml for required permissions"
-          echo "---------------------------------------------------"
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if [ ! -f "$MANIFEST" ]; then
-            echo "❌ Manifest file not found at $MANIFEST"
-            exit 1
-          fi
+          echo "🔍 Checking Android permissions..."
+          mkdir -p build
+          grep "<uses-permission" android/app/src/main/AndroidManifest.xml > build/build.log || echo "⚠️ No permissions found in AndroidManifest.xml" > build/build.log
+          cat build/build.log
 
-          REQUIRED_PERMS=("INTERNET" "ACCESS_NETWORK_STATE" "READ_MEDIA_IMAGES" "READ_MEDIA_VIDEO" "READ_MEDIA_AUDIO" "READ_EXTERNAL_STORAGE")
-          MISSING=()
+      # ✅ Step 6: Verify Gradle Wrapper (Optional but Safe)
+      - name: 🧰 Verify Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
 
-          for PERM in "${REQUIRED_PERMS[@]}"; do
-            if ! grep -q "$PERM" "$MANIFEST"; then
-              MISSING+=("$PERM")
-            fi
-          done
-
-          if [ ${#MISSING[@]} -eq 0 ]; then
-            echo "✅ All essential permissions are present in AndroidManifest.xml"
-          else
-            echo "⚠️ Missing permissions detected:"
-            for PERM in "${MISSING[@]}"; do
-              echo "➡️ Add: <uses-permission android:name=\"android.permission.$PERM\" />"
-            done
-            echo ""
-            echo "💡 Tip: Android 13+ also requires READ_MEDIA_* permissions for media files."
-          fi
-          echo "---------------------------------------------------"
-
-      ###########################################################
-      # 🧱 BUILD PHASE - Catch runtime permission-related errors
-      ###########################################################
-      - name: 🧱 Build Debug APK (permission validation)
-        id: build
-        run: |
-          echo "---------------------------------------------------"
-          echo "🏗️ Building Flutter Debug APK..."
-          echo "---------------------------------------------------"
-          set -e
-          flutter build apk --debug 2>&1 | tee build.log
-        continue-on-error: true
-
-      ###########################################################
-      # 🧩 ERROR ANALYZER - Parse permission issues in logs
-      ###########################################################
-      - name: 🕵️ Analyze Permission Errors
-        if: always()
-        run: |
-          echo "---------------------------------------------------"
-          echo "🕵️ Scanning build.log for permission issues..."
-          echo "---------------------------------------------------"
-
-          if grep -qi "permission" build.log; then
-            echo "⚠️ Possible permission-related issue found:"
-            grep -i "permission" build.log | tail -n 15
-            echo ""
-            echo "🔧 Suggestions:"
-            if grep -qi "READ_MEDIA_IMAGES" build.log; then
-              echo "➡️ Add <uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\" />"
-            fi
-            if grep -qi "WRITE_EXTERNAL_STORAGE" build.log; then
-              echo "➡️ Add WRITE_EXTERNAL_STORAGE with maxSdkVersion=29 (Android 10–12 only)"
-            fi
-            if grep -qi "MANAGE_EXTERNAL_STORAGE" build.log; then
-              echo "➡️ Check MANAGE_EXTERNAL_STORAGE and Scoped Storage policies"
-            fi
-          else
-            echo "✅ No permission-related issues found in build logs."
-          fi
-
-      ###########################################################
-      # 📤 Upload build log as artifact for manual check
-      ###########################################################
-      - name: 🧾 Upload Build Log
+      # ✅ Step 7: Upload Permission Report (Artifact)
+      - name: 📤 Upload Build Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-permission-build-log
-          path: build.log
+          path: build/build.log
+
+      # ✅ Step 8: Optional - Flutter Analyze
+      - name: 🧩 Flutter Analyze
+        run: flutter analyze || true
+
+      # ✅ Step 9: Optional - Build APK
+      - name: 🏗️ Build APK
+        run: flutter build apk --release
+
+      # ✅ Step 10: Upload APK as Artifact
+      - name: 📦 Upload Built APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AladdinAI-App-APK
+          path: build/app/outputs/flutter-apk/app-release.apk

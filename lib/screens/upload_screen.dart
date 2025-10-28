@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:animations/animations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:lottie/lottie.dart';
 import '../models/project_model.dart';
@@ -22,51 +21,46 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isPicking = false;
   String _currentOperation = '';
 
-  // ✅ Universal Permission Handling (Android 10–14 + iOS)
+  /// ✅ Request all required permissions (Android 10–14 + iOS)
   Future<bool> _requestFilePermission() async {
     try {
       if (Platform.isAndroid) {
-        // ✅ اگر Android 13+ ہے تو READ_MEDIA_* permissions
-        if (await Permission.photos.isGranted ||
-            await Permission.videos.isGranted ||
-            await Permission.audio.isGranted ||
-            await Permission.manageExternalStorage.isGranted ||
-            await Permission.storage.isGranted) {
+        // ✅ اگر پہلے سے اجازت ہے
+        if (await Permission.storage.isGranted ||
+            await Permission.photos.isGranted ||
+            await Permission.mediaLibrary.isGranted ||
+            await Permission.manageExternalStorage.isGranted) {
           return true;
         }
 
         // 🔐 Request new permissions
-        final photosStatus = await Permission.photos.request();
-        final videosStatus = await Permission.videos.request();
-        final audioStatus = await Permission.audio.request();
-        final storageStatus = await Permission.storage.request();
+        final statuses = await [
+          Permission.storage,
+          Permission.photos,
+          Permission.mediaLibrary,
+          Permission.manageExternalStorage,
+        ].request();
 
-        if (photosStatus.isGranted ||
-            videosStatus.isGranted ||
-            audioStatus.isGranted ||
-            storageStatus.isGranted) {
+        // ✅ اگر کسی بھی permission کو اجازت مل گئی
+        if (statuses.values.any((status) => status.isGranted)) {
           return true;
         }
 
-        // ❌ اگر user نے deny کر دیا
-        if (photosStatus.isDenied ||
-            videosStatus.isDenied ||
-            storageStatus.isDenied) {
+        // ❌ اگر deny کر دیا
+        if (statuses.values.any((status) => status.isDenied)) {
           _showPermissionDialog(
               'Storage permission is required to select files from your device.');
         }
 
         // 🚫 اگر permanently deny کیا گیا
-        if (photosStatus.isPermanentlyDenied ||
-            videosStatus.isPermanentlyDenied ||
-            storageStatus.isPermanentlyDenied ||
-            await Permission.manageExternalStorage.isPermanentlyDenied) {
+        if (statuses.values
+            .any((status) => status.isPermanentlyDenied)) {
           _showPermissionSettingsDialog();
         }
 
         return false;
       } else if (Platform.isIOS) {
-        // ✅ iOS کے لیے photos permission
+        // ✅ iOS کے لیے Photos permission
         if (await Permission.photos.isGranted) return true;
         final status = await Permission.photos.request();
         return status.isGranted;
@@ -79,7 +73,6 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ Simple permission dialog
   void _showPermissionDialog(String message) {
     showDialog(
       context: context,
@@ -96,7 +89,6 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 
-  // ✅ Settings redirect dialog
   void _showPermissionSettingsDialog() {
     showDialog(
       context: context,
@@ -123,7 +115,6 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 
-  // ✅ Allowed extensions
   List<String> _allowedExtensions(String type) {
     switch (type) {
       case 'icon':
@@ -137,7 +128,7 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ File picker logic
+  /// ✅ File picker logic
   Future<void> _pickFiles(String type) async {
     try {
       setState(() {
@@ -149,8 +140,8 @@ class _UploadScreenState extends State<UploadScreen> {
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('Permission denied. Please allow storage access to select files.'),
+            content: Text(
+                'Permission denied. Please allow storage access to select files.'),
           ),
         );
         return;
@@ -161,21 +152,22 @@ class _UploadScreenState extends State<UploadScreen> {
       });
 
       FilePickerResult? result;
+
       try {
         result = await FilePicker.platform.pickFiles(
           allowMultiple: true,
           type: FileType.custom,
           allowedExtensions: _allowedExtensions(type),
           withData: false,
-          dialogTitle: 'Select ${type} files',
+          dialogTitle: 'Select ${type.toUpperCase()} files',
         );
       } catch (e) {
-        debugPrint('FilePicker Error: $e');
+        debugPrint('⚠️ FilePicker Error: $e');
         result = await FilePicker.platform.pickFiles(
           allowMultiple: true,
           type: FileType.any,
           withData: false,
-          dialogTitle: 'Select ${type} files',
+          dialogTitle: 'Select files',
         );
       }
 
@@ -228,13 +220,11 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ Save to local storage
   Future<void> _downloadToLocal(File file) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final destination = File('${directory.path}/${file.path.split('/').last}');
       await file.copy(destination.path);
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ File saved to device')),
       );
@@ -245,14 +235,12 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ✅ Remove file
   void _removeFile(File file, String type) {
     setState(() {
       if (type == 'icon') _iconFiles.remove(file);
       if (type == 'font') _fontFiles.remove(file);
       if (type == 'animation') _animationFiles.remove(file);
     });
-
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('🗑️ File removed')),
     );
@@ -280,10 +268,10 @@ class _UploadScreenState extends State<UploadScreen> {
     Navigator.pushNamed(context, '/publish', arguments: project);
   }
 
-  // ✅ UI below remains same
   @override
   Widget build(BuildContext context) {
-    final Project project = ModalRoute.of(context)!.settings.arguments as Project;
+    final Project project =
+        ModalRoute.of(context)!.settings.arguments as Project;
     return Scaffold(
       appBar: AppBar(
         title: const Text('📁 Upload Assets'),
@@ -320,7 +308,8 @@ class _UploadScreenState extends State<UploadScreen> {
             Expanded(
               child: ListView(
                 children: [
-                  _buildAssetSection('🎬 Animations', _animationFiles, 'animation', project),
+                  _buildAssetSection(
+                      '🎬 Animations', _animationFiles, 'animation', project),
                   const SizedBox(height: 16),
                   _buildAssetSection('🔤 Fonts', _fontFiles, 'font', project),
                   const SizedBox(height: 16),
@@ -342,11 +331,13 @@ class _UploadScreenState extends State<UploadScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Project Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              const Text('Project Summary',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 12),
               _buildSummaryItem('Framework', project.framework),
               _buildSummaryItem('Platforms', project.platforms.join(', ')),
-              _buildSummaryItem('Animation', project.features['animation'] ?? 'None'),
+              _buildSummaryItem(
+                  'Animation', project.features['animation'] ?? 'None'),
               _buildSummaryItem('Font', project.features['font'] ?? 'Default'),
             ],
           ),
@@ -361,7 +352,8 @@ class _UploadScreenState extends State<UploadScreen> {
         ]),
       );
 
-  Widget _buildAssetSection(String title, List<File> files, String type, Project project) {
+  Widget _buildAssetSection(
+      String title, List<File> files, String type, Project project) {
     final isRequired = _isAssetRequired(type, project);
     return Card(
       elevation: 2,
@@ -374,22 +366,30 @@ class _UploadScreenState extends State<UploadScreen> {
             if (isRequired)
               Container(
                 margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
-                child: const Text('Required', style: TextStyle(color: Colors.white, fontSize: 10)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(4)),
+                child: const Text('Required',
+                    style: TextStyle(color: Colors.white, fontSize: 10)),
               ),
           ]),
           const SizedBox(height: 12),
           if (files.isEmpty)
             Text(
-              isRequired ? '❌ Required - Please select files' : 'No files selected',
+              isRequired
+                  ? '❌ Required - Please select files'
+                  : 'No files selected',
               style: TextStyle(
                 color: isRequired ? Colors.red : Colors.grey,
                 fontStyle: FontStyle.italic,
               ),
             )
           else
-            Column(children: files.map((file) => _filePreviewTile(file, type)).toList()),
+            Column(
+                children:
+                    files.map((file) => _filePreviewTile(file, type)).toList()),
           const SizedBox(height: 12),
           Row(children: [
             Expanded(
@@ -404,7 +404,8 @@ class _UploadScreenState extends State<UploadScreen> {
                 padding: const EdgeInsets.only(left: 8),
                 child: ElevatedButton(
                   onPressed: () => _clearFiles(type),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent),
                   child: const Icon(Icons.clear_all, color: Colors.white),
                 ),
               ),
@@ -432,9 +433,8 @@ class _UploadScreenState extends State<UploadScreen> {
       if (type == 'animation') _animationFiles.clear();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('🗑️ All ${type}s cleared')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('🗑️ All ${type}s cleared')));
   }
 
   Widget _buildContinueButton(Project project) {
@@ -467,7 +467,9 @@ class _UploadScreenState extends State<UploadScreen> {
           'Make sure to allow "Storage" permission when prompted.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK')),
         ],
       ),
     );
@@ -480,7 +482,9 @@ class _UploadScreenState extends State<UploadScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
-        leading: Icon(Icons.insert_drive_file, color: Colors.blue),
+        leading: type == 'animation'
+            ? SizedBox(width: 50, height: 50, child: Lottie.file(file))
+            : const Icon(Icons.insert_drive_file, color: Colors.blue),
         title: Text(fileName, overflow: TextOverflow.ellipsis),
         subtitle: Text('$fileSize KB'),
         trailing: Row(
@@ -500,3 +504,4 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 }
+

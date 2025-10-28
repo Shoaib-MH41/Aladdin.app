@@ -1,59 +1,52 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.aladdin_app">
 
-    <!-- 🌟 ضروری Permissions -->
+    <!-- 🌐 انٹرنیٹ اور نیٹ ورک کی اجازت -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    
-    <!-- 📁 Storage Permissions - درست طریقہ -->
-    <!-- Android 13+ (API 33+) کے لیے -->
+
+    <!-- 📁 Storage Permissions -->
+    <!-- ✅ Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    
-    <!-- Android 10-12 کے لیے legacy permissions -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+
+    <!-- ✅ Android 10–12 (Legacy Support) -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
     <application
         android:name="${applicationName}"
         android:label="Aladdin AI App Factory"
         android:icon="@mipmap/ic_launcher"
-        android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
-        tools:targetApi="31">
-        
+        android:requestLegacyExternalStorage="true"
+        tools:targetApi="33">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
-            android:requestLegacyExternalStorage="true">
-            
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode">
+
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- 🌟 فائل منیجر کے لیے intent filter -->
-            <intent-filter>
-                <action android:name="android.intent.action.GET_CONTENT" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.OPENABLE" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-                
         </activity>
 
+        <!-- 🧠 Flutter Embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-            
+
     </application>
 </manifest>

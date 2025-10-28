@@ -1,77 +1,84 @@
-name: Android Permission Check & Build
+name: Build Flutter APK
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
-  permission-check:
-    name: 🔍 Android Permission & Build Log
+  build:
     runs-on: ubuntu-latest
 
-    # ✅ صرف ضروری permissions رکھو
-    permissions:
-      contents: read
-      packages: read
-
     steps:
-      # ✅ Step 1: Checkout Repository
-      - name: 🧩 Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Step 2: Setup Java (Fixed)
-      - name: ☕ Setup Java Environment
-        uses: actions/setup-java@v3
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'   # ✅ FIXED missing key
-          java-version: '17'        # ✅ Compatible JDK for Flutter/Gradle
+          java-version: '17'
+          distribution: 'temurin'
 
-      # ✅ Step 3: Setup Flutter
-      - name: 🐦 Setup Flutter SDK
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.19.5'
+          channel: 'stable'
 
-      # ✅ Step 4: Get Flutter Dependencies
-      - name: 📦 Get Dependencies
+      # ✅ نیا اور درست project creation
+      - name: Create Fresh Flutter Project
+        run: |
+          echo "🔄 Creating fresh Flutter project..."
+          
+          # Important files کو backup کریں
+          mkdir -p /tmp/backup
+          cp -r lib/ /tmp/backup/ || true
+          cp -r assets/ /tmp/backup/ || true
+          cp pubspec.yaml /tmp/backup/ || true
+          cp -r android/app/src/main/res/ /tmp/backup/android_res/ || true
+          cp -r ios/Runner/Assets.xcassets/ /tmp/backup/ios_assets/ || true
+          
+          # پرانی فولڈرز ڈیلیٹ کریں
+          rm -rf android ios linux macos windows
+          
+          # نیا project بنائیں
+          flutter create --project-name aladdin_app --org com.aladdin .
+          
+          # Backup files restore کریں
+          echo "📦 Restoring files from backup..."
+          cp -r /tmp/backup/lib/* lib/ || true
+          cp -r /tmp/backup/assets/* assets/ || true
+          cp /tmp/backup/pubspec.yaml . || true
+          
+          # Icons restore کریں
+          if [ -d "/tmp/backup/android_res" ]; then
+            echo "🎨 Restoring Android icons..."
+            cp -r /tmp/backup/android_res/* android/app/src/main/res/ || true
+          fi
+          
+          if [ -d "/tmp/backup/ios_assets" ]; then
+            echo "🎨 Restoring iOS assets..."
+            cp -r /tmp/backup/ios_assets/* ios/Runner/Assets.xcassets/ || true
+          fi
+          
+          echo "✅ Project recreation completed!"
+
+      - name: Get dependencies
         run: flutter pub get
 
-      # ✅ Step 5: Analyze Android Permissions
-      - name: 🧠 Analyze Android Permissions
-        run: |
-          echo "🔍 Checking Android permissions..."
-          mkdir -p build
-          grep "<uses-permission" android/app/src/main/AndroidManifest.xml > build/build.log || echo "⚠️ No permissions found in AndroidManifest.xml" > build/build.log
-          cat build/build.log
+      - name: Clean project
+        run: flutter clean
 
-      # ✅ Step 6: Verify Gradle Wrapper
-      - name: 🧰 Verify Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v2
+      - name: Build release APK
+        run: flutter build apk --release --no-tree-shake-icons
 
-      # ✅ Step 7: Upload Permission Report (Artifact)
-      - name: 📤 Upload Build Log
-        if: always()
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-permission-build-log
-          path: build/build.log
-
-      # ✅ Step 8: Optional - Flutter Analyze
-      - name: 🧩 Flutter Analyze
-        run: flutter analyze || true
-
-      # ✅ Step 9: Optional - Build APK
-      - name: 🏗️ Build APK
-        run: flutter build apk --release
-
-      # ✅ Step 10: Upload APK as Artifact
-      - name: 📦 Upload Built APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: AladdinAI-App-APK
+          name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
+      - name: Display Build Info
+        run: |
+          echo "🎉 APK Build Completed Successfully!"
+          echo "📦 APK Location: build/app/outputs/flutter-apk/app-release.apk"

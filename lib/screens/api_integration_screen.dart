@@ -21,17 +21,57 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
   bool _isSubmitting = false;
   bool _isFetchingSuggestion = false;
+  bool _isValidatingApi = false;
   String? _suggestedApiLink;
   String? _suggestedApiName;
   String? _suggestedApiNote;
+  String _validationMessage = '';
+  bool _isApiValid = false;
 
   @override
   void initState() {
     super.initState();
-    // ✅ TextField میں تبدیلی پر UI خود ریفریش ہو جائے (delete بٹن کیلئے)
     _apiKeyController.addListener(() {
-      setState(() {});
+      setState(() {
+        _validationMessage = '';
+        _isApiValid = false;
+      });
     });
+  }
+
+  // 🔹 API Key کو validate کرنے کا فنکشن
+  Future<bool> _validateApiKey(String apiKey) async {
+    setState(() {
+      _isValidatingApi = true;
+      _validationMessage = 'API key کی جانچ ہو رہی ہے...';
+    });
+
+    try {
+      // 🔄 یہاں آپ کا actual API validation logic آئے گا
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // ✅ Simulate validation - آپ کو اپنی API کے مطابق بدلنا ہوگا
+      bool isValid = apiKey.length >= 10 && apiKey.contains('_');
+      
+      setState(() {
+        _isApiValid = isValid;
+        _validationMessage = isValid 
+            ? '✅ API key درست ہے' 
+            : '❌ API key غلط ہے۔ براہ کرم درست key درج کریں';
+      });
+      
+      return isValid;
+    } catch (e) {
+      setState(() {
+        _validationMessage = '❌ API validation میں مسئلہ: $e';
+        _isApiValid = false;
+      });
+      return false;
+    } finally {
+      setState(() {
+        _isValidatingApi = false;
+      });
+    }
   }
 
   // 🔹 Smart Suggestion System (Gemini)
@@ -101,10 +141,9 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
     }
   }
 
-  // 🔹 Submit API Key
-  void _submitApiKey() async {
-    if (widget.apiTemplate.keyRequired &&
-        _apiKeyController.text.trim().isEmpty) {
+  // 🔹 Validate API Key
+  void _validateApi() async {
+    if (_apiKeyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('❌ براہ کرم پہلے API key درج کریں'),
@@ -114,11 +153,79 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
       return;
     }
 
+    await _validateApiKey(_apiKeyController.text.trim());
+  }
+
+  // 🔹 Submit API Key - مکمل اپگریڈ
+  void _submitApiKey() async {
+    // ✅ پہلے چیک کریں کہ API key درکار ہے اور خالی تو نہیں
+    if (widget.apiTemplate.keyRequired && _apiKeyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ براہ کرم پہلے API key درج کریں'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // ✅ اگر API key درکار ہے تو validate کریں
+    if (widget.apiTemplate.keyRequired && _apiKeyController.text.trim().isNotEmpty) {
+      if (!_isApiValid) {
+        bool? shouldValidate = await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('API Key کی تصدیق'),
+            content: const Text('API key کی تصدیق نہیں ہوئی ہے۔ کیا آپ بغیر تصدیق کے محفوظ کرنا چاہتے ہیں؟'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('تصدیق کریں'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                child: const Text('بغیر تصدیق کے محفوظ کریں'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldValidate == false) {
+          await _validateApi();
+          return;
+        }
+      }
+    }
+
+    // ✅ کنفرمیشن ڈائیلاگ
     bool? shouldSave = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('API Key محفوظ کریں'),
-        content: const Text('کیا آپ واقعی یہ API key محفوظ کرنا چاہتے ہیں؟'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('کیا آپ واقعی یہ API key محفوظ کرنا چاہتے ہیں؟'),
+            if (_isApiValid) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    SizedBox(width: 6),
+                    Text('API key درست ہے', style: TextStyle(color: Colors.green)),
+                  ],
+                ),
+              ),
+            ]
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -126,8 +233,10 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('محفوظ کریں'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isApiValid ? Colors.green : Colors.orange,
+            ),
+            child: Text(_isApiValid ? 'محفوظ کریں' : 'بغیر تصدیق کے محفوظ کریں'),
           ),
         ],
       ),
@@ -140,7 +249,7 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
       widget.onApiKeySubmitted?.call(_apiKeyController.text.trim());
       setState(() => _isSubmitting = false);
 
-      // ✅ اگر API کو key کی ضرورت نہ تھی تو الگ پیغام دکھاؤ
+      // ✅ کامیابی کا پیغام
       if (!widget.apiTemplate.keyRequired) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -150,9 +259,11 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ API key کامیابی سے محفوظ ہو گئی'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(_isApiValid 
+                ? '✅ API key کامیابی سے محفوظ ہو گئی' 
+                : '⚠️ API key محفوظ ہو گئی (تصدیق نہیں ہوئی)'),
+            backgroundColor: _isApiValid ? Colors.green : Colors.orange,
           ),
         );
       }
@@ -161,14 +272,23 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
     }
   }
 
-  // 🔹 Delete API Key
+  // 🔹 Delete API Key - مکمل اپگریڈ
   void _deleteApiKey() async {
+    if (_apiKeyController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ حذف کرنے کے لیے پہلے API key درج کریں'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     bool? shouldDelete = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('API Key حذف کریں'),
-        content: const Text(
-            'کیا آپ واقعی یہ API key حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔'),
+        content: const Text('کیا آپ واقعی یہ API key حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -188,8 +308,12 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
       await Future.delayed(const Duration(seconds: 1));
 
       _apiKeyController.clear();
-      widget.onApiKeySubmitted?.call(''); // ✅ parent کو اطلاع دو
-      setState(() => _isSubmitting = false);
+      widget.onApiKeySubmitted?.call('');
+      setState(() {
+        _isSubmitting = false;
+        _isApiValid = false;
+        _validationMessage = '';
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -216,8 +340,7 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: 'API Key حذف کریں',
-            onPressed:
-                _apiKeyController.text.isNotEmpty ? _deleteApiKey : null,
+            onPressed: _apiKeyController.text.isNotEmpty ? _deleteApiKey : null,
           ),
         ],
       ),
@@ -234,24 +357,92 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
             const SizedBox(height: 20),
 
             if (widget.apiTemplate.keyRequired) ...[
-              const Text('اپنی API Key درج کریں:',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text(
+                'اپنی API Key درج کریں:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
+              
+              // API Key Input with Validation
               TextField(
                 controller: _apiKeyController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'یہاں اپنی API key پیسٹ کریں...',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.vpn_key),
+                  suffixIcon: _apiKeyController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(_isApiValid ? Icons.check_circle : Icons.error),
+                          color: _isApiValid ? Colors.green : Colors.orange,
+                          onPressed: _validateApi,
+                        )
+                      : null,
                 ),
                 obscureText: true,
               ),
+              
+              // Validation Message
+              if (_validationMessage.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _isApiValid ? Colors.green[50] : Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _isApiValid ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      _isValidatingApi
+                          ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _isApiValid ? Icons.check_circle : Icons.warning,
+                              color: _isApiValid ? Colors.green : Colors.orange,
+                              size: 16,
+                            ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _validationMessage,
+                          style: TextStyle(
+                            color: _isApiValid ? Colors.green : Colors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 16),
+              
+              // Validate Button
+              if (_apiKeyController.text.isNotEmpty && !_isValidatingApi)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.verified_user),
+                    label: const Text('API Key کی تصدیق کریں'),
+                    onPressed: _validateApi,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.blue,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              
               const SizedBox(height: 10),
             ],
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
+            // Submit Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -261,13 +452,15 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
                     : const Icon(Icons.check_circle_outline),
                 onPressed: _isSubmitting ? null : _submitApiKey,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: _isApiValid ? Colors.green : Colors.blue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
-                label: Text(widget.apiTemplate.keyRequired
-                    ? 'API Key جمع کروائیں'
-                    : 'API انٹیگریشن مکمل کریں'),
+                label: Text(
+                  widget.apiTemplate.keyRequired
+                      ? (_isApiValid ? 'API Key محفوظ کریں' : 'API Key جمع کروائیں')
+                      : 'API انٹیگریشن مکمل کریں',
+                ),
               ),
             ),
           ],
@@ -432,7 +625,8 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
               _buildInstructionStep('1.', 'AI سے یا دستی طور پر لنک کھولیں'),
               _buildInstructionStep('2.', 'اکاؤنٹ بنائیں اور API key حاصل کریں'),
               _buildInstructionStep('3.', 'API key نیچے پیسٹ کریں'),
-              _buildInstructionStep('4.', 'جمع کروائیں بٹن پر کلک کریں'),
+              _buildInstructionStep('4.', 'API key کی تصدیق کریں (اختیاری)'),
+              _buildInstructionStep('5.', 'جمع کروائیں بٹن پر کلک کریں'),
             ],
           ),
         ),

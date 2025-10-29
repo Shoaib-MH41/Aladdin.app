@@ -192,11 +192,11 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
         );
 
         if (shouldValidate == false) {
-          await _validateApi();
-          return;
-        }
-      }
-    }
+  bool isValid = await _validateApi();  // ✅ bool واپس لے رہا ہے
+  if (!isValid) {
+    return;  // ✅ صرف تب return کریں جب valid نہ ہو
+  }
+}
 
     // ✅ کنفرمیشن ڈائیلاگ
     bool? shouldSave = await showDialog(

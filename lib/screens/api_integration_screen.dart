@@ -25,16 +25,24 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
   String? _suggestedApiName;
   String? _suggestedApiNote;
 
-  // 🔹 Smart Suggestion System (Gemini) - ChatGPT Version
+  @override
+  void initState() {
+    super.initState();
+    // ✅ TextField میں تبدیلی پر UI خود ریفریش ہو جائے (delete بٹن کیلئے)
+    _apiKeyController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  // 🔹 Smart Suggestion System (Gemini)
   Future<void> _fetchApiSuggestion() async {
     setState(() => _isFetchingSuggestion = true);
-
     try {
       final geminiService = GeminiService();
-      // Wait for initialization
       await Future.delayed(const Duration(milliseconds: 500));
-      
-      final suggestion = await geminiService.getApiSuggestion(widget.apiTemplate.category);
+
+      final suggestion =
+          await geminiService.getApiSuggestion(widget.apiTemplate.category);
 
       if (suggestion != null && suggestion['url'] != null) {
         setState(() {
@@ -42,7 +50,7 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
           _suggestedApiName = suggestion['name'];
           _suggestedApiNote = suggestion['note'];
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ AI نے ${suggestion['name']} تجویز کیا'),
@@ -65,7 +73,6 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
         ),
       );
     }
-
     setState(() => _isFetchingSuggestion = false);
   }
 
@@ -81,7 +88,7 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
     }
   }
 
-  // 🔹 Open AI Suggested Link
+  // 🔹 Open Suggested Link
   void _openSuggestedLink() async {
     if (_suggestedApiLink == null) return;
     final url = Uri.parse(_suggestedApiLink!);
@@ -94,10 +101,10 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
     }
   }
 
-  // 🔹 Submit API Key - ✅ درست کیا گیا
+  // 🔹 Submit API Key
   void _submitApiKey() async {
-    // ✅ پہلے چیک کریں کہ API key موجود ہے
-    if (widget.apiTemplate.keyRequired && _apiKeyController.text.trim().isEmpty) {
+    if (widget.apiTemplate.keyRequired &&
+        _apiKeyController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('❌ براہ کرم پہلے API key درج کریں'),
@@ -107,7 +114,6 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
       return;
     }
 
-    // ✅ کنفرمیشن ڈائیلاگ
     bool? shouldSave = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -127,7 +133,6 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
       ),
     );
 
-    // ✅ اگر user نے confirm کیا تو محفوظ کریں
     if (shouldSave == true) {
       setState(() => _isSubmitting = true);
       await Future.delayed(const Duration(seconds: 1));
@@ -135,25 +140,35 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
       widget.onApiKeySubmitted?.call(_apiKeyController.text.trim());
       setState(() => _isSubmitting = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ API key کامیابی سے محفوظ ہو گئی'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // ✅ اگر API کو key کی ضرورت نہ تھی تو الگ پیغام دکھاؤ
+      if (!widget.apiTemplate.keyRequired) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ℹ️ اس API کو key کی ضرورت نہیں تھی، محفوظ کر لیا گیا۔'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ API key کامیابی سے محفوظ ہو گئی'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
 
       Navigator.pop(context);
     }
   }
 
-  // 🔹 Delete API Key - ✅ نیا فنکشن
+  // 🔹 Delete API Key
   void _deleteApiKey() async {
-    // ✅ کنفرمیشن ڈائیلاگ
     bool? shouldDelete = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('API Key حذف کریں'),
-        content: const Text('کیا آپ واقعی یہ API key حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔'),
+        content: const Text(
+            'کیا آپ واقعی یہ API key حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -168,14 +183,12 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
       ),
     );
 
-    // ✅ اگر user نے confirm کیا تو حذف کریں
     if (shouldDelete == true) {
       setState(() => _isSubmitting = true);
       await Future.delayed(const Duration(seconds: 1));
 
-      // یہاں آپ کا حذف کرنے کا logic آئے گا
-      // _removeApiKeyFromStorage();
-      
+      _apiKeyController.clear();
+      widget.onApiKeySubmitted?.call(''); // ✅ parent کو اطلاع دو
       setState(() => _isSubmitting = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,8 +197,6 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
           backgroundColor: Colors.green,
         ),
       );
-
-      _apiKeyController.clear();
     }
   }
 
@@ -202,11 +213,11 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
             tooltip: 'ویب سائٹ کھولیں',
             onPressed: _openApiWebsite,
           ),
-          // ✅ حذف کرنے کا بٹن شامل کیا
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: 'API Key حذف کریں',
-            onPressed: _apiKeyController.text.isNotEmpty ? _deleteApiKey : null,
+            onPressed:
+                _apiKeyController.text.isNotEmpty ? _deleteApiKey : null,
           ),
         ],
       ),
@@ -215,26 +226,17 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔸 API Info Card
             _buildApiInfoCard(),
-
             const SizedBox(height: 20),
-
-            // 🔹 AI Suggestion Section
             _buildAiSuggestionCard(),
-
             const SizedBox(height: 20),
-
-            // 🔸 Instructions
             _buildInstructionsCard(),
-
             const SizedBox(height: 20),
 
-            // 🔸 API Key Input
             if (widget.apiTemplate.keyRequired) ...[
               const Text('اپنی API Key درج کریں:',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
+                  style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextField(
                 controller: _apiKeyController,
@@ -250,7 +252,6 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
 
             const SizedBox(height: 10),
 
-            // 🔹 Submit Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -275,11 +276,10 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
     );
   }
 
-  // 🔸 Build API Info Card
+  // 🔸 Build Cards (info, suggestion, instructions)
   Widget _buildApiInfoCard() => Card(
         elevation: 4,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -301,8 +301,8 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
               const SizedBox(height: 10),
               _buildInfoRow('پرووائیڈر:', widget.apiTemplate.provider),
               _buildInfoRow('زمرہ:', widget.apiTemplate.category),
-              _buildInfoRow('Key درکار:',
-                  widget.apiTemplate.keyRequired ? 'ہاں' : 'نہیں'),
+              _buildInfoRow(
+                  'Key درکار:', widget.apiTemplate.keyRequired ? 'ہاں' : 'نہیں'),
               _buildInfoRow('مفت ٹائر:', widget.apiTemplate.freeTierInfo),
               const SizedBox(height: 8),
               Text(
@@ -315,7 +315,6 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
         ),
       );
 
-  // 🔹 Build AI Suggestion Card
   Widget _buildAiSuggestionCard() => Card(
         color: Colors.purple[50],
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -329,7 +328,8 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
                   Icon(Icons.auto_awesome, color: Colors.purple),
                   SizedBox(width: 8),
                   Text('🤖 AI کی تجویز:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -411,7 +411,6 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
         ),
       );
 
-  // 🔹 Instructions Card
   Widget _buildInstructionsCard() => Card(
         color: Colors.blue[50],
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -425,7 +424,8 @@ class _ApiIntegrationScreenState extends State<ApiIntegrationScreen> {
                   Icon(Icons.help_outline, color: Colors.blue),
                   SizedBox(width: 8),
                   Text('📋 ہدایات:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ],
               ),
               const SizedBox(height: 8),

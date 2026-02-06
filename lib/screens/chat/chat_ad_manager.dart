@@ -1,9 +1,9 @@
 // lib/screens/chat/chat_ad_manager.dart
 import 'package:flutter/material.dart';
-import '../models/ad_model.dart';
-import '../models/project_model.dart';
-import '../services/gemini_service.dart';
-import '../screens/ads_screen.dart';
+import '../../models/ad_model.dart';          // ✅ ریلٹیو پیٹھ
+import '../../models/project_model.dart';     // ✅ ریلٹیو پیٹھ
+import '../../services/gemini_service.dart';  // ✅ ریلٹیو پیٹھ
+import '../../screens/ads_screen.dart';       // ✅ ریلٹیو پیٹھ
 
 class ChatAdManager {
   final GeminiService geminiService;

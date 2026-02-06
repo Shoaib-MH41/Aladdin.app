@@ -1038,7 +1038,7 @@ API URL: ${apiTemplate.url}
         actions: [
           // ✅ نیا: اشتہار پینل ٹوگل بٹن
           IconButton(
-            icon: Icon(_showAdsPanel ? Icons.ads_off : Icons.ads_click),
+            icon: Icon(_showAdsPanel ? Icons.close : Icons.ads_click),
             tooltip: _showAdsPanel ? 'اشتہار پینل چھپائیں' : 'اشتہار پینل دکھائیں',
             onPressed: _toggleAdsPanel,
           ),

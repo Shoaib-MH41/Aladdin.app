@@ -14,7 +14,7 @@ import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
 import 'screens/upload_screen.dart';
-import 'screens/chat_screen.dart';
+import 'screens/chat_screen.dart'; // ✅ اپ ڈیٹ شدہ (چھوٹی فائل)
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/api_integration_screen.dart';
@@ -90,34 +90,33 @@ class AladdinApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData(
-  useMaterial3: true,
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: Colors.blue,
-    brightness: Brightness.light,
-  ),
-  fontFamily: 'Poppins', // ✅ یہاں Poppins استعمال کریں
-  appBarTheme: const AppBarTheme(
-    systemOverlayStyle: SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  ),
-),
-darkTheme: ThemeData(
-  useMaterial3: true,
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: Colors.blue,
-    brightness: Brightness.dark,
-  ),
-  fontFamily: 'Poppins', // ✅ یہاں بھی Poppins
-  appBarTheme: const AppBarTheme(
-    systemOverlayStyle: SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
-  ),
-),
- 
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
+        fontFamily: 'Poppins',
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+          ),
+        ),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        fontFamily: 'Poppins',
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+          ),
+        ),
+      ),
 
       // 🔒 لاک اسکرین سے شروعات کریں
       initialRoute: '/pin',
@@ -150,10 +149,8 @@ darkTheme: ThemeData(
         '/upload': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {
-            // ✅ درستی: صرف UploadScreen() کال کریں
             return UploadScreen();
           } else {
-            // ✅ اگر Project argument نہیں ملا تو error handle کریں
             return _buildErrorScreen(
               context, 
               'Upload screen requires project data.\nPlease go back and try again.'
@@ -186,7 +183,7 @@ darkTheme: ThemeData(
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
               initialBudget: args['initialBudget'] ?? 100.0,
               initialAdText: args['initialAdText'] ?? 'میرے ایپ کو آزمائیں!',
-              adService: adService,
+              // ✅ adService ہٹایا گیا کیونکہ AdsScreen میں موجود نہیں
             );
           } else {
             return _buildErrorScreen(
@@ -203,7 +200,7 @@ darkTheme: ThemeData(
             return AdCampaignListScreen(
               projectId: args['projectId'] ?? '',
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
-              
+              // ✅ adService ہٹایا گیا کیونکہ AdCampaignListScreen خود AdService بناتا ہے
             );
           } else {
             return _buildErrorScreen(

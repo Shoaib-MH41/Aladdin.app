@@ -6,6 +6,7 @@ import 'services/gemini_service.dart';
 import 'services/github_service.dart';
 import 'services/api_service.dart';
 import 'services/security_service.dart';
+import 'services/ad_service.dart'; // ✅ نیا: اشتہار سروس
 
 // ✅ سکرینز کے امپورٹس
 import 'screens/pin_screen.dart';
@@ -19,10 +20,13 @@ import 'screens/settings_screen.dart';
 import 'screens/api_integration_screen.dart';
 import 'screens/api_discovery_screen.dart';
 import 'screens/publish_guide_screen.dart';
+import 'screens/ads_screen.dart'; // ✅ نیا: اشتہار اسکرین
+import 'screens/ad_campaign_list_screen.dart'; // ✅ نیا: اشتہار مہم فہرست
 
 // ✅ ماڈلز کے امپورٹس
 import 'models/api_template_model.dart';
 import 'models/project_model.dart';
+import 'models/ad_model.dart'; // ✅ نیا: اشتہار ماڈل
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,6 +83,7 @@ class AladdinApp extends StatelessWidget {
     final githubService = GitHubService();
     final apiService = ApiService();
     final securityService = SecurityService();
+    final adService = AdService(); // ✅ نیا: اشتہار سروس
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
@@ -129,11 +134,13 @@ class AladdinApp extends StatelessWidget {
         '/home': (context) => HomeScreen(
               geminiService: geminiService,
               githubService: githubService,
+              adService: adService, // ✅ نیا: اشتہار سروس پاس کریں
             ),
 
         '/projects': (context) => ProjectScreen(
               geminiService: geminiService,
               githubService: githubService,
+              adService: adService, // ✅ نیا: اشتہار سروس پاس کریں
             ),
 
         '/select': (context) => SelectionScreen(
@@ -155,12 +162,58 @@ class AladdinApp extends StatelessWidget {
           }
         },
 
-        '/chat': (context) => ChatScreen(
+        '/chat': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Project) {
+            return ChatScreen(
               geminiService: geminiService,
               githubService: githubService,
-            ),
+            );
+          } else {
+            return _buildErrorScreen(
+              context,
+              'Chat screen requires project data.\nPlease select a project first.'
+            );
+          }
+        },
 
         '/settings': (context) => SettingsScreen(),
+
+        // ✅ نیا: اشتہار مہم اسکرین
+        '/ads': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map<String, dynamic>) {
+            return AdsScreen(
+              projectName: args['projectName'] ?? 'نیا پروجیکٹ',
+              initialBudget: args['initialBudget'] ?? 100.0,
+              initialAdText: args['initialAdText'] ?? 'میرے ایپ کو آزمائیں!',
+              initialCampaign: args['initialCampaign'],
+              adService: adService,
+            );
+          } else {
+            return _buildErrorScreen(
+              context,
+              'Ad campaign screen requires project data.'
+            );
+          }
+        },
+
+        // ✅ نیا: اشتہار مہم فہرست اسکرین
+        '/ad-campaigns': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map<String, dynamic>) {
+            return AdCampaignListScreen(
+              projectId: args['projectId'] ?? '',
+              projectName: args['projectName'] ?? 'نیا پروجیکٹ',
+              adService: adService,
+            );
+          } else {
+            return _buildErrorScreen(
+              context,
+              'Ad campaigns list requires project data.'
+            );
+          }
+        },
 
         '/api-discovery': (context) {
           final args = ModalRoute.of(context)?.settings.arguments

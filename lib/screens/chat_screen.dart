@@ -338,7 +338,6 @@ void _startAdCampaign() async {
 
     try {
       // اشتہار مہم محفوظ کریں
-      _saveCampaignLocally(newCampaign);
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -379,15 +378,6 @@ void _startAdCampaign() async {
   }
 }
 
-// ✅ اشتہار مہم مقامی طور پر محفوظ کرنے کا طریقہ
-void _saveCampaignLocally(AdCampaign campaign) {
-  if (_project.ads == null) {
-    _project.ads = [];
-  }
-  _project.ads!.add(campaign);
-  
-  print('اشتہار مہم محفوظ ہوئی: ${campaign.name}');
-}
 
 // ✅ اشتہار مہم کی تفصیل دکھانے کا طریقہ
 void _showCampaignDetails(AdCampaign campaign) {

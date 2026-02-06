@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
+
 import '../models/project_model.dart';
 import '../models/chat_model.dart';
 import '../models/api_template_model.dart';
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
-import '../services/ai_api_finder.dart'; // ✅ نیا امپورٹ
+import '../services/ai_api_finder.dart';
 import '../screens/api_integration_screen.dart';
-import '../screens/api_discovery_screen.dart'; // ✅ نیا امپورٹ
+import '../screens/api_discovery_screen.dart';
+import '../screens/ads_screen.dart'; // ✅ نیا امپورٹ - اشتہار اسکرین
 
 class ChatScreen extends StatefulWidget {
   final GeminiService geminiService;
@@ -29,23 +36,37 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isAIThinking = false;
   late Project _project;
-  late AIApiFinder aiApiFinder; // ✅ نیا variable
-
-  // ✅ نیا: کنکشن چیک ویری ایبلز
+  late AIApiFinder aiApiFinder;
+  
+  // ✅ نیا: فائل اپ لوڈ ویری ایبلز
+  File? _selectedFile;
+  String? _fileName;
+  String? _fileContent;
+  bool _isUploadingFile = false;
+  
+  // ✅ نیا: کاپی/پیسٹ ویری ایبلز
+  bool _hasCopiedText = false;
+  String? _copiedText;
+  
+  // ✅ نیا: اشتہار ویری ایبلز
+  bool _showAdsPanel = false;
+  double _adBudget = 100.0;
+  String _adText = "میرے ایپ کو آزمائیں!";
+  
+  // ✅ کنکشن چیک ویری ایبلز
   bool _isConnected = false;
   String _connectionMessage = "⚠️ اپنا کنکشن جوڑیں";
 
   @override
   void initState() {
     super.initState();
-    aiApiFinder = AIApiFinder(geminiService: widget.geminiService); // ✅ initialize
+    aiApiFinder = AIApiFinder(geminiService: widget.geminiService);
     _checkConnection();
   }
 
   // ✅ کنکشن چیک کرنے والا فنکشن
   Future<void> _checkConnection() async {
     try {
-      // Simple connection test - بس ایک test call
       await widget.geminiService.testConnection();
       setState(() {
         _isConnected = true;
@@ -63,6 +84,209 @@ class _ChatScreenState extends State<ChatScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _project = ModalRoute.of(context)!.settings.arguments as Project;
+  }
+
+  // ✅ نیا: فائل منتخب کرنے کا فنکشن
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'txt'],
+      allowMultiple: false,
+    );
+    
+    if (result != null) {
+      setState(() {
+        _isUploadingFile = true;
+      });
+      
+      try {
+        _selectedFile = File(result.files.single.path!);
+        _fileName = result.files.single.name;
+        
+        // فائل کا مواد پڑھیں (صرف txt فائلوں کے لیے)
+        if (_fileName!.toLowerCase().endsWith('.txt')) {
+          _fileContent = await _selectedFile!.readAsString();
+        } else {
+          _fileContent = "فائل اپ لوڈ ہو گئی: $_fileName";
+        }
+        
+        // AI کو فائل کی معلومات بھیجیں
+        _sendFileToAI();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ فائل اپ لوڈ ہو گئی: $_fileName'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ فائل اپ لوڈ ناکام: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isUploadingFile = false;
+        });
+      }
+    }
+  }
+
+  // ✅ نیا: تصویر/اسکرین شاٹ منتخب کرنے کا فنکشن
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (pickedFile != null) {
+      setState(() {
+        _isUploadingFile = true;
+      });
+      
+      try {
+        _selectedFile = File(pickedFile.path);
+        _fileName = pickedFile.name;
+        _fileContent = "اسکرین شاٹ اپ لوڈ ہو گئی: $_fileName";
+        
+        // AI کو تصویر کی معلومات بھیجیں
+        _sendImageToAI();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ اسکرین شاٹ اپ لوڈ ہو گئی: $_fileName'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ تصویر اپ لوڈ ناکام: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isUploadingFile = false;
+        });
+      }
+    }
+  }
+
+  // ✅ نیا: AI کو فائل کی معلومات بھیجنے کا فنکشن
+  void _sendFileToAI() {
+    if (_fileContent == null) return;
+    
+    String prompt = """
+میں نے ایک فائل اپ لوڈ کی ہے۔ براہ کرم اس کے مطابق کوڈ بنائیں۔
+
+فائل کا نام: $_fileName
+فائل کا مواد: $_fileContent
+
+فریم ورک: ${_project.framework}
+پلیٹ فارمز: ${_project.platforms.join(', ')}
+""";
+
+    _controller.text = prompt;
+    _sendMessage(prompt);
+  }
+
+  // ✅ نیا: AI کو تصویر کی معلومات بھیجنے کا فنکشن
+  void _sendImageToAI() {
+    String prompt = """
+میں نے ایک اسکرین شاٹ اپ لوڈ کی ہے۔ براہ کرم اس کے مطابق UI کوڈ بنائیں۔
+
+تصویر کا نام: $_fileName
+تصویر کی تفصیل: یہ ایک UI اسکرین شاٹ ہے۔
+
+فریم ورک: ${_project.framework}
+پلیٹ فارمز: ${_project.platforms.join(', ')}
+""";
+
+    _controller.text = prompt;
+    _sendMessage(prompt);
+  }
+
+  // ✅ نیا: متن کاپی کرنے کا فنکشن
+  void _copyText(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    setState(() {
+      _hasCopiedText = true;
+      _copiedText = text;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ متن کاپی ہو گیا!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    
+    // 3 سیکنڈ بعد ری سیٹ کریں
+    Future.delayed(Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _hasCopiedText = false;
+        });
+      }
+    });
+  }
+
+  // ✅ نیا: کاپی شدہ متن پیسٹ کرنے کا فنکشن
+  void _pasteText() {
+    if (_copiedText != null && _copiedText!.isNotEmpty) {
+      _controller.text = _copiedText!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ متن پیسٹ ہو گیا!'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ کاپی کرنے کے لیے پہلے کوئی متن کاپی کریں'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  // ✅ نیا: اشتہار مہم شروع کرنے کا فنکشن
+  void _startAdCampaign() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdsScreen(
+          projectName: _project.name,
+          initialBudget: _adBudget,
+          initialAdText: _adText,
+        ),
+      ),
+    ).then((result) {
+      if (result != null && result is Map) {
+        setState(() {
+          _adBudget = result['budget'] ?? _adBudget;
+          _adText = result['adText'] ?? _adText;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ اشتہار مہم شروع ہو گئی!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    });
+  }
+
+  // ✅ نیا: اشتہار پینل ٹوگل کرنے کا فنکشن
+  void _toggleAdsPanel() {
+    setState(() {
+      _showAdsPanel = !_showAdsPanel;
+    });
   }
 
   void _sendMessage(String text) async {
@@ -189,7 +413,6 @@ $text
     );
   }
 
-  // ✅ ڈیبگ بٹن: اگر کوئی کوڈ نہیں تو میسج دکھاؤ
   void _debugCurrentCode() async {
     if (_messages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -259,14 +482,12 @@ ${lastAIMessage.text}
     }
   }
 
-  // ✅ نیا: AI سے APIs ڈھونڈنے کا فنکشن
   void _discoverApisWithAI() async {
     if (_isAIThinking) return;
 
     setState(() => _isAIThinking = true);
 
     try {
-      // User کے آخری میسج سے ایپ کی تفصیل لیں
       String appDescription = '';
       if (_messages.isNotEmpty) {
         final userMessages = _messages.where((msg) => msg.sender == "user");
@@ -281,7 +502,6 @@ ${lastAIMessage.text}
         appName: _project.name,
       );
 
-      // API ڈسکوری اسکرین پر جائیں
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -333,72 +553,265 @@ API URL: ${apiTemplate.url}
     _sendMessage(prompt);
   }
 
+  // ✅ نیا: میسج بلب میں کاپی کا آپشن شامل کریں
   Widget _buildMessageBubble(ChatMessage msg) {
     final isUser = msg.sender == "user";
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          if (!isUser)
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.blue,
-              child: Icon(Icons.auto_awesome, size: 16, color: Colors.white),
-            ),
-          SizedBox(width: 8),
-          Flexible(
-            child: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isUser ? Colors.blue.shade100 : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onLongPress: () {
+        if (msg.text.isNotEmpty && !msg.isCode) {
+          _showCopyOptions(context, msg.text);
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        child: Row(
+          mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+          children: [
+            if (!isUser)
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.blue,
+                child: Icon(Icons.auto_awesome, size: 16, color: Colors.white),
               ),
-              child: msg.isCode
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.code, size: 16),
-                            SizedBox(width: 4),
-                            Text('کوڈ', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.black87,
-                            borderRadius: BorderRadius.circular(8),
+            SizedBox(width: 8),
+            Flexible(
+              child: Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isUser ? Colors.blue.shade100 : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: msg.isCode
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.code, size: 16),
+                                  SizedBox(width: 4),
+                                  Text('کوڈ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              // ✅ نیا: کوڈ کاپی کا آپشن
+                              IconButton(
+                                icon: Icon(Icons.content_copy, size: 16),
+                                onPressed: () => _copyText(msg.text),
+                                tooltip: 'کوڈ کاپی کریں',
+                                padding: EdgeInsets.zero,
+                                constraints: BoxConstraints(),
+                              ),
+                            ],
                           ),
-                          child: HighlightView(
-                            msg.text,
-                            language: _project.framework.toLowerCase(),
-                            theme: githubTheme,
+                          SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
                             padding: EdgeInsets.all(8),
-                            textStyle: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 12,
-                              color: Colors.white,
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: HighlightView(
+                              msg.text,
+                              language: _project.framework.toLowerCase(),
+                              theme: githubTheme,
+                              padding: EdgeInsets.all(8),
+                              textStyle: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : Text(msg.text, style: TextStyle(fontSize: 14)),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(msg.text, style: TextStyle(fontSize: 14)),
+                          // ✅ نیا: کاپی کا چھوٹا بٹن
+                          if (msg.text.length > 20)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: IconButton(
+                                icon: Icon(Icons.content_copy, size: 14),
+                                onPressed: () => _copyText(msg.text),
+                                tooltip: 'متن کاپی کریں',
+                                padding: EdgeInsets.zero,
+                                constraints: BoxConstraints(),
+                              ),
+                            ),
+                        ],
+                      ),
+              ),
+            ),
+            if (isUser)
+              SizedBox(width: 8),
+            if (isUser)
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.green,
+                child: Icon(Icons.person, size: 16, color: Colors.white),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ نیا: کاپی آپشنز مینو
+  void _showCopyOptions(BuildContext context, String text) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.content_copy),
+                title: Text('متن کاپی کریں'),
+                onTap: () {
+                  _copyText(text);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.paste),
+                title: Text('یہاں پیسٹ کریں'),
+                onTap: () {
+                  _controller.text = text;
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ✅ نیا: فائل اپ لوڈ بٹنز والا ویجٹ
+  Widget _buildFileUploadButtons() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // فائل اپ لوڈ بٹن
+          IconButton(
+            icon: _isUploadingFile 
+                ? CircularProgressIndicator(strokeWidth: 2)
+                : Icon(Icons.attach_file, size: 22),
+            onPressed: _isUploadingFile ? null : _pickFile,
+            tooltip: 'فائل اپ لوڈ کریں',
+            color: Colors.blue,
+          ),
+          
+          // تصویر اپ لوڈ بٹن
+          IconButton(
+            icon: Icon(Icons.image, size: 22),
+            onPressed: _isUploadingFile ? null : _pickImage,
+            tooltip: 'اسکرین شاٹ اپ لوڈ کریں',
+            color: Colors.green,
+          ),
+          
+          // ✅ کاپی/پیسٹ بٹنز
+          if (_hasCopiedText)
+            IconButton(
+              icon: Icon(Icons.check, size: 18),
+              onPressed: null,
+              tooltip: 'متن کاپی ہو گیا',
+              color: Colors.green,
+            ),
+          
+          IconButton(
+            icon: Icon(Icons.content_copy, size: 20),
+            onPressed: _copiedText == null ? null : () => _copyText(_copiedText!),
+            tooltip: 'کاپی شدہ متن دوبارہ کاپی کریں',
+            color: _copiedText == null ? Colors.grey : Colors.blue,
+          ),
+          
+          IconButton(
+            icon: Icon(Icons.paste, size: 20),
+            onPressed: _pasteText,
+            tooltip: 'کاپی شدہ متن پیسٹ کریں',
+            color: Colors.purple,
+          ),
+          
+          // اشتہار مہم بٹن
+          IconButton(
+            icon: Icon(Icons.ads_click, size: 22),
+            onPressed: _startAdCampaign,
+            tooltip: 'اشتہار مہم شروع کریں',
+            color: Colors.orange,
+          ),
+          
+          // اگر فائل منتخب ہو تو نام دکھائیں
+          if (_fileName != null && _fileName!.length < 15)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                _fileName!,
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade800),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ نیا: اشتہار پینل ویجٹ
+  Widget _buildAdsPanel() {
+    return Container(
+      padding: EdgeInsets.all(12),
+      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '📢 اشتہار مہم',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade800,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, size: 18),
+                onPressed: _toggleAdsPanel,
+                padding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text('بجٹ: \$$_adBudget'),
+          SizedBox(height: 4),
+          Text('اشتہاری متن: "$_adText"'),
+          SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: _startAdCampaign,
+            child: Text('اشتہار مہم شروع کریں'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
             ),
           ),
-          if (isUser)
-            SizedBox(width: 8),
-          if (isUser)
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.green,
-              child: Icon(Icons.person, size: 16, color: Colors.white),
-            ),
         ],
       ),
     );
@@ -412,7 +825,12 @@ API URL: ${apiTemplate.url}
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
-          // ✅ نیا: API ڈسکوری بٹن
+          // ✅ نیا: اشتہار پینل ٹوگل بٹن
+          IconButton(
+            icon: Icon(_showAdsPanel ? Icons.ads_off : Icons.ads_click),
+            tooltip: _showAdsPanel ? 'اشتہار پینل چھپائیں' : 'اشتہار پینل دکھائیں',
+            onPressed: _toggleAdsPanel,
+          ),
           IconButton(
             icon: Icon(Icons.search),
             tooltip: 'AI سے APIs ڈھونڈیں',
@@ -452,7 +870,7 @@ API URL: ${apiTemplate.url}
       ),
       body: Column(
         children: [
-          // ✅ فریم ورک + کنکشن اسٹیٹس
+          // فریم ورک + کنکشن اسٹیٹس
           Container(
             padding: EdgeInsets.all(12),
             color: Colors.blue.shade50,
@@ -491,6 +909,9 @@ API URL: ${apiTemplate.url}
             ),
           ),
 
+          // ✅ اشتہار پینل
+          if (_showAdsPanel) _buildAdsPanel(),
+
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.all(8.0),
@@ -516,6 +937,11 @@ API URL: ${apiTemplate.url}
                 ],
               ),
             ),
+          // ✅ نیا: فائل اپ لوڈ بٹنز بار
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: _buildFileUploadButtons(),
+          ),
           Padding(
             padding: EdgeInsets.all(8.0),
             child: Row(

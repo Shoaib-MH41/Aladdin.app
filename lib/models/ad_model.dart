@@ -1,5 +1,5 @@
 // models/ad_model.dart
-
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
 // اشتہار مہم کی قسمیں

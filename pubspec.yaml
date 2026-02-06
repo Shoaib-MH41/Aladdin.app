@@ -4,39 +4,44 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.4.0 <4.0.0'  # ✅ اپ ڈیٹ کردہ
+  flutter: '>=3.16.0'     # ✅ نیا شامل کریں
 
 dependencies:
   flutter:
     sdk: flutter
 
   # 🔹 UI & Icons
-  cupertino_icons: ^1.0.2
+  cupertino_icons: ^1.0.6  # ✅ اپ ڈیٹ کردہ
 
   # 🔹 File & Storage Handling
-  file_picker: ^6.1.1
-  permission_handler: ^10.2.0  # ✅ پرانی stable version
-  path_provider: ^2.1.1
-  archive: ^3.3.6
+  file_picker: ^6.1.1      # ✅ موجود ہے
+  image_picker: ^1.0.4     # ✅ نیا شامل کریں (آپ کی نئی فائل اپ لوڈ فیچر کے لیے)
+  permission_handler: ^11.0.1  # ✅ اپ ڈیٹ کردہ
+  path_provider: ^2.1.1    # ✅ موجود ہے
+  archive: ^3.3.6          # ✅ موجود ہے
 
   # 🔹 Network & APIs
-  http: ^1.1.0
-  url_launcher: ^6.2.0
-  google_generative_ai: ^0.2.1
+  http: ^1.2.1             # ✅ اپ ڈیٹ کردہ
+  url_launcher: ^6.2.2     # ✅ اپ ڈیٹ کردہ
+  google_generative_ai: ^0.3.2  # ✅ اپ ڈیٹ کردہ (آپ کی AI سروس کے لیے)
 
   # 🔹 Local Storage
-  shared_preferences: ^2.2.2
-  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.2  # ✅ موجود ہے
+  flutter_secure_storage: ^9.0.0  # ✅ موجود ہے
 
   # 🔹 Authentication & Security
-  local_auth: ^2.1.7
+  local_auth: ^2.1.7       # ✅ موجود ہے
 
   # 🔹 Syntax Highlighting (Code Preview)
-  flutter_highlight: ^0.7.0
+  flutter_highlight: ^0.7.0  # ✅ موجود ہے
 
   # 🔹 Animations & UI
-  animations: ^2.0.7
-  lottie: ^2.7.0
+  animations: ^2.0.7       # ✅ موجود ہے
+  lottie: ^2.7.0           # ✅ موجود ہے
+
+  # 🔹 نیا: Clipboard کے لیے
+  clipboard: ^0.1.3        # ✅ نیا شامل کریں (کاپی/پیسٹ فیچر کے لیے)
 
 dev_dependencies:
   flutter_test:
@@ -45,3 +50,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # ✅ Assets شامل کریں اگر آپ کے پاس ہیں
+  assets:
+    - assets/
+    - assets/images/
+    - assets/animations/
+
+  # ✅ Fonts شامل کریں اگر آپ کے پاس ہیں
+  fonts:
+    - family: Urdu
+      fonts:
+        - asset: fonts/urdu_font.ttf

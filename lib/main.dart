@@ -186,7 +186,6 @@ darkTheme: ThemeData(
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
               initialBudget: args['initialBudget'] ?? 100.0,
               initialAdText: args['initialAdText'] ?? 'میرے ایپ کو آزمائیں!',
-              initialCampaign: args['initialCampaign'],
               adService: adService,
             );
           } else {

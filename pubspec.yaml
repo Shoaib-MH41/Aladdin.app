@@ -9,10 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-lottie: ^2.7.0
-    
-  # 🔹 UI & Icons
+  lottie: ^2.7.0
   cupertino_icons: ^1.0.2
+  
 
   # 🔹 File & Storage Handling
   file_picker: ^6.1.1

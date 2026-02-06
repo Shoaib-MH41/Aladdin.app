@@ -204,7 +204,7 @@ darkTheme: ThemeData(
             return AdCampaignListScreen(
               projectId: args['projectId'] ?? '',
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
-              adService: 
+              
             );
           } else {
             return _buildErrorScreen(

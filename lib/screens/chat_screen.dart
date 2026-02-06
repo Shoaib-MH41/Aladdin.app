@@ -6,10 +6,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
-
+import '../models/ad_model.dart'; // ✅ یہ لازمی ہے
 import '../models/project_model.dart';
 import '../models/chat_model.dart';
 import '../models/api_template_model.dart';
+
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
 import '../services/ai_api_finder.dart';
@@ -254,33 +255,253 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // ✅ نیا: اشتہار مہم شروع کرنے کا فنکشن
-  void _startAdCampaign() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AdsScreen(
-          projectName: _project.name,
-          initialBudget: _adBudget,
-          initialAdText: _adText,
-        ),
+void _startAdCampaign() async {
+  // ادائیگی کی آئی ڈی بنائیں
+  final String paymentId = 'pay_${DateTime.now().millisecondsSinceEpoch}';
+  
+  // نئی اشتہار مہم بنائیں
+  final newCampaign = AdCampaign(
+    id: 'campaign_${DateTime.now().millisecondsSinceEpoch}',
+    projectId: _project.id,
+    projectName: _project.name,
+    name: '${_project.name} لانچ مہم',
+    description: '${_project.name} ایپ کی مارکیٹنگ مہم',
+    type: AdCampaignType.socialMedia,
+    dailyBudget: _adBudget,
+    totalBudget: _adBudget * 10,
+    adText: _adText,
+    targetAudience: '18-45 سال کے صارفین',
+    keywords: [_project.name, 'ایپ', 'مفت', 'لانچ'],
+    platforms: ['Facebook', 'Instagram', 'Google'],
+    startDate: DateTime.now(),
+    endDate: DateTime.now().add(Duration(days: 30)),
+    status: AdCampaignStatus.draft,
+    paymentMethod: PaymentMethod.creditCard,
+    paymentId: paymentId,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+    metrics: {
+      'impressions': 0,
+      'clicks': 0,
+      'totalSpent': 0.0,
+      'conversions': 0,
+    },
+    settings: {
+      'autoOptimize': true,
+      'dailyLimit': _adBudget,
+      'targeting': {
+        'age': '18-45',
+        'gender': 'all',
+        'interests': ['technology', 'mobile apps'],
+      },
+    },
+  );
+
+  // AdsScreen پر جائیں
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AdsScreen(
+        projectName: _project.name,
+        initialBudget: _adBudget,
+        initialAdText: _adText,
+        initialCampaign: newCampaign,
       ),
-    ).then((result) {
-      if (result != null && result is Map) {
-        setState(() {
-          _adBudget = result['budget'] ?? _adBudget;
-          _adText = result['adText'] ?? _adText;
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ اشتہار مہم شروع ہو گئی!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+    ),
+  );
+
+  // نتیجہ پروسیس کریں
+  if (result != null && result is Map) {
+    setState(() {
+      _adBudget = result['budget'] ?? _adBudget;
+      _adText = result['adText'] ?? _adText;
     });
+
+    // ادائیگی کی معلومات بنائیں
+    final paymentInfo = PaymentInfo(
+      id: paymentId,
+      campaignId: newCampaign.id,
+      method: PaymentMethod.creditCard,
+      amount: result['budget'] ?? _adBudget,
+      transactionId: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      paymentDate: DateTime.now(),
+      status: 'completed',
+      details: {
+        'project': _project.name,
+        'userEmail': 'user@example.com',
+      },
+    );
+
+    // اشتہار مہم کو اپ ڈیٹ کریں
+    newCampaign.updateStatus(AdCampaignStatus.active);
+    newCampaign.updateBudget(_adBudget);
+
+    try {
+      // اشتہار مہم محفوظ کریں
+      _saveCampaignLocally(newCampaign);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('✅ اشتہار مہم کامیابی سے شروع ہو گئی!'),
+              SizedBox(height: 4),
+              Text(
+                'روزانہ بجٹ: \$$_adBudget',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'دیکھیں',
+            onPressed: () {
+              _showCampaignDetails(newCampaign);
+            },
+          ),
+        ),
+      );
+
+      // AI سے اشتہار بہتر بنانے کی تجویز
+      _suggestAdOptimization(newCampaign);
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('⚠️ اشتہار مہم محفوظ ہوئی لیکن API کنکشن ناکام: $e'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
+}
+
+// ✅ اشتہار مہم مقامی طور پر محفوظ کرنے کا طریقہ
+void _saveCampaignLocally(AdCampaign campaign) {
+  if (_project.ads == null) {
+    _project.ads = [];
+  }
+  _project.ads!.add(campaign);
+  
+  print('اشتہار مہم محفوظ ہوئی: ${campaign.name}');
+}
+
+// ✅ اشتہار مہم کی تفصیل دکھانے کا طریقہ
+void _showCampaignDetails(AdCampaign campaign) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('اشتہار مہم کی تفصیل'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.campaign, color: campaign.statusColor),
+                title: Text(campaign.name),
+                subtitle: Text('ID: ${campaign.id}'),
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.attach_money),
+                title: Text('روزانہ بجٹ'),
+                trailing: Text('\$${campaign.dailyBudget}'),
+              ),
+              ListTile(
+                leading: Icon(Icons.text_fields),
+                title: Text('اشتہاری متن'),
+                subtitle: Text(campaign.adText),
+              ),
+              ListTile(
+                leading: Icon(Icons.calendar_today),
+                title: Text('تاریخ'),
+                subtitle: Text('${campaign.startDate.day}/${campaign.startDate.month}/${campaign.startDate.year}'),
+              ),
+              ListTile(
+                leading: Icon(Icons.bar_chart),
+                title: Text('حیثیت'),
+                trailing: Chip(
+                  label: Text(campaign.statusText),
+                  backgroundColor: campaign.statusColor,
+                  labelStyle: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('بند کریں'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // اشتہار مہم اپ ڈیٹ اسکرین پر جائیں
+            },
+            child: Text('ترمیم کریں'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// ✅ AI سے اشتہار بہتر بنانے کی تجویز
+void _suggestAdOptimization(AdCampaign campaign) async {
+  try {
+    String optimizationPrompt = """
+میں نے ایک اشتہار مہم بنائی ہے۔ براہ کرم اسے بہتر بنانے کی تجاویز دیں۔
+
+اشتہار مہم کی تفصیل:
+- نام: ${campaign.name}
+- ایپ: ${campaign.projectName}
+- اشتہاری متن: ${campaign.adText}
+- بجٹ: \$${campaign.dailyBudget} روزانہ
+- ہدف سامعین: ${campaign.targetAudience}
+
+براہ کرم مجھے 3 تجاویز دیں:
+1. اشتہاری متن کو بہتر بنانے کے لیے
+2. بجٹ کو بہترین طریقے سے استعمال کرنے کے لیے
+3. ہدف سامعین تک بہتر پہنچنے کے لیے
+
+مختصر اور عملی تجاویز دیں۔
+""";
+
+    final String aiSuggestions = await widget.geminiService.generateCode(
+      prompt: optimizationPrompt,
+      framework: 'marketing',
+      platforms: ['all'],
+    );
+
+    // تجاویز صارف کو دکھائیں
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('🤖 AI کی تجاویز'),
+          content: SingleChildScrollView(
+            child: Text(aiSuggestions),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('ٹھیک ہے'),
+            ),
+          ],
+        );
+      },
+    );
+  } catch (e) {
+    // AI تجاویز ناکام ہونے پر کچھ نہ کریں
+    print('AI suggestions failed: $e');
+  }
+}
 
   // ✅ نیا: اشتہار پینل ٹوگل کرنے کا فنکشن
   void _toggleAdsPanel() {

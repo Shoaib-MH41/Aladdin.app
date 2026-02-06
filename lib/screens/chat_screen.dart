@@ -332,27 +332,28 @@ void _startAdCampaign() async {
       },
     );
 
-    // اشتہار مہم کو اپ ڈیٹ کریں
-    newCampaign.updateStatus(AdCampaignStatus.active);
-    newCampaign.updateBudget(_adBudget);
+ // اشتہار مہم کو اپ ڈیٹ کریں
+newCampaign.updateStatus(AdCampaignStatus.active);
+newCampaign.updateBudget(_adBudget);
 
-    try {
-      // اشتہار مہم محفوظ کریں
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('✅ اشتہار مہم کامیابی سے شروع ہو گئی!'),
-              SizedBox(height: 4),
-              Text(
-                'روزانہ بجٹ: \$$_adBudget',
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
+try {
+  // ✅ نیا: اشتہار مہم پروجیکٹ میں محفوظ کریں
+  _saveCampaignToProject(newCampaign);
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('✅ اشتہار مہم کامیابی سے شروع ہو گئی!'),
+          SizedBox(height: 4),
+          Text(
+            'روزانہ بجٹ: \$$_adBudget',
+            style: TextStyle(fontSize: 12),
           ),
+        ],
+      ),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
           action: SnackBarAction(

@@ -2,14 +2,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
-import '../models/project_model.dart';
-import '../models/chat_model.dart';
-import '../models/api_template_model.dart';
-import '../services/github_service.dart';
-import '../services/gemini_service.dart';
-import '../services/ai_api_finder.dart';
-import '../screens/api_integration_screen.dart';
-import '../screens/api_discovery_screen.dart';
+import '../../models/project_model.dart';  // ✅ ریلٹیو پیٹھ
+import '../../models/chat_model.dart';    // ✅ ریلٹیو پیٹھ
+import '../../models/api_template_model.dart'; // ✅ ریلٹیو پیٹھ
+import '../../models/ad_model.dart';      // ✅ ریلٹیو پیٹھ
+
+import '../../services/github_service.dart';  // ✅ ریلٹیو پیٹھ
+import '../../services/gemini_service.dart';  // ✅ ریلٹیو پیٹھ
+import '../../services/ai_api_finder.dart';   // ✅ ریلٹیو پیٹھ
+
+import '../../screens/api_integration_screen.dart';  // ✅ ریلٹیو پیٹھ
+import '../../screens/api_discovery_screen.dart';    // ✅ ریلٹیو پیٹھ
+
+// فائل مینیجر ایمپورٹ
 import 'chat_file_manager.dart';
 import 'chat_ad_manager.dart';
 

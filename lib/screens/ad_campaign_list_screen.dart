@@ -29,6 +29,7 @@ class _AdCampaignListScreenState extends State<AdCampaignListScreen> {
     _loadCampaigns();
   }
 
+  // مہمات لوڈ کرنے کا فنکشن
   Future<void> _loadCampaigns() async {
     try {
       final campaigns = await _adService.getCampaigns(widget.projectId);
@@ -49,29 +50,56 @@ class _AdCampaignListScreenState extends State<AdCampaignListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('اشتہار مہمیں - ${widget.projectName}'),
+        backgroundColor: Colors.deepPurple, // ڈیزائن کے لیے رنگ شامل کیا
         actions: [
+          // ✅ نیا اشتہار مہم بنانے والا بٹن
           IconButton(
-            icon: Icon(Icons.add),
+            icon: const Icon(Icons.add),
+            tooltip: 'نئی مہم بنائیں',
             onPressed: () {
-              // نیا اشتہار مہم اسکرین پر جائیں
+              Navigator.pushNamed(
+                context,
+                '/ads',
+                arguments: {
+                  'projectName': widget.projectName, // ✅ خودکار نام
+                  'initialBudget': 100.0,
+                  'initialAdText': 'میرے ایپ ${widget.projectName} کو آزمائیں!',
+                },
+              ).then((result) {
+                // ✅ واپسی پر لسٹ کو ریفریش کریں
+                if (result != null) {
+                  _loadCampaigns();
+                }
+              });
             },
           ),
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : _campaigns.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.campaign, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text('کوئی اشتہار مہم نہیں ہے'),
-                      SizedBox(height: 8),
-                      Text(
-                        'پہلی اشتہار مہم بنائیں',
-                        style: TextStyle(color: Colors.grey),
+                      const Icon(Icons.campaign, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text('اس پروجیکٹ کی کوئی اشتہار مہم نہیں ہے'),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          // خالی اسکرین پر بھی بٹن کام کرے
+                          Navigator.pushNamed(
+                            context,
+                            '/ads',
+                            arguments: {
+                              'projectName': widget.projectName,
+                              'initialBudget': 100.0,
+                              'initialAdText': 'میرے ایپ کو آزمائیں!',
+                            },
+                          ).then((_) => _loadCampaigns());
+                        },
+                        child: const Text('پہلی اشتہار مہم بنائیں'),
                       ),
                     ],
                   ),
@@ -81,23 +109,32 @@ class _AdCampaignListScreenState extends State<AdCampaignListScreen> {
                   itemBuilder: (context, index) {
                     final campaign = _campaigns[index];
                     return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      elevation: 4,
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: campaign.statusColor,
-                          child: Icon(Icons.campaign, color: Colors.white),
+                          child: const Icon(Icons.campaign, color: Colors.white),
                         ),
-                        title: Text(campaign.name),
+                        title: Text(campaign.name, style: TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('بجٹ: \$${campaign.dailyBudget}/روز'),
-                            Text('حیثیت: ${campaign.statusText}'),
+                            const SizedBox(height: 4),
+                            Text('💰 بجٹ: \$${campaign.dailyBudget}/روز'),
+                            Text(
+                              '📊 حیثیت: ${campaign.statusText}',
+                              style: TextStyle(color: campaign.statusColor),
+                            ),
                           ],
                         ),
-                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
-                          // اشتہار مہم کی تفصیل دیکھیں
+                          // اگر آپ مہم کی تفصیل دیکھنا چاہیں تو یہاں کوڈ آئے گا
+                          // فی الحال ہم صرف سنیپ بار دکھا رہے ہیں
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('منتخب مہم: ${campaign.name}')),
+                          );
                         },
                       ),
                     );

@@ -14,7 +14,7 @@ import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
 import 'screens/upload_screen.dart';
-import 'screens/chat_screen.dart'; // ✅ اپ ڈیٹ شدہ (چھوٹی فائل)
+import 'screens/chat/chat_main_screen.dart'; // ✅ اپ ڈیٹ: نئی چھٹ اسکرین کا راستہ
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/api_integration_screen.dart';
@@ -27,6 +27,7 @@ import 'screens/ad_campaign_list_screen.dart'; // ✅ نیا: اشتہار مہ�
 import 'models/api_template_model.dart';
 import 'models/project_model.dart';
 import 'models/ad_model.dart'; // ✅ نیا: اشتہار ماڈل
+import 'models/chat_model.dart'; // ✅ نیا: چیٹ ماڈل
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,20 +58,15 @@ void _setupErrorHandling() {
   FlutterError.onError = (FlutterErrorDetails details) {
     print('🚨 Flutter Error: ${details.exception}');
     print('📝 StackTrace: ${details.stack}');
+    // آپ یہاں Firebase Crashlytics یا کوئی اور error reporting service شامل کر سکتے ہیں
   };
 
-  // Platform errors handle کریں
-  PlatformExceptionHandler? handler;
-  try {
-    handler = PlatformExceptionHandler.getInstance();
-    // ✅ درستی: ?. کا استعمال کریں
-    handler?.setHandler((error, stackTrace) {
-      print('🚨 Platform Error: $error');
-      print('📝 StackTrace: $stackTrace');
-    });
-  } catch (e) {
-    print('⚠️ Platform exception handler not available: $e');
-  }
+  // Run-time errors handle کریں
+  PlatformDispatcher.instance.onError = (error, stack) {
+    print('🚨 Runtime Error: $error');
+    print('📝 StackTrace: $stack');
+    return true; // Prevent app crash
+  };
 }
 
 class AladdinApp extends StatelessWidget {
@@ -78,7 +74,7 @@ class AladdinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ تمام سروسز initialize کریں
+    // ✅ تمام سروسز کی single instance بنائیں
     final geminiService = GeminiService();
     final githubService = GitHubService();
     final apiService = ApiService();
@@ -92,29 +88,30 @@ class AladdinApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: const Color(0xFF6366F1), // Modern Indigo
           brightness: Brightness.light,
         ),
         fontFamily: 'Poppins',
         appBarTheme: const AppBarTheme(
-          systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-          ),
+          backgroundColor: Color(0xFF1E293B),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: const Color(0xFF8B5CF6), // Modern Violet
           brightness: Brightness.dark,
         ),
         fontFamily: 'Poppins',
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
         appBarTheme: const AppBarTheme(
-          systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-          ),
+          backgroundColor: Color(0xFF1E293B),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
         ),
       ),
 
@@ -149,7 +146,7 @@ class AladdinApp extends StatelessWidget {
         '/upload': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {
-            return UploadScreen();
+            return UploadScreen(project: args); // ✅ پروجیکٹ پاس کریں
           } else {
             return _buildErrorScreen(
               context, 
@@ -158,12 +155,14 @@ class AladdinApp extends StatelessWidget {
           }
         },
 
+        // ✅ اپ ڈیٹ: نئی chat_main_screen کا راستہ
         '/chat': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {
-            return ChatScreen(
+            return ChatMainScreen( // ✅ نام تبدیل کیا
               geminiService: geminiService,
               githubService: githubService,
+              project: args,
             );
           } else {
             return _buildErrorScreen(
@@ -183,7 +182,7 @@ class AladdinApp extends StatelessWidget {
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
               initialBudget: args['initialBudget'] ?? 100.0,
               initialAdText: args['initialAdText'] ?? 'میرے ایپ کو آزمائیں!',
-              // ✅ adService ہٹایا گیا کیونکہ AdsScreen میں موجود نہیں
+              adService: adService, // ✅ adService واپس شامل کریں
             );
           } else {
             return _buildErrorScreen(
@@ -200,7 +199,7 @@ class AladdinApp extends StatelessWidget {
             return AdCampaignListScreen(
               projectId: args['projectId'] ?? '',
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
-              // ✅ adService ہٹایا گیا کیونکہ AdCampaignListScreen خود AdService بناتا ہے
+              adService: adService, // ✅ adService واپس شامل کریں
             );
           } else {
             return _buildErrorScreen(
@@ -213,28 +212,42 @@ class AladdinApp extends StatelessWidget {
         '/api-discovery': (context) {
           final args = ModalRoute.of(context)?.settings.arguments
               as Map<String, dynamic>?;
-          return ApiDiscoveryScreen(
-            discoveredApis: args?['discoveredApis'] ?? [],
-            projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
-          );
+          if (args != null) {
+            return ApiDiscoveryScreen(
+              discoveredApis: (args['discoveredApis'] as List?)?.cast<ApiTemplate>() ?? [],
+              projectName: args['projectName'] ?? 'نیا پروجیکٹ',
+            );
+          } else {
+            return _buildErrorScreen(
+              context,
+              'API discovery requires data.'
+            );
+          }
         },
 
         '/api-integration': (context) {
           final args = ModalRoute.of(context)?.settings.arguments
               as Map<String, dynamic>?;
-          return ApiIntegrationScreen(
-            apiTemplate: args?['apiTemplate'],
-            onApiKeySubmitted: args?['onApiKeySubmitted'],
-          );
+          if (args != null && args['apiTemplate'] is ApiTemplate) {
+            return ApiIntegrationScreen(
+              apiTemplate: args['apiTemplate'] as ApiTemplate,
+              onApiKeySubmitted: args['onApiKeySubmitted'] as Function(String)?,
+            );
+          } else {
+            return _buildErrorScreen(
+              context,
+              'API integration requires valid data.'
+            );
+          }
         },
 
         '/build': (context) {
           final args = ModalRoute.of(context)?.settings.arguments
               as Map<String, dynamic>?;
           return BuildScreen(
-            generatedCode: args?['code'] ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
-            projectName: args?['projectName'] ?? 'نیا پروجیکٹ',
-            framework: args?['framework'] ?? 'Flutter',
+            generatedCode: args?['code']?.toString() ?? '// کوئی کوڈ جنریٹ نہیں ہوا',
+            projectName: args?['projectName']?.toString() ?? 'نیا پروجیکٹ',
+            framework: args?['framework']?.toString() ?? 'Flutter',
           );
         },
 
@@ -242,9 +255,9 @@ class AladdinApp extends StatelessWidget {
           final args = ModalRoute.of(context)?.settings.arguments
               as Map<String, dynamic>?;
           return PublishGuideScreen(
-            appName: args?['appName'] ?? 'میرا ایپ',
-            generatedCode: args?['generatedCode'] ?? '// کوئی کوڈ نہیں',
-            framework: args?['framework'] ?? 'Flutter',
+            appName: args?['appName']?.toString() ?? 'میرا ایپ',
+            generatedCode: args?['generatedCode']?.toString() ?? '// کوئی کوڈ نہیں',
+            framework: args?['framework']?.toString() ?? 'Flutter',
           );
         },
       },
@@ -279,6 +292,36 @@ class AladdinApp extends StatelessWidget {
 
       // ✅ Global error handler
       builder: (context, child) {
+        ErrorWidget.builder = (FlutterErrorDetails details) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Error')),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 64, color: Colors.red),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'An error occurred',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    details.exception.toString(),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+                    child: const Text('Restart App'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        };
+
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaleFactor: 1.0, // Prevent text scaling issues
@@ -320,25 +363,5 @@ class AladdinApp extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// ✅ Platform Exception Handler (اگر available ہو)
-class PlatformExceptionHandler {
-  static PlatformExceptionHandler? _instance;
-  
-  factory PlatformExceptionHandler() {
-    _instance ??= PlatformExceptionHandler._internal();
-    return _instance!;
-  }
-  
-  PlatformExceptionHandler._internal();
-  
-  static PlatformExceptionHandler? getInstance() {
-    return _instance;
-  }
-  
-  void setHandler(Function(Object, StackTrace) handler) {
-    // Platform-specific exception handling logic here
   }
 }

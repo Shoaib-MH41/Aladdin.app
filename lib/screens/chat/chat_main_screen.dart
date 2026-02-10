@@ -26,7 +26,7 @@ import 'chat_ad_manager.dart';
 import 'ui_design_preview.dart';
 
 class ChatMainScreen extends StatefulWidget {
-  final aiService aiService;
+  final aiService = UniversalAIService();
   final GitHubService githubService;
   final Project project;
 

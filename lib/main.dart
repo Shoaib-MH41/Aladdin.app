@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,7 +8,7 @@ import 'services/gemini_service.dart';
 import 'services/github_service.dart';
 import 'services/api_service.dart';
 import 'services/security_service.dart';
-import 'services/ad_service.dart'; // ✅ نیا: اشتہار سروس
+import 'services/ad_service.dart';
 
 // ✅ سکرینز کے امپورٹس
 import 'screens/pin_screen.dart';
@@ -14,25 +16,23 @@ import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
 import 'screens/upload_screen.dart';
-import 'screens/chat/chat_main_screen.dart'; // ✅ اپ ڈیٹ: نئی چھٹ اسکرین کا راستہ
+import 'screens/chat/chat_main_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/api_integration_screen.dart';
 import 'screens/api_discovery_screen.dart';
 import 'screens/publish_guide_screen.dart';
-import 'screens/ads_screen.dart'; // ✅ نیا: اشتہار اسکرین
-import 'screens/ad_campaign_list_screen.dart'; // ✅ نیا: اشتہار مہم فہرست
+import 'screens/ads_screen.dart';
+import 'screens/ad_campaign_list_screen.dart';
 
 // ✅ ماڈلز کے امپورٹس
 import 'models/api_template_model.dart';
 import 'models/project_model.dart';
-import 'models/ad_model.dart'; // ✅ نیا: اشتہار ماڈل
-import 'models/chat_model.dart'; // ✅ نیا: چیٹ ماڈل
+import 'models/ad_model.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   _optimizePerformance();
-  _setupErrorHandling();
   runApp(const AladdinApp());
 }
 
@@ -52,23 +52,6 @@ void _optimizePerformance() {
   );
 }
 
-// ✅ درست: Error Handling Setup
-void _setupErrorHandling() {
-  // Flutter errors handle کریں
-  FlutterError.onError = (FlutterErrorDetails details) {
-    print('🚨 Flutter Error: ${details.exception}');
-    print('📝 StackTrace: ${details.stack}');
-    // آپ یہاں Firebase Crashlytics یا کوئی اور error reporting service شامل کر سکتے ہیں
-  };
-
-  // Run-time errors handle کریں
-  PlatformDispatcher.instance.onError = (error, stack) {
-    print('🚨 Runtime Error: $error');
-    print('📝 StackTrace: $stack');
-    return true; // Prevent app crash
-  };
-}
-
 class AladdinApp extends StatelessWidget {
   const AladdinApp({super.key});
 
@@ -79,7 +62,7 @@ class AladdinApp extends StatelessWidget {
     final githubService = GitHubService();
     final apiService = ApiService();
     final securityService = SecurityService();
-    final adService = AdService(); // ✅ نیا: اشتہار سروس
+    final adService = AdService();
 
     return MaterialApp(
       title: 'Aladdin AI App Factory',
@@ -88,7 +71,7 @@ class AladdinApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1), // Modern Indigo
+          seedColor: const Color(0xFF6366F1),
           brightness: Brightness.light,
         ),
         fontFamily: 'Poppins',
@@ -102,7 +85,7 @@ class AladdinApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B5CF6), // Modern Violet
+          seedColor: const Color(0xFF8B5CF6),
           brightness: Brightness.dark,
         ),
         fontFamily: 'Poppins',
@@ -129,13 +112,13 @@ class AladdinApp extends StatelessWidget {
         '/home': (context) => HomeScreen(
               geminiService: geminiService,
               githubService: githubService,
-              adService: adService, // ✅ نیا: اشتہار سروس پاس کریں
+              adService: adService,
             ),
 
         '/projects': (context) => ProjectScreen(
               geminiService: geminiService,
               githubService: githubService,
-              adService: adService, // ✅ نیا: اشتہار سروس پاس کریں
+              adService: adService,
             ),
 
         '/select': (context) => SelectionScreen(
@@ -146,7 +129,8 @@ class AladdinApp extends StatelessWidget {
         '/upload': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {
-            return UploadScreen(project: args); // ✅ پروجیکٹ پاس کریں
+            // اگر UploadScreen پروجیکٹ لیتا ہے تو یہاں تبدیل کریں
+            return const UploadScreen();
           } else {
             return _buildErrorScreen(
               context, 
@@ -155,11 +139,10 @@ class AladdinApp extends StatelessWidget {
           }
         },
 
-        // ✅ اپ ڈیٹ: نئی chat_main_screen کا راستہ
         '/chat': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {
-            return ChatMainScreen( // ✅ نام تبدیل کیا
+            return ChatMainScreen(
               geminiService: geminiService,
               githubService: githubService,
               project: args,
@@ -172,9 +155,9 @@ class AladdinApp extends StatelessWidget {
           }
         },
 
-        '/settings': (context) => SettingsScreen(),
+        '/settings': (context) => const SettingsScreen(),
 
-        // ✅ نیا: اشتہار مہم اسکرین
+        // ✅ اشتہار مہم اسکرین
         '/ads': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Map<String, dynamic>) {
@@ -182,7 +165,6 @@ class AladdinApp extends StatelessWidget {
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
               initialBudget: args['initialBudget'] ?? 100.0,
               initialAdText: args['initialAdText'] ?? 'میرے ایپ کو آزمائیں!',
-              adService: adService, // ✅ adService واپس شامل کریں
             );
           } else {
             return _buildErrorScreen(
@@ -192,14 +174,13 @@ class AladdinApp extends StatelessWidget {
           }
         },
 
-        // ✅ نیا: اشتہار مہم فہرست اسکرین
+        // ✅ اشتہار مہم فہرست اسکرین
         '/ad-campaigns': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Map<String, dynamic>) {
             return AdCampaignListScreen(
               projectId: args['projectId'] ?? '',
               projectName: args['projectName'] ?? 'نیا پروجیکٹ',
-              adService: adService, // ✅ adService واپس شامل کریں
             );
           } else {
             return _buildErrorScreen(
@@ -290,41 +271,11 @@ class AladdinApp extends StatelessWidget {
         ),
       ),
 
-      // ✅ Global error handler
+      // ✅ Global settings
       builder: (context, child) {
-        ErrorWidget.builder = (FlutterErrorDetails details) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Error')),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'An error occurred',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    details.exception.toString(),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
-                    child: const Text('Restart App'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        };
-
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaleFactor: 1.0, // Prevent text scaling issues
+            textScaleFactor: 1.0,
           ),
           child: child!,
         );

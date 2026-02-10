@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 // ✅ سروسز کے امپورٹس
 import 'services/gemini_service.dart';
-import 'services/universal_ai_service.dart'; // یہ لائن شامل کریں
 import 'services/github_service.dart';
 import 'services/api_service.dart';
 import 'services/security_service.dart';
@@ -59,7 +58,7 @@ class AladdinApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ✅ تمام سروسز کی single instance بنائیں
-    final aiService = UniversalAIService();
+    final geminiService = GeminiService();
     final githubService = GitHubService();
     final apiService = ApiService();
     final securityService = SecurityService();
@@ -111,19 +110,19 @@ class AladdinApp extends StatelessWidget {
             ),
 
         '/home': (context) => HomeScreen(
-              aiService: aiService,
+              geminiService: geminiService,
               githubService: githubService,
               adService: adService,
             ),
 
         '/projects': (context) => ProjectScreen(
-              aiService: aiService,
+              geminiService: geminiService,
               githubService: githubService,
               adService: adService,
             ),
 
         '/select': (context) => SelectionScreen(
-              aiService: aiService,
+              geminiService: geminiService,
               githubService: githubService,
             ),
 

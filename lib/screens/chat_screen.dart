@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/project_model.dart';
 import '../services/github_service.dart';
 import '../services/gemini_service.dart';
-import 'chat/chat_main_screen.dart';
+import 'chat/chat_screen.dart';
 
 class ChatScreen extends StatelessWidget {
   final GeminiService geminiService;

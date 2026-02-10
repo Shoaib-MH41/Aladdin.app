@@ -4,6 +4,8 @@ class ChatMessage {
   final String text;
   final DateTime timestamp;
   final bool isCode;
+  final bool isDesign; // نیا فیلڈ
+  final Map<String, dynamic>? designData; // نیا فیلڈ
 
   ChatMessage({
     required this.id,
@@ -11,6 +13,9 @@ class ChatMessage {
     required this.text,
     required this.timestamp,
     this.isCode = false,
+  // ... existing parameters ...
+    this.isDesign = false,
+    this.designData,
   });
 
 

@@ -26,7 +26,7 @@ class GeminiService {
   
   // Current state
   AIProvider _currentProvider = AIProvider.gemini;
-  late GenerativeModel _geminiModel;
+  GenerativeModel? _geminiModel;
   bool _isInitialized = false;
   
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -149,7 +149,7 @@ class GeminiService {
     try {
       await _secureStorage.delete(key: _apiKeyKey);
       _isInitialized = false;
-      _geminiModel = null as GenerativeModel;
+      _geminiModel = null;
       print('🗑️ API key removed');
     } catch (e) {
       throw Exception('API key removal failed: $e');
@@ -226,7 +226,8 @@ Return only valid JSON.
 
       switch (_currentProvider) {
         case AIProvider.gemini:
-          final response = await _geminiModel.generateContent([Content.text(fullPrompt)]);
+          if (_geminiModel == null) throw Exception('Gemini model not initialized');
+          final response = await _geminiModel!.generateContent([Content.text(fullPrompt)]);
           return _parseDesignResponse(response.text ?? '{}');
           
         case AIProvider.deepseek:
@@ -271,7 +272,7 @@ REQUIREMENTS:
 Return ONLY Flutter Dart code:
 ''';
 
-      final response = await _model.generateContent([Content.text(prompt)]);
+      final response = await _geminiModel!.generateContent([Content.text(prompt)]);
       String generatedCode = response.text?.trim() ?? '';
 
       if (generatedCode.isEmpty) {
@@ -310,7 +311,7 @@ Include these components: ${components.join(', ')}.
 Return a JSON array where each element is a UI component design.
 ''';
 
-      final response = await _model.generateContent([Content.text(prompt)]);
+      final response = await _geminiModel!.generateContent([Content.text(prompt)]);
       String rawResponse = response.text?.trim() ?? '[]';
 
       // Clean JSON
@@ -337,56 +338,6 @@ Return a JSON array where each element is a UI component design.
     }
   }
 
-  // Fallback methods
-  String _generateFallbackFlutterCode(Map<String, dynamic> design) {
-    final type = design['componentType'] ?? 'container';
-    final label = design['label'] ?? 'AI Generated';
-    
-    return '''
-import 'package:flutter/material.dart';
-
-class ${_toPascalCase(type)}Widget extends StatelessWidget {
-  final String label;
-  
-  const ${_toPascalCase(type)}Widget({
-    Key? key,
-    required this.label,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: EdgeInsets.all(16),
-      child: Center(
-        child: Text(label),
-      ),
-    );
-  }
-}
-''';
-  }
-
-  List<Map<String, dynamic>> _generateFallbackUIKit(String theme, List<String> components) {
-    return components.map((component) {
-      return {
-        'componentType': component,
-        'label': '$theme $component',
-        'style': {'backgroundColor': '#6366F1', 'borderRadius': 16.0},
-      };
-    }).toList();
-  }
-
-  String _toPascalCase(String input) {
-    if (input.isEmpty) return '';
-    return input[0].toUpperCase() + input.substring(1);
-  }
-}
   /// 🔹 Smart Debugging Helper (Universal)
   Future<String> debugCode({
     required String faultyCode,
@@ -425,7 +376,6 @@ Return ONLY corrected code:
 
   /// 🔹 API Suggestion (Universal)
   Future<Map<String, dynamic>?> getApiSuggestion(String category) async {
-    // آپ کا موجودہ logic
     return _getFallbackSuggestion(category);
   }
 
@@ -437,16 +387,15 @@ Return ONLY corrected code:
     try {
       switch (_currentProvider) {
         case AIProvider.gemini:
-          final response = await _geminiModel.generateContent([Content.text("Say only: OK")]);
+          if (_geminiModel == null) return false;
+          final response = await _geminiModel!.generateContent([Content.text("Say only: OK")]);
           return response.text?.toLowerCase().contains("ok") ?? false;
           
         case AIProvider.deepseek:
         case AIProvider.openai:
-          // Simple test for OpenAI-compatible APIs
           return await _testOpenAICompatibleConnection();
           
         case AIProvider.local:
-          // Test local connection
           return await _testLocalConnection();
       }
     } catch (e) {
@@ -459,9 +408,28 @@ Return ONLY corrected code:
   // 🔧 PRIVATE HELPER METHODS
   // ==============================================================
 
+  // ✅ یہ methods class کے اندر ہیں
+  void _saveApiKeyDirectly(String apiKey) {
+    _secureStorage.write(key: _apiKeyKey, value: apiKey);
+  }
+  
+  void _saveCustomUrlDirectly(String url) {
+    _secureStorage.write(key: _customUrlKey, value: url);
+  }
+  
+  AIProvider _parseProvider(String provider) {
+    switch (provider.toLowerCase()) {
+      case 'deepseek': return AIProvider.deepseek;
+      case 'openai': return AIProvider.openai;
+      case 'local': return AIProvider.local;
+      default: return AIProvider.gemini;
+    }
+  }
+
   // Gemini implementation
   Future<String> _generateWithGemini(String prompt) async {
-    final response = await _geminiModel.generateContent([Content.text(prompt)]);
+    if (_geminiModel == null) throw Exception('Gemini model not initialized');
+    final response = await _geminiModel!.generateContent([Content.text(prompt)]);
     return _cleanGeneratedCode(response.text?.trim() ?? '', 'flutter');
   }
   
@@ -610,7 +578,6 @@ Return ONLY corrected code:
     }
   }
 
-  // باقی آپ کے helper methods ویسے ہی رہیں گے
   String _buildFrameworkPrompt(String userPrompt, String framework, List<String> platforms) {
     final platformList = platforms.join(', ');
     return '''
@@ -645,7 +612,6 @@ RETURN ONLY CODE.
   }
 
   Map<String, dynamic> _createFallbackDesign(String prompt, String componentType) {
-    // آپ کا موجودہ fallback design
     return {
       'componentType': componentType == 'auto' ? 'container' : componentType,
       'label': prompt.length > 20 ? '${prompt.substring(0, 20)}...' : prompt,
@@ -659,21 +625,98 @@ RETURN ONLY CODE.
   }
 
   Map<String, dynamic>? _getFallbackSuggestion(String category) {
-    // آپ کا موجودہ fallback
-    return {
-      'ai': {'name': 'Google Gemini', 'url': 'https://makersuite.google.com/app/apikey'},
-    }[category.toLowerCase()];
+    final fallbacks = {
+      'ai': {
+        'name': 'OpenAI API',
+        'url': 'https://platform.openai.com/api-keys',
+        'note': 'Create account and generate API key'
+      },
+      'firebase': {
+        'name': 'Google Firebase',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Create project and enable APIs'
+      },
+      'weather': {
+        'name': 'OpenWeather Map',
+        'url': 'https://openweathermap.org/api',
+        'note': 'Free tier available with signup'
+      },
+      'authentication': {
+        'name': 'Firebase Auth',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Authentication in Firebase Console'
+      },
+      'database': {
+        'name': 'Firebase Firestore',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Firestore in Firebase Console'
+      }
+    };
+    
+    final key = category.toLowerCase();
+    return fallbacks[key] ?? fallbacks['ai'];
+  }
+
+  String _generateFallbackFlutterCode(Map<String, dynamic> design) {
+    final type = design['componentType'] ?? 'container';
+    final label = design['label'] ?? 'AI Generated';
+    
+    return '''
+import 'package:flutter/material.dart';
+
+class ${_toPascalCase(type)}Widget extends StatelessWidget {
+  final String label;
+  
+  const ${_toPascalCase(type)}Widget({
+    Key? key,
+    required this.label,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: EdgeInsets.all(16),
+      child: Center(
+        child: Text(label),
+      ),
+    );
+  }
+}
+''';
+  }
+
+  List<Map<String, dynamic>> _generateFallbackUIKit(String theme, List<String> components) {
+    return components.map((component) {
+      return {
+        'componentType': component,
+        'label': '$theme $component',
+        'style': {'backgroundColor': '#6366F1', 'borderRadius': 16.0},
+      };
+    }).toList();
+  }
+
+  String _toPascalCase(String input) {
+    if (input.isEmpty) return '';
+    return input[0].toUpperCase() + input.substring(1);
   }
 
   Future<String> getFirebaseAuthGuide() async {
     await _initialization;
-    final response = await _geminiModel.generateContent([Content.text("Firebase Auth guide")]);
+    if (_geminiModel == null) throw Exception('Gemini model not initialized');
+    final response = await _geminiModel!.generateContent([Content.text("Firebase Auth guide")]);
     return response.text ?? 'Guide unavailable.';
   }
 
   Future<String> getFirebaseDatabaseGuide() async {
     await _initialization;
-    final response = await _geminiModel.generateContent([Content.text("Firebase Firestore guide")]);
+    if (_geminiModel == null) throw Exception('Gemini model not initialized');
+    final response = await _geminiModel!.generateContent([Content.text("Firebase Firestore guide")]);
     return response.text ?? 'Guide unavailable.';
   }
 
@@ -684,31 +727,10 @@ RETURN ONLY CODE.
     if (open) await LinkHelper.openLink(link);
     return link;
   }
-
-  // Helper methods
-  void _saveApiKeyDirectly(String apiKey) {
-    _secureStorage.write(key: _apiKeyKey, value: apiKey);
-  }
-  
-  void _saveCustomUrlDirectly(String url) {
-    _secureStorage.write(key: _customUrlKey, value: url);
-  }
-  
-  AIProvider _parseProvider(String provider) {
-    switch (provider.toLowerCase()) {
-      case 'deepseek': return AIProvider.deepseek;
-      case 'openai': return AIProvider.openai;
-      case 'local': return AIProvider.local;
-      default: return AIProvider.gemini;
-    }
-  }
-
-  // باقی آپ کے methods (generateFlutterCode, generateUIKit, etc.) ویسے ہی رہیں گے
-  // میں نے صرف اوپر کے methods لکھے ہیں، باقی آپ کے کوڈ میں موجود ہیں
 }
 
 // ==============================================================
-// 🎯 ENUMS
+// 🎯 ENUMS (class کے باہر)
 // ==============================================================
 
 enum AIProvider {

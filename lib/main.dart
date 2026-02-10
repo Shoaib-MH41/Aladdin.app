@@ -58,12 +58,12 @@ class AladdinApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ✅ تمام سروسز کی single instance بنائیں
-    final geminiService = GeminiService();
+    final aiService = UniversalAIService();
     final githubService = GitHubService();
     final apiService = ApiService();
     final securityService = SecurityService();
     final adService = AdService();
-
+  
     return MaterialApp(
       title: 'Aladdin AI App Factory',
       debugShowCheckedModeBanner: false,

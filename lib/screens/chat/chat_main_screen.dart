@@ -32,7 +32,7 @@ class ChatMainScreen extends StatefulWidget {
 
   const ChatMainScreen({
     super.key,
-    required this.geminiService,
+    required this.aiService,
     required this.githubService,
     required this.project,
   });

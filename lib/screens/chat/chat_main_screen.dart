@@ -26,13 +26,13 @@ import 'chat_ad_manager.dart';
 import 'ui_design_preview.dart';
 
 class ChatMainScreen extends StatefulWidget {
-  final aiService = UniversalAIService();
+  final geminiService = geminiService();
   final GitHubService githubService;
   final Project project;
 
   const ChatMainScreen({
     super.key,
-    required this.aiService,
+    required this.geminiService,
     required this.githubService,
     required this.project,
   });

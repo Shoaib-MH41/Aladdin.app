@@ -11,7 +11,8 @@ dependencies:
     sdk: flutter
   lottie: ^2.7.0
   cupertino_icons: ^1.0.2
-  
+  google_fonts: ^6.1.0
+  flutter_highlight: ^3.0.0
 
   # 🔹 File & Storage Handling
   file_picker: ^6.1.1

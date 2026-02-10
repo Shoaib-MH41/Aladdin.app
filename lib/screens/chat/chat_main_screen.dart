@@ -26,7 +26,7 @@ import 'chat_ad_manager.dart';
 import 'ui_design_preview.dart';
 
 class ChatMainScreen extends StatefulWidget {
-  final geminiService = geminiService();
+  final GeminiService geminiService;
   final GitHubService githubService;
   final Project project;
 

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 // ✅ سروسز کے امپورٹس
 import 'services/gemini_service.dart';
+import 'services/universal_ai_service.dart'; // یہ لائن شامل کریں
 import 'services/github_service.dart';
 import 'services/api_service.dart';
 import 'services/security_service.dart';
@@ -110,19 +111,19 @@ class AladdinApp extends StatelessWidget {
             ),
 
         '/home': (context) => HomeScreen(
-              geminiService: geminiService,
+              aiService: aiService,
               githubService: githubService,
               adService: adService,
             ),
 
         '/projects': (context) => ProjectScreen(
-              geminiService: geminiService,
+              aiService: aiService,
               githubService: githubService,
               adService: adService,
             ),
 
         '/select': (context) => SelectionScreen(
-              geminiService: geminiService,
+              aiService: aiService,
               githubService: githubService,
             ),
 

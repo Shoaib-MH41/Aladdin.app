@@ -1,7 +1,9 @@
+// lib/screens/settings_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/universal_ai_service.dart';
 import '../services/github_service.dart';
-import '../services/gemini_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,49 +13,91 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _geminiController = TextEditingController();
+  final _apiKeyController = TextEditingController();
   final _githubController = TextEditingController();
+  final _customUrlController = TextEditingController();
   final _storage = const FlutterSecureStorage();
 
   bool _isSaving = false;
-  bool _isTestingGemini = false;
+  bool _isTestingAI = false;
   bool _isTestingGitHub = false;
   String _statusMessage = '';
 
-  final GeminiService _geminiService = GeminiService();
+  late UniversalAIService _aiService;
   final GitHubService _githubService = GitHubService();
+  
+  AIProvider _selectedProvider = AIProvider.gemini;
+  bool _showCustomUrlField = false;
 
   @override
   void initState() {
     super.initState();
-    _loadKeys();
+    _aiService = UniversalAIService();
+    _loadSettings();
   }
 
-  Future<void> _loadKeys() async {
-    final geminiKey = await _storage.read(key: 'gemini_api_key');
-    final githubToken = await _storage.read(key: 'github_token');
-    setState(() {
-      _geminiController.text = geminiKey ?? '';
+  Future<void> _loadSettings() async {
+    try {
+      // Load AI Provider
+      final savedProvider = await _storage.read(key: 'ai_provider');
+      if (savedProvider != null) {
+        _selectedProvider = _parseProvider(savedProvider);
+      }
+      
+      // Load API Key
+      final apiKey = await _storage.read(key: 'ai_api_key');
+      _apiKeyController.text = apiKey ?? '';
+      
+      // Load Custom URL for local provider
+      final customUrl = await _storage.read(key: 'ai_custom_url');
+      _customUrlController.text = customUrl ?? 'http://localhost:11434';
+      
+      // Load GitHub Token
+      final githubToken = await _storage.read(key: 'github_token');
       _githubController.text = githubToken ?? '';
-    });
+      
+      setState(() {
+        _showCustomUrlField = _selectedProvider == AIProvider.local;
+      });
+    } catch (e) {
+      print('Error loading settings: $e');
+    }
   }
 
-  // 🔹 درست: محفوظ کریں بٹن - کنفرمیشن کے ساتھ
-  Future<void> _saveKeys() async {
-    // ✅ پہلے چیک کریں کہ کوئی key تو ہے
-    if (_geminiController.text.trim().isEmpty && _githubController.text.trim().isEmpty) {
+  AIProvider _parseProvider(String provider) {
+    switch (provider.toLowerCase()) {
+      case 'deepseek':
+        return AIProvider.deepseek;
+      case 'openai':
+        return AIProvider.openai;
+      case 'local':
+        return AIProvider.local;
+      default:
+        return AIProvider.gemini;
+    }
+  }
+
+  // 🔹 Save Settings with new AI Provider
+  Future<void> _saveSettings() async {
+    if (_selectedProvider != AIProvider.local && _apiKeyController.text.trim().isEmpty) {
       setState(() {
-        _statusMessage = '❌ براہ کرم پہلے کوئی API key درج کریں';
+        _statusMessage = '❌ براہ کرم پہلے API key درج کریں';
       });
       return;
     }
 
-    // ✅ کنفرمیشن ڈائیلاگ
+    if (_selectedProvider == AIProvider.local && _customUrlController.text.trim().isEmpty) {
+      setState(() {
+        _statusMessage = '❌ براہ کرم لوکل API URL درج کریں';
+      });
+      return;
+    }
+
     bool? shouldSave = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('API Keys محفوظ کریں'),
-        content: const Text('کیا آپ واقعی یہ API keys محفوظ کرنا چاہتے ہیں؟'),
+        title: const Text('Settings محفوظ کریں'),
+        content: Text('کیا آپ واقعی یہ settings محفوظ کرنا چاہتے ہیں؟\n\nProvider: ${_selectedProvider.name.toUpperCase()}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -68,7 +112,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
-    // ✅ صرف confirm پر محفوظ کریں
     if (shouldSave == true) {
       setState(() {
         _isSaving = true;
@@ -76,22 +119,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
 
       try {
-        if (_geminiController.text.trim().isNotEmpty) {
-          // ✅ Gemini key کی validation
-          final bool isGeminiValid = await _validateGeminiKey(_geminiController.text.trim());
-          if (isGeminiValid) {
-            await _geminiService.saveApiKey(_geminiController.text.trim());
-          } else {
-            setState(() {
-              _isSaving = false;
-              _statusMessage = '❌ Gemini API key درست نہیں ہے';
-            });
-            return;
-          }
-        }
+        // Save AI Provider and API Key
+        await _aiService.changeProvider(
+          _selectedProvider,
+          apiKey: _selectedProvider != AIProvider.local ? _apiKeyController.text.trim() : null,
+          customUrl: _selectedProvider == AIProvider.local ? _customUrlController.text.trim() : null,
+        );
         
+        // Save GitHub Token if provided
         if (_githubController.text.trim().isNotEmpty) {
-          // ✅ GitHub token کی validation
           final bool isGitHubValid = await _validateGitHubToken(_githubController.text.trim());
           if (isGitHubValid) {
             await _githubService.saveToken(_githubController.text.trim());
@@ -106,37 +142,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         setState(() {
           _isSaving = false;
-          _statusMessage = '✅ تمام Keys کامیابی سے محفوظ ہو گئیں!';
+          _statusMessage = '✅ تمام Settings کامیابی سے محفوظ ہو گئیں!';
         });
       } catch (e) {
         setState(() {
           _isSaving = false;
-          _statusMessage = '❌ Keys محفوظ نہیں ہو سکیں: $e';
+          _statusMessage = '❌ Settings محفوظ نہیں ہو سکیں: $e';
         });
       }
     }
   }
 
-  // 🔹 درست: حذف کریں بٹن - کنفرمیشن کے ساتھ
-  Future<void> _removeKeys() async {
-    // ✅ پہلے چیک کریں کہ کچھ ہے بھی ڈیلیٹ کرنے کے لیے
-    final geminiKey = await _storage.read(key: 'gemini_api_key');
-    final githubToken = await _storage.read(key: 'github_token');
-    
-    if ((geminiKey == null || geminiKey.isEmpty) && 
-        (githubToken == null || githubToken.isEmpty)) {
-      setState(() {
-        _statusMessage = 'ℹ️ ڈیلیٹ کرنے کے لیے کوئی Keys موجود نہیں ہیں';
-      });
-      return;
-    }
-
-    // ✅ Warning ڈائیلاگ
+  // 🔹 Remove Settings
+  Future<void> _removeSettings() async {
     bool? shouldDelete = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('تمام Keys حذف کریں'),
-        content: const Text('کیا آپ واقعی تمام API keys حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔'),
+        title: const Text('تمام Settings حذف کریں'),
+        content: const Text('کیا آپ واقعی تمام API keys اور settings حذف کرنا چاہتے ہیں؟'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -151,68 +174,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
-    // ✅ صرف confirm پر ڈیلیٹ کریں
     if (shouldDelete == true) {
-      await _geminiService.removeApiKey();
+      await _aiService.removeApiKey();
       await _githubService.removeToken();
+      await _storage.delete(key: 'ai_provider');
+      await _storage.delete(key: 'ai_custom_url');
+      
       setState(() {
-        _geminiController.clear();
+        _apiKeyController.clear();
         _githubController.clear();
-        _statusMessage = '🗑️ تمام Keys حذف کر دی گئیں۔';
+        _customUrlController.clear();
+        _selectedProvider = AIProvider.gemini;
+        _showCustomUrlField = false;
+        _statusMessage = '🗑️ تمام Settings حذف کر دی گئیں۔';
       });
     }
   }
 
-  // 🔹 بہتر: Gemini کنکشن ٹیسٹ - پہلے validation
-  Future<void> _testGeminiConnection() async {
-    if (_geminiController.text.trim().isEmpty) {
+  // 🔹 Test AI Connection
+  Future<void> _testAIConnection() async {
+    if (_selectedProvider != AIProvider.local && _apiKeyController.text.trim().isEmpty) {
       setState(() {
-        _statusMessage = '❌ براہ کرم پہلے Gemini API key درج کریں';
+        _statusMessage = '❌ براہ کرم پہلے API key درج کریں';
       });
       return;
     }
 
-    // ✅ پہلے key کی validation چیک کریں
-    final bool isValidFormat = _validateGeminiFormat(_geminiController.text.trim());
-    if (!isValidFormat) {
+    if (_selectedProvider == AIProvider.local && _customUrlController.text.trim().isEmpty) {
       setState(() {
-        _statusMessage = '❌ Gemini API key کا فارمیٹ غلط ہے';
+        _statusMessage = '❌ براہ کرم لوکل API URL درج کریں';
       });
       return;
     }
 
-    setState(() => _isTestingGemini = true);
+    setState(() => _isTestingAI = true);
     
     try {
-      final success = await _geminiService.testConnection();
+      // Temporary service for testing
+      UniversalAIService testService;
+      
+      if (_selectedProvider == AIProvider.gemini) {
+        testService = UniversalAIService.gemini(apiKey: _apiKeyController.text.trim());
+      } else if (_selectedProvider == AIProvider.deepseek) {
+        testService = UniversalAIService.deepseek(apiKey: _apiKeyController.text.trim());
+      } else if (_selectedProvider == AIProvider.openai) {
+        testService = UniversalAIService.openai(apiKey: _apiKeyController.text.trim());
+      } else {
+        testService = UniversalAIService.local(baseUrl: _customUrlController.text.trim());
+      }
+      
+      final success = await testService.testConnection();
       setState(() {
-        _isTestingGemini = false;
+        _isTestingAI = false;
         _statusMessage = success
-            ? '✅ Gemini کنکشن کامیاب ہے! API key درست ہے'
-            : '❌ Gemini کنکشن ناکام۔ براہ کرم اپنی API key چیک کریں۔';
+            ? '✅ ${_selectedProvider.name.toUpperCase()} کنکشن کامیاب ہے!'
+            : '❌ ${_selectedProvider.name.toUpperCase()} کنکشن ناکام۔';
       });
     } catch (e) {
       setState(() {
-        _isTestingGemini = false;
-        _statusMessage = '❌ Gemini کنکشن چیک میں مسئلہ: $e';
+        _isTestingAI = false;
+        _statusMessage = '❌ کنکشن چیک میں مسئلہ: $e';
       });
     }
   }
 
-  // 🔹 بہتر: GitHub کنکشن ٹیسٹ - پہلے validation
+  // 🔹 Test GitHub Connection
   Future<void> _testGitHubConnection() async {
     if (_githubController.text.trim().isEmpty) {
       setState(() {
         _statusMessage = '❌ براہ کرم پہلے GitHub Token درج کریں';
-      });
-      return;
-    }
-
-    // ✅ پہلے token کی validation چیک کریں
-    final bool isValidFormat = _validateGitHubFormat(_githubController.text.trim());
-    if (!isValidFormat) {
-      setState(() {
-        _statusMessage = '❌ GitHub Token کا فارمیٹ غلط ہے';
       });
       return;
     }
@@ -225,7 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isTestingGitHub = false;
         _statusMessage = success
             ? '✅ GitHub کنکشن کامیاب ہے! Token درست ہے'
-            : '❌ GitHub کنکشن ناکام۔ براہ کرم انٹرنیٹ یا Token چیک کریں۔';
+            : '❌ GitHub کنکشن ناکام۔';
       });
     } catch (e) {
       setState(() {
@@ -235,36 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // 🔹 نیا: Gemini Key Format Validation
-  bool _validateGeminiFormat(String apiKey) {
-    // ✅ Gemini keys عام طور پر 39 حروف کی ہوتی ہیں اور 'AIza' سے شروع ہوتی ہیں
-    if (apiKey.length < 20) return false;
-    if (!apiKey.startsWith('AIza')) return false;
-    return true;
-  }
-
-  // 🔹 نیا: GitHub Token Format Validation
-  bool _validateGitHubFormat(String token) {
-    // ✅ GitHub tokens عام طور پر 40 حروف کے ہوتے ہیں
-    if (token.length < 10) return false;
-    return true;
-  }
-
-  // 🔹 نیا: Gemini Key کی مکمل validation
-  Future<bool> _validateGeminiKey(String apiKey) async {
-    if (!_validateGeminiFormat(apiKey)) return false;
-    
-    try {
-      return await _geminiService.testConnection();
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // 🔹 نیا: GitHub Token کی مکمل validation
   Future<bool> _validateGitHubToken(String token) async {
-    if (!_validateGitHubFormat(token)) return false;
-    
     try {
       return await _githubService.checkConnection();
     } catch (e) {
@@ -285,13 +286,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('🔑 Gemini API Key'),
-            _buildTextField(_geminiController, 'Gemini API Key درج کریں'),
+            _buildSectionTitle('🤖 AI Provider'),
+            _buildAIProviderDropdown(),
+            const SizedBox(height: 20),
+
+            if (!_showCustomUrlField) _buildSectionTitle('🔑 API Key'),
+            if (!_showCustomUrlField)
+              _buildTextField(_apiKeyController, '${_selectedProvider.name.toUpperCase()} API Key درج کریں'),
+            
+            if (_showCustomUrlField) _buildSectionTitle('🌐 Local API URL'),
+            if (_showCustomUrlField)
+              _buildTextField(_customUrlController, 'لوکل API URL (مثال: http://localhost:11434)'),
+
             const SizedBox(height: 8),
             _buildTestButton(
-              onPressed: _testGeminiConnection,
-              isLoading: _isTestingGemini,
-              label: 'Gemini کنکشن چیک کریں',
+              onPressed: _testAIConnection,
+              isLoading: _isTestingAI,
+              label: 'AI کنکشن چیک کریں',
             ),
             const SizedBox(height: 20),
 
@@ -306,20 +317,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 30),
 
-            // 🔘 Save Keys Button - اب کنفرمیشن مانگے گا
+            // 🔘 Save Settings Button
             _buildMainButton(
-              onPressed: _isSaving ? null : _saveKeys,
-              label: _isSaving ? 'محفوظ ہو رہا ہے...' : 'Keys محفوظ کریں',
+              onPressed: _isSaving ? null : _saveSettings,
+              label: _isSaving ? 'محفوظ ہو رہا ہے...' : 'Settings محفوظ کریں',
               icon: Icons.save,
               color: Colors.blue,
             ),
 
             const SizedBox(height: 10),
 
-            // 🗑️ Remove Keys Button - اب کنفرمیشن مانگے گا
+            // 🗑️ Remove Settings Button
             _buildMainButton(
-              onPressed: _removeKeys,
-              label: 'تمام Keys حذف کریں',
+              onPressed: _removeSettings,
+              label: 'تمام Settings حذف کریں',
               icon: Icons.delete,
               color: Colors.red,
             ),
@@ -383,16 +394,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // 🔹 نیا: معلومات کارڈ
+  Widget _buildAIProviderDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButton<AIProvider>(
+        value: _selectedProvider,
+        isExpanded: true,
+        underline: const SizedBox(),
+        items: AIProvider.values.map((provider) {
+          return DropdownMenuItem<AIProvider>(
+            value: provider,
+            child: Row(
+              children: [
+                _getProviderIcon(provider),
+                const SizedBox(width: 10),
+                Text(
+                  provider.name.toUpperCase(),
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (AIProvider? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _selectedProvider = newValue;
+              _showCustomUrlField = newValue == AIProvider.local;
+              _statusMessage = '';
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _getProviderIcon(AIProvider provider) {
+    switch (provider) {
+      case AIProvider.gemini:
+        return const Icon(Icons.g_mobiledata, color: Colors.blue);
+      case AIProvider.deepseek:
+        return const Icon(Icons.code, color: Colors.purple);
+      case AIProvider.openai:
+        return const Icon(Icons.chat_bubble, color: Colors.green);
+      case AIProvider.local:
+        return const Icon(Icons.computer, color: Colors.orange);
+      default:
+        return const Icon(Icons.auto_awesome);
+    }
+  }
+
   Widget _buildInfoCard() {
     return Card(
       color: Colors.blue[50],
-      child: const Padding(
-        padding: EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.info, color: Colors.blue),
                 SizedBox(width: 8),
@@ -402,10 +466,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 8),
-            Text('• Gemini API key "AIza" سے شروع ہونی چاہیے'),
-            Text('• GitHub Token کم از کم 10 حروف کا ہونا چاہیے'),
-            Text('• Keys محفوظ کرنے سے پہلے خودبخود validate ہوں گی'),
+            const SizedBox(height: 8),
+            Text('• Gemini: Google کے Gemini API کے لیے (مفت)'),
+            Text('• DeepSeek: DeepSeek AI کے لیے (مفت)'),
+            Text('• OpenAI: ChatGPT API کے لیے (ادائیگی)'),
+            Text('• Local: Ollama یا دوسرے لوکل APIs کے لیے'),
+            const SizedBox(height: 8),
+            Text('• لوکل API چلانے کے لیے Ollama انسٹال کریں'),
+            Text('• GitHub Token: repositories بنانے کے لیے'),
           ],
         ),
       ),
@@ -432,7 +500,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         prefixIcon: const Icon(Icons.vpn_key),
       ),
-      obscureText: true,
+      obscureText: hint.contains('API') || hint.contains('Token'),
     );
   }
 

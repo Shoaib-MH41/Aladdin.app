@@ -1,9 +1,11 @@
 // lib/screens/chat/chat_input.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';  // ✅ Clipboard کے لیے ضروری
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'chat_controller.dart';
+
 
 /// 📝 Chat Input Widget - گلیری سمیت مکمل input سیکشن
 class ChatInput extends StatelessWidget {

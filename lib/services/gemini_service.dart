@@ -18,7 +18,6 @@ class LinkHelper {
 }
 
 /// ✅ Universal AI Service - Gemini, DeepSeek, OpenAI, Local سب کے لیے
-/// ✅ آپ کی موجودہ تمام لوجک محفوظ رہے گی
 class GeminiService {
   // Settings keys
   static const String _providerKey = 'ai_provider';
@@ -240,7 +239,154 @@ Return only valid JSON.
       return _createFallbackDesign(prompt, componentType);
     }
   }
+  
+  /// 🎨 Generate Flutter Code from Design
+  Future<String> generateFlutterCode({
+    required Map<String, dynamic> designData,
+    bool includeComments = true,
+    bool addDependencies = true,
+  }) async {
+    await _initialization;
+    if (!_isInitialized) {
+      throw Exception('AI Service not initialized.');
+    }
 
+    try {
+      final designJson = json.encode(designData);
+      
+      final prompt = '''
+You are a senior Flutter developer. Convert this UI design JSON into complete, working Flutter code.
+
+DESIGN DATA:
+$designJson
+
+REQUIREMENTS:
+1. Generate COMPLETE, COMPILABLE Flutter code
+2. Use StatelessWidget for simple components
+3. Use StatefulWidget if interaction is needed
+4. Follow Flutter best practices
+5. ${includeComments ? 'Add helpful comments' : 'No comments needed'}
+6. ${addDependencies ? 'Add necessary imports' : 'Only core Flutter imports'}
+
+Return ONLY Flutter Dart code:
+''';
+
+      final response = await _model.generateContent([Content.text(prompt)]);
+      String generatedCode = response.text?.trim() ?? '';
+
+      if (generatedCode.isEmpty) {
+        throw Exception('AI نے کوئی کوڈ واپس نہیں کیا');
+      }
+
+      // Clean the code
+      generatedCode = generatedCode
+          .replaceAll(RegExp(r'```[a-z]*\n'), '')
+          .replaceAll('```', '')
+          .trim();
+
+      return generatedCode;
+
+    } catch (e) {
+      print('❌ Flutter Code Generation Failed: $e');
+      return _generateFallbackFlutterCode(designData);
+    }
+  }
+
+  /// 🎨 Generate UI Kit
+  Future<List<Map<String, dynamic>>> generateUIKit({
+    required String appTheme,
+    List<String> components = const ['button', 'card', 'textfield', 'appbar'],
+  }) async {
+    await _initialization;
+    if (!_isInitialized) {
+      throw Exception('AI Service not initialized.');
+    }
+
+    try {
+      final prompt = '''
+Generate a complete UI Kit for a $appTheme themed Flutter app.
+Include these components: ${components.join(', ')}.
+
+Return a JSON array where each element is a UI component design.
+''';
+
+      final response = await _model.generateContent([Content.text(prompt)]);
+      String rawResponse = response.text?.trim() ?? '[]';
+
+      // Clean JSON
+      String cleanJson = rawResponse
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+
+      List<Map<String, dynamic>> componentsList;
+      try {
+        final List<dynamic> parsed = json.decode(cleanJson);
+        componentsList = parsed.cast<Map<String, dynamic>>();
+      } catch (e) {
+        print('⚠️ Failed to parse UI Kit, using fallback');
+        componentsList = _generateFallbackUIKit(appTheme, components);
+      }
+
+      print('🎨 Generated UI Kit with ${componentsList.length} components');
+      return componentsList;
+
+    } catch (e) {
+      print('❌ UI Kit Generation Failed: $e');
+      return _generateFallbackUIKit(appTheme, components);
+    }
+  }
+
+  // Fallback methods
+  String _generateFallbackFlutterCode(Map<String, dynamic> design) {
+    final type = design['componentType'] ?? 'container';
+    final label = design['label'] ?? 'AI Generated';
+    
+    return '''
+import 'package:flutter/material.dart';
+
+class ${_toPascalCase(type)}Widget extends StatelessWidget {
+  final String label;
+  
+  const ${_toPascalCase(type)}Widget({
+    Key? key,
+    required this.label,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: EdgeInsets.all(16),
+      child: Center(
+        child: Text(label),
+      ),
+    );
+  }
+}
+''';
+  }
+
+  List<Map<String, dynamic>> _generateFallbackUIKit(String theme, List<String> components) {
+    return components.map((component) {
+      return {
+        'componentType': component,
+        'label': '$theme $component',
+        'style': {'backgroundColor': '#6366F1', 'borderRadius': 16.0},
+      };
+    }).toList();
+  }
+
+  String _toPascalCase(String input) {
+    if (input.isEmpty) return '';
+    return input[0].toUpperCase() + input.substring(1);
+  }
+}
   /// 🔹 Smart Debugging Helper (Universal)
   Future<String> debugCode({
     required String faultyCode,

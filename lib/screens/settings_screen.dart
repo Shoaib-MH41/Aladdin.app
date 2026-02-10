@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../services/universal_ai_service.dart';
+import '../services/gemini_service.dart'; // ✅ GeminiService استعمال کریں
 import '../services/github_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -23,7 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isTestingGitHub = false;
   String _statusMessage = '';
 
-  late UniversalAIService _aiService;
+  late GeminiService _aiService; // ✅ GeminiService
   final GitHubService _githubService = GitHubService();
   
   AIProvider _selectedProvider = AIProvider.gemini;
@@ -32,7 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _aiService = UniversalAIService();
+    _aiService = GeminiService(); // ✅ GeminiService instance
     _loadSettings();
   }
 
@@ -119,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
 
       try {
-        // Save AI Provider and API Key
+        // Save AI Provider and API Key using GeminiService
         await _aiService.changeProvider(
           _selectedProvider,
           apiKey: _selectedProvider != AIProvider.local ? _apiKeyController.text.trim() : null,
@@ -210,17 +210,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isTestingAI = true);
     
     try {
-      // Temporary service for testing
-      UniversalAIService testService;
+      // Temporary service for testing using GeminiService factory constructors
+      GeminiService testService;
       
       if (_selectedProvider == AIProvider.gemini) {
-        testService = UniversalAIService.gemini(apiKey: _apiKeyController.text.trim());
+        testService = GeminiService.gemini(apiKey: _apiKeyController.text.trim());
       } else if (_selectedProvider == AIProvider.deepseek) {
-        testService = UniversalAIService.deepseek(apiKey: _apiKeyController.text.trim());
+        testService = GeminiService.deepseek(apiKey: _apiKeyController.text.trim());
       } else if (_selectedProvider == AIProvider.openai) {
-        testService = UniversalAIService.openai(apiKey: _apiKeyController.text.trim());
+        testService = GeminiService.openai(apiKey: _apiKeyController.text.trim());
       } else {
-        testService = UniversalAIService.local(baseUrl: _customUrlController.text.trim());
+        testService = GeminiService.local(baseUrl: _customUrlController.text.trim());
       }
       
       final success = await testService.testConnection();

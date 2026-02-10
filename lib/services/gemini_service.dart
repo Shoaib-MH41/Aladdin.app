@@ -19,7 +19,6 @@ class LinkHelper {
 class GeminiService {
   static const String _apiKeyKey = 'gemini_api_key';
   late GenerativeModel _model;
-  late GenerativeModel _designerModel; // 🎨 Special Model for UI
   bool _isInitialized = false;
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -35,22 +34,9 @@ class GeminiService {
       final savedKey = await getSavedApiKey();
 
       if (savedKey != null && savedKey.isNotEmpty) {
-        // 1. General Chat Model
         _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: savedKey);
-
-        // 2. 🎨 Expert UI Designer Model (With System Instructions)
-        _designerModel = GenerativeModel(
-          model: 'gemini-1.5-flash',
-          apiKey: savedKey,
-          generationConfig: GenerationConfig(
-            responseMimeType: 'application/json', // Force JSON Output
-            temperature: 0.7, // تھوڑی تخلیقی صلاحیت کے لیے
-          ),
-          systemInstruction: Content.system(_uiSystemPrompt),
-        );
-
         _isInitialized = true;
-        print('✅ Gemini AI & Designer Models initialized successfully');
+        print('✅ Gemini model initialized successfully');
       } else {
         _isInitialized = false;
         print('⚠️ Gemini API key not found.');
@@ -99,70 +85,10 @@ class GeminiService {
   }
 
   // ==============================================================
-  // 🎨 GENERATIVE UI SYSTEM (The Magic Part)
+  // 🚀 CORE AI FUNCTIONS
   // ==============================================================
 
-  static const String _uiSystemPrompt = """
-    You are an expert Flutter UI/UX Designer and Frontend Architect.
-    Your Goal: Generate modern, premium, and aesthetically pleasing UI component data based on user input.
-    
-    DESIGN RULES:
-    1. Modernity: Always use modern trends like Glassmorphism, Neumorphism, or Soft UI.
-    2. Shapes: Prefer rounded corners (BorderRadius 20-30px).
-    3. Colors: Use gradients (LinearGradient) instead of flat colors where possible.
-    4. Shadows: Use soft, diffused box shadows (elevation).
-    5. Typography: Select readable and modern font weights.
-    
-    OUTPUT FORMAT:
-    You must return a SINGLE JSON object. Do not wrap in markdown blocks.
-    Structure:
-    {
-      "type": "The type of widget (e.g., ModernButton, InfoCard, GradientContainer)",
-      "data": {
-        "label": "Text content",
-        "icon": "Icon name (e.g., arrow_forward, home, star)",
-        "subLabel": "Secondary text if needed"
-      },
-      "style": {
-        "primaryColor": "Hex Code (e.g., #FF512F)",
-        "secondaryColor": "Hex Code (e.g., #DD2476)",
-        "borderRadius": 25.0,
-        "elevation": 8.0,
-        "isGlass": true/false (if glassmorphism is needed)
-      }
-    }
-  """;
-
-  /// 🔹 Generate Magic UI Design
-  Future<Map<String, dynamic>> generateModernUi(String userRequest) async {
-    await _initialization;
-    if (!_isInitialized) throw Exception('Gemini not initialized.');
-
-    try {
-      final prompt = "Create a modern UI design for: $userRequest";
-      final response = await _designerModel.generateContent([Content.text(prompt)]);
-      
-      final jsonString = response.text ?? "{}";
-      
-      // JSON Cleaning (just in case model adds markdown)
-      final cleanJson = jsonString.replaceAll('```json', '').replaceAll('```', '').trim();
-      
-      return json.decode(cleanJson) as Map<String, dynamic>;
-    } catch (e) {
-      print('❌ UI Generation Error: $e');
-      // Fallback UI in case of error
-      return {
-        "type": "ErrorCard",
-        "data": {"label": "Error generating UI", "subLabel": e.toString()},
-        "style": {"primaryColor": "#FF0000", "borderRadius": 12.0}
-      };
-    }
-  }
-
-  // ==============================================================
-  // 🚀 CORE AI FUNCTIONS (Existing Logic)
-  // ==============================================================
-
+  /// 🔹 General Code Generation
   Future<String> generateCode({
     required String prompt,
     required String framework,
@@ -175,12 +101,18 @@ class GeminiService {
       String frameworkPrompt = _buildFrameworkPrompt(prompt, framework, platforms);
       final response = await _model.generateContent([Content.text(frameworkPrompt)]);
       String generatedCode = response.text?.trim() ?? '';
+
+      if (generatedCode.isEmpty) {
+        throw Exception('AI نے کوئی کوڈ واپس نہیں کیا، دوبارہ کوشش کریں۔');
+      }
+
       return _cleanGeneratedCode(generatedCode, framework);
     } catch (e) {
-      throw Exception('Code generation failed: $e');
+      throw Exception('کوڈ جنریشن ناکام: $e');
     }
   }
 
+  /// 🔹 Smart Debugging Helper
   Future<String> debugCode({
     required String faultyCode,
     required String errorDescription,
@@ -188,14 +120,192 @@ class GeminiService {
     required String originalPrompt,
   }) async {
     await _initialization;
-    if (!_isInitialized) throw Exception('Gemini service not initialized.');
+    if (!_isInitialized) {
+      throw Exception('Gemini service not initialized.');
+    }
 
     try {
-      final debugPrompt = "Fix this code ($framework): \n$faultyCode\n Error: $errorDescription";
+      final debugPrompt = """
+You are a senior $framework developer and debugging assistant.
+Your task is to fix the given code strictly based on the context and error details.
+
+ORIGINAL PROMPT: $originalPrompt
+
+FAULTY CODE:
+$faultyCode
+
+ERROR / ISSUE:
+$errorDescription
+
+OBJECTIVE:
+- Correct the error and make the code functional.
+- Preserve all existing logic, structure, and comments.
+- Use proper $framework best practices.
+
+OUTPUT RULES:
+- Return ONLY the corrected code (no markdown, no explanation).
+- Ensure the code compiles successfully.
+- Do not include backticks or JSON wrappers.
+""";
+
       final response = await _model.generateContent([Content.text(debugPrompt)]);
-      return _cleanGeneratedCode(response.text?.trim() ?? faultyCode, framework);
+      String fixedCode = response.text?.trim() ?? faultyCode;
+      return _cleanGeneratedCode(fixedCode, framework);
     } catch (e) {
-      throw Exception('Debugging failed: $e');
+      throw Exception('ڈیبگنگ ناکام: $e');
+    }
+  }
+
+  // ==============================================================
+  // 🔍 SMART API SUGGESTION SYSTEM
+  // ==============================================================
+
+  /// 🔹 Get AI-based API Suggestion
+  Future<Map<String, dynamic>?> getApiSuggestion(String category) async {
+    await _initialization;
+    if (!_isInitialized) {
+      throw Exception('Gemini service not initialized. Please set your API key.');
+    }
+
+    try {
+      final prompt = """
+You are an AI assistant that suggests API websites for app developers.
+Given the category: "$category"
+Find a suitable API service provider or console that offers APIs in this category.
+
+Return only one result in JSON format:
+{
+  "name": "Provider or Platform Name",
+  "url": "https://example.com",
+  "note": "Short instruction for how to get API key or use it."
+}
+
+Return only valid JSON, no additional text.
+""";
+
+      final response = await _model.generateContent([Content.text(prompt)]);
+      final text = response.text ?? '';
+      
+      // بہتر JSON parsing
+      String cleanText = text.replaceAll('```json', '').replaceAll('```', '').trim();
+      
+      // JSON extract کریں
+      try {
+        final data = json.decode(cleanText) as Map<String, dynamic>;
+        print('✅ AI Suggested API: ${data['name']}');
+        return data;
+      } catch (e) {
+        // اگر JSON نہیں ملا تو text سے extract کریں
+        final jsonMatch = RegExp(r'\{[^{}]*\}').firstMatch(cleanText);
+        if (jsonMatch != null) {
+          final data = json.decode(jsonMatch.group(0)!) as Map<String, dynamic>;
+          return data;
+        }
+        throw Exception('AI نے صحیح JSON نہیں دیا');
+      }
+    } catch (e) {
+      print('⚠️ Error in getApiSuggestion: $e');
+      return _getFallbackSuggestion(category);
+    }
+  }
+
+  /// 🔹 Fallback suggestions if AI fails
+  Map<String, dynamic>? _getFallbackSuggestion(String category) {
+    final fallbacks = {
+      'ai': {
+        'name': 'OpenAI API',
+        'url': 'https://platform.openai.com/api-keys',
+        'note': 'Create account and generate API key'
+      },
+      'firebase': {
+        'name': 'Google Firebase',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Create project and enable APIs'
+      },
+      'weather': {
+        'name': 'OpenWeather Map',
+        'url': 'https://openweathermap.org/api',
+        'note': 'Free tier available with signup'
+      },
+      'authentication': {
+        'name': 'Firebase Auth',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Authentication in Firebase Console'
+      },
+      'database': {
+        'name': 'Firebase Firestore',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Firestore in Firebase Console'
+      }
+    };
+    
+    final key = category.toLowerCase();
+    return fallbacks[key] ?? fallbacks['ai'];
+  }
+
+  // ==============================================================
+  // 🧠 GUIDE SYSTEM
+  // ==============================================================
+
+  /// 🔹 Firebase Authentication Guide
+  Future<String> getFirebaseAuthGuide() async {
+    await _initialization;
+    final prompt = """
+Explain step-by-step how to add Firebase Authentication to a Flutter app.
+Include:
+1. How to open Firebase Console
+2. How to register Android App
+3. Where to place google-services.json
+4. Which dependencies to use
+5. Simple example code for Email/Password login
+""";
+    final response = await _model.generateContent([Content.text(prompt)]);
+    return response.text ?? 'Guide unavailable.';
+  }
+
+  /// 🔹 Firebase Firestore Database Guide
+  Future<String> getFirebaseDatabaseGuide() async {
+    await _initialization;
+    final prompt = """
+Explain step-by-step how to connect Firebase Firestore in Flutter.
+Include:
+1. Enabling Firestore in Firebase Console
+2. Dependencies to add
+3. Example of Add & Read Data in Flutter
+""";
+    final response = await _model.generateContent([Content.text(prompt)]);
+    return response.text ?? 'Guide unavailable.';
+  }
+
+  // ==============================================================
+  // 🔗 Gemini Link Generator
+  // ==============================================================
+
+  Future<String> generateGeminiLink(String topic, {bool open = false}) async {
+    final key = await getSavedApiKey();
+    if (key == null || key.isEmpty) throw Exception('Gemini API key not found.');
+
+    final encodedPrompt = Uri.encodeComponent(topic);
+    final link = "https://aistudio.google.com/app/prompts/new?prompt=$encodedPrompt";
+
+    if (open) await LinkHelper.openLink(link);
+    return link;
+  }
+
+  // ==============================================================
+  // 🔍 Connection Test
+  // ==============================================================
+
+  Future<bool> testConnection() async {
+    await _initialization;
+    if (!_isInitialized) return false;
+
+    try {
+      final response = await _model.generateContent([Content.text("Say only: OK")]);
+      return response.text?.toLowerCase().contains("ok") ?? false;
+    } catch (e) {
+      print('⚠️ Gemini connection test failed: $e');
+      return false;
     }
   }
 
@@ -204,7 +314,35 @@ class GeminiService {
   // ==============================================================
 
   String _buildFrameworkPrompt(String userPrompt, String framework, List<String> platforms) {
-    return "Generate $framework code for: $userPrompt. Platforms: ${platforms.join(', ')}. Return ONLY code.";
+    final platformList = platforms.join(', ');
+
+    switch (framework.toLowerCase()) {
+      case 'react':
+        return """
+Generate COMPLETE React code for: $userPrompt
+Platforms: $platformList
+Use hooks and responsive layout.
+RETURN ONLY CODE.
+""";
+      case 'vue':
+        return """
+Generate COMPLETE Vue code for: $userPrompt
+Platforms: $platformList
+RETURN ONLY CODE.
+""";
+      case 'html':
+        return """
+Generate COMPLETE HTML/JS/CSS webpage for: $userPrompt
+Platforms: $platformList
+RETURN ONLY CODE.
+""";
+      default:
+        return """
+Generate COMPLETE Flutter code for: $userPrompt
+Platforms: $platformList
+RETURN ONLY CODE.
+""";
+    }
   }
 
   String _cleanGeneratedCode(String code, String framework) {

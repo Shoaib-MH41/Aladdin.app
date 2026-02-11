@@ -1,14 +1,13 @@
 // lib/screens/chat/chat_input.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';  // ✅ Clipboard کے لیے ضروری
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'chat_controller.dart';
 
-
-/// 📝 Chat Input Widget - گلیری سمیت مکمل input سیکشن
-class ChatInput extends StatelessWidget {
+/// 📝 Chat Input Widget - WhatsApp/ChatGPT style
+class ChatInput extends StatefulWidget {
   final ChatController controller;
   final VoidCallback onSend;
   final Function(String fileName, String? content) onFileUploaded;
@@ -19,6 +18,19 @@ class ChatInput extends StatelessWidget {
     required this.onSend,
     required this.onFileUploaded,
   });
+
+  @override
+  State<ChatInput> createState() => _ChatInputState();
+}
+
+class _ChatInputState extends State<ChatInput> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +49,8 @@ class ChatInput extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 🔥 گلیری اور ٹولز کا row
-            _buildToolsRow(context),
+            // 🔥 + بٹن (اب صرف BottomSheet کھولے گا)
+            _buildAttachmentButton(context),
             
             SizedBox(height: 8),
             
@@ -61,7 +73,8 @@ class ChatInput extends StatelessWidget {
                         SizedBox(width: 16),
                         Expanded(
                           child: TextField(
-                            controller: controller.textController,
+                            controller: widget.controller.textController,
+                            focusNode: _focusNode,
                             style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontSize: 14,
@@ -75,7 +88,7 @@ class ChatInput extends StatelessWidget {
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(vertical: 12),
                             ),
-                            onSubmitted: (_) => onSend(),
+                            onSubmitted: (_) => widget.onSend(),
                             maxLines: 5,
                             minLines: 1,
                             textInputAction: TextInputAction.send,
@@ -83,12 +96,12 @@ class ChatInput extends StatelessWidget {
                         ),
                         // Clear button
                         ValueListenableBuilder<TextEditingValue>(
-                          valueListenable: controller.textController,
+                          valueListenable: widget.controller.textController,
                           builder: (context, value, child) {
                             if (value.text.isNotEmpty) {
                               return IconButton(
                                 icon: Icon(Icons.clear, color: Colors.white70, size: 20),
-                                onPressed: () => controller.textController.clear(),
+                                onPressed: () => widget.controller.textController.clear(),
                               );
                             }
                             return SizedBox.shrink();
@@ -109,108 +122,200 @@ class ChatInput extends StatelessWidget {
     );
   }
 
-  /// 🔧 Tools Row - گلیری، کیمرہ، فائل
-  Widget _buildToolsRow(BuildContext context) {
+  /// ➕ Attachment Button - صرف BottomSheet کھولے گا
+  Widget _buildAttachmentButton(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showAttachmentMenu(context),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, color: Color(0xFF8B5CF6), size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'منسلکات',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 📎 Attachment Menu BottomSheet
+  Future<void> _showAttachmentMenu(BuildContext context) async {
+    // 1. پہلے keyboard بند کریں
+    _focusNode.unfocus();
+    FocusScope.of(context).unfocus();
+    
+    // 2. تھوڑا انتظار کریں تاکہ keyboard بند ہو جائے
+    await Future.delayed(Duration(milliseconds: 200));
+    
+    // 3. اب BottomSheet کھولیں
+    if (!mounted) return;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,  // ✅ Important
+      useSafeArea: true,         // ✅ Important
+      builder: (context) => _buildAttachmentBottomSheet(context),
+    );
+  }
+
+  /// 📋 Attachment BottomSheet Content
+  Widget _buildAttachmentBottomSheet(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0xFF0F172A),
+        color: Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 📷 Gallery / Image
-          _buildToolButton(
+          // Handle bar
+          Container(
+            margin: EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(height: 20),
+          
+          Text(
+            'منسلک کریں',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 16),
+          
+          Divider(color: Colors.white.withOpacity(0.1)),
+          
+          // 📷 Gallery Option
+          _buildAttachmentOption(
             icon: Icons.image,
             color: Color(0xFF10B981),
-            onTap: () => _pickImage(context, ImageSource.gallery),
-            tooltip: 'گیلری سے تصویر',
-          ),
-          
-          // 📸 Camera
-          _buildToolButton(
-            icon: Icons.camera_alt,
-            color: Color(0xFF0EA5E9),
-            onTap: () => _pickImage(context, ImageSource.camera),
-            tooltip: 'کیمرہ',
-          ),
-          
-          // 📎 File Attachment
-          _buildToolButton(
-            icon: Icons.attach_file,
-            color: Color(0xFF8B5CF6),
-            onTap: () => _attachFile(context),
-            tooltip: 'فائل منسلک کریں',
-          ),
-          
-          // 📋 Paste
-          _buildToolButton(
-            icon: Icons.paste,
-            color: Color(0xFFF59E0B),
-            onTap: () => _pasteFromClipboard(context),
-            tooltip: 'پیسٹ',
-          ),
-          
-          // 🎨 Magic Design (اگر text موجود ہو)
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller.textController,
-            builder: (context, value, child) {
-              if (value.text.isNotEmpty) {
-                return _buildToolButton(
-                  icon: Icons.auto_awesome,
-                  color: Color(0xFFEC4899),
-                  onTap: controller.isGeneratingUI ? null : controller.generateUIDesign,
-                  tooltip: 'Magic Design',
-                  isLoading: controller.isGeneratingUI,
-                );
-              }
-              return SizedBox.shrink();
+            title: 'گیلری سے تصویر',
+            subtitle: 'فون کی گیلری سے منتخب کریں',
+            onTap: () {
+              Navigator.pop(context);
+              _pickImage(context, ImageSource.gallery);
             },
           ),
+          
+          // 📸 Camera Option
+          _buildAttachmentOption(
+            icon: Icons.camera_alt,
+            color: Color(0xFF0EA5E9),
+            title: 'کیمرہ',
+            subtitle: 'نئی تصویر کھینچیں',
+            onTap: () {
+              Navigator.pop(context);
+              _pickImage(context, ImageSource.camera);
+            },
+          ),
+          
+          // 🎥 Video Option
+          _buildAttachmentOption(
+            icon: Icons.videocam,
+            color: Color(0xFFEF4444),
+            title: 'ویڈیو',
+            subtitle: 'ویڈیو منتخب کریں',
+            onTap: () {
+              Navigator.pop(context);
+              _pickVideo(context);
+            },
+          ),
+          
+          // 📄 File Option
+          _buildAttachmentOption(
+            icon: Icons.insert_drive_file,
+            color: Color(0xFF8B5CF6),
+            title: 'فائل',
+            subtitle: 'کوئی بھی فائل منتخب کریں',
+            onTap: () {
+              Navigator.pop(context);
+              _pickFile(context);
+            },
+          ),
+          
+          // 📋 Paste Option
+          _buildAttachmentOption(
+            icon: Icons.paste,
+            color: Color(0xFFF59E0B),
+            title: 'پیسٹ',
+            subtitle: 'کلپ بورڈ سے پیسٹ کریں',
+            onTap: () {
+              Navigator.pop(context);
+              _pasteFromClipboard(context);
+            },
+          ),
+          
+          SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  /// 🔘 Individual Tool Button
-  Widget _buildToolButton({
+  /// 🎯 Individual Attachment Option
+  Widget _buildAttachmentOption({
     required IconData icon,
     required Color color,
-    required VoidCallback? onTap,
-    required String tooltip,
-    bool isLoading = false,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
   }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
+    return ListTile(
+      leading: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
           borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 40,
-            height: 40,
-            margin: EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: isLoading
-                ? Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: color,
-                      ),
-                    ),
-                  )
-                : Icon(icon, color: color, size: 20),
-          ),
+        ),
+        child: Icon(icon, color: color, size: 24),
+      ),
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
+      subtitle: Text(
+        subtitle,
+        style: GoogleFonts.poppins(
+          color: Colors.white.withOpacity(0.6),
+          fontSize: 12,
+        ),
+      ),
+      onTap: onTap,
     );
   }
 
@@ -235,12 +340,12 @@ class ChatInput extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: controller.isAIThinking ? null : onSend,
+          onTap: widget.controller.isAIThinking ? null : widget.onSend,
           borderRadius: BorderRadius.circular(30),
           child: Container(
             width: 48,
             height: 48,
-            child: controller.isAIThinking
+            child: widget.controller.isAIThinking
                 ? SizedBox(
                     width: 20,
                     height: 20,
@@ -256,7 +361,7 @@ class ChatInput extends StatelessWidget {
     );
   }
 
-  /// 📷 Pick Image from Gallery/Camera
+  /// 📷 Pick Image
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     try {
       final picker = ImagePicker();
@@ -271,11 +376,7 @@ class ChatInput extends StatelessWidget {
         final file = File(pickedFile.path);
         final fileName = pickedFile.name;
         
-        // Show preview in chat
-        onFileUploaded(fileName, null);
-        
-        // You can also read image bytes if needed
-        // final bytes = await file.readAsBytes();
+        widget.onFileUploaded(fileName, null);
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -295,47 +396,45 @@ class ChatInput extends StatelessWidget {
     }
   }
 
-  /// 📎 Attach File
-  void _attachFile(BuildContext context) {
-    // Implement file picker
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        margin: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(20),
+  /// 🎥 Pick Video
+  Future<void> _pickVideo(BuildContext context) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: Duration(minutes: 5),
+      );
+
+      if (pickedFile != null) {
+        final file = File(pickedFile.path);
+        final fileName = pickedFile.name;
+        
+        widget.onFileUploaded(fileName, null);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎥 ویڈیو منسلک ہو گئی: $fileName'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ ویڈیو منتخب کرنے میں خرابی: $e'),
+          backgroundColor: Colors.red,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.image, color: Color(0xFF10B981)),
-              title: Text('تصویر', style: GoogleFonts.poppins(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(context, ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.videocam, color: Color(0xFFEF4444)),
-              title: Text('ویڈیو', style: GoogleFonts.poppins(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                // Video picker
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.insert_drive_file, color: Color(0xFF8B5CF6)),
-              title: Text('فائل', style: GoogleFonts.poppins(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                // File picker
-              },
-            ),
-          ],
-        ),
+      );
+    }
+  }
+
+  /// 📄 Pick File
+  Future<void> _pickFile(BuildContext context) async {
+    // TODO: Implement file_picker package
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('📄 فائل پیکر جلد آرہا ہے'),
+        backgroundColor: Color(0xFF8B5CF6),
       ),
     );
   }
@@ -345,15 +444,14 @@ class ChatInput extends StatelessWidget {
     try {
       final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
       if (clipboardData?.text != null) {
-        final currentText = controller.textController.text;
+        final currentText = widget.controller.textController.text;
         final newText = currentText.isEmpty 
             ? clipboardData!.text! 
             : '$currentText\n${clipboardData!.text}';
         
-        controller.textController.text = newText;
+        widget.controller.textController.text = newText;
         
-        // Move cursor to end
-        controller.textController.selection = TextSelection.fromPosition(
+        widget.controller.textController.selection = TextSelection.fromPosition(
           TextPosition(offset: newText.length),
         );
         

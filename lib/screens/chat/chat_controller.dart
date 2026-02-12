@@ -8,6 +8,11 @@ import '../../services/gemini_service.dart';
 import '../../services/github_service.dart';
 import '../../services/ai_api_finder.dart';
 
+// ✅ سکرینز کے imports
+import '../build_screen.dart';
+import '../api_discovery_screen.dart';
+import '../api_integration_screen.dart';
+
 /// 🎯 Chat Controller - تمام logic اور state مینجمنٹ
 class ChatController extends ChangeNotifier {
   final GeminiService geminiService;
@@ -70,7 +75,6 @@ class ChatController extends ChangeNotifier {
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
-    // Add user message
     final userMsg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       sender: "user",
@@ -84,7 +88,6 @@ class ChatController extends ChangeNotifier {
     textController.clear();
     notifyListeners();
     
-    // Auto scroll
     scrollToBottom();
 
     try {
@@ -128,7 +131,6 @@ $text
       notifyListeners();
       scrollToBottom();
 
-      // Save to GitHub if valid
       if (_isValidCode(generatedCode)) {
         await _saveToGitHub(generatedCode);
       }
@@ -191,7 +193,6 @@ $text
       showDesignPreview = true;
       isGeneratingUI = false;
 
-      // Add design message
       final designMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         sender: "ai",
@@ -239,7 +240,6 @@ $text
       notifyListeners();
       scrollToBottom();
 
-      // Save to GitHub
       await _saveToGitHub(flutterCode);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -350,7 +350,7 @@ ${lastAIMessage.text}
     }
   }
 
-  /// 🔹 Discover APIs
+  /// 🔹 Discover APIs - ✅ براہ راست ApiDiscoveryScreen
   Future<void> discoverApis(BuildContext context) async {
     if (isAIThinking) return;
 
@@ -372,11 +372,15 @@ ${lastAIMessage.text}
         appName: project.name,
       );
 
-      // Navigate to API discovery screen
-      Navigator.pushNamed(
+      // ✅ براہ راست ApiDiscoveryScreen کھولیں
+      Navigator.push(
         context,
-        '/api-discovery',
-        arguments: {'apis': discoveredApis, 'project': project.name},
+        MaterialPageRoute(
+          builder: (context) => ApiDiscoveryScreen(
+            discoveredApis: discoveredApis,
+            projectName: project.name,
+          ),
+        ),
       );
 
     } catch (e) {
@@ -387,7 +391,42 @@ ${lastAIMessage.text}
     }
   }
 
-  /// 🔹 View Generated Code
+  /// 🔹 Start API Integration - ✅ براہ راست ApiIntegrationScreen
+  void startApiIntegration(BuildContext context, ApiTemplate apiTemplate) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ApiIntegrationScreen(
+          apiTemplate: apiTemplate,
+          onApiKeySubmitted: (apiKey) {
+            _handleApiKeySubmission(apiTemplate, apiKey);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 🔹 Handle API Key Submission
+  void _handleApiKeySubmission(ApiTemplate apiTemplate, String apiKey) {
+    String prompt = """
+میں نے ${apiTemplate.name} کی API key جمع کرا دی ہے۔
+براہ کرم ${apiTemplate.provider} API کے ساتھ مکمل کوڈ بنائیں۔
+
+API Key: $apiKey
+API URL: ${apiTemplate.url}
+
+ہدایات:
+1. مکمل functional app بنائیں
+2. API integration شامل کریں
+3. Error handling شامل کریں
+4. Modern UI design استعمال کریں
+5. صرف کوڈ لوٹائیں
+""";
+
+    sendMessage(prompt);
+  }
+
+  /// 🔹 View Generated Code - ✅ براہ راست BuildScreen
   void viewGeneratedCode(BuildContext context) {
     if (messages.isEmpty) return;
 
@@ -402,14 +441,16 @@ ${lastAIMessage.text}
       ),
     );
 
-    Navigator.pushNamed(
+    // ✅ براہ راست BuildScreen کھولیں
+    Navigator.push(
       context,
-      '/build',
-      arguments: {
-        'code': lastAIMessage.text,
-        'projectName': project.name,
-        'framework': project.framework,
-      },
+      MaterialPageRoute(
+        builder: (context) => BuildScreen(
+          generatedCode: lastAIMessage.text,
+          projectName: project.name,
+          framework: project.framework,
+        ),
+      ),
     );
   }
 

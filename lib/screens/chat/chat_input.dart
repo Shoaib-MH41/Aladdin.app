@@ -409,7 +409,7 @@ class _ChatInputState extends State<ChatInput> {
        final file = File(pickedFile.path);
        final fileName = pickedFile.name;
 
-       widget.onFileUploaded(fileName, file);
+       widget.onFileUploaded(fileName, null);
 
        if (!mounted) return;
 

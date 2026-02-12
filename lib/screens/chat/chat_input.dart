@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart'; // ✅ نیا پیکیج
 import 'chat_controller.dart';
 
 /// 📝 Chat Input Widget - WhatsApp/ChatGPT style
@@ -241,15 +242,15 @@ class _ChatInputState extends State<ChatInput> {
             },
           ),
           
-          // 🎥 Video Option
+          // 🎵 Audio Option (ویڈیو کی جگہ آڈیو)
           _buildAttachmentOption(
-            icon: Icons.videocam,
+            icon: Icons.mic,
             color: Color(0xFFEF4444),
-            title: 'ویڈیو',
-            subtitle: 'ویڈیو منتخب کریں',
+            title: 'آڈیو میسج',
+            subtitle: 'وائس میسج ریکارڈ یا منتخب کریں',
             onTap: () {
               Navigator.pop(context);
-              _pickVideo(context);
+              _pickAudio(context); // ✅ نیا فنکشن
             },
           ),
           
@@ -261,7 +262,7 @@ class _ChatInputState extends State<ChatInput> {
             subtitle: 'کوئی بھی فائل منتخب کریں',
             onTap: () {
               Navigator.pop(context);
-              _pickFile(context);
+              _pickFile(context); // ✅ اب یہ کام کرے گا
             },
           ),
           
@@ -396,50 +397,72 @@ class _ChatInputState extends State<ChatInput> {
     }
   }
 
-  /// 🎥 Pick Video
-  Future<void> _pickVideo(BuildContext context) async {
+  /// 🎵 Pick Audio (نیا فنکشن - ویڈیو کی جگہ)
+  Future<void> _pickAudio(BuildContext context) async {
     try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickVideo(
-        source: ImageSource.gallery,
-        maxDuration: Duration(minutes: 5),
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.audio, // ✅ صرف آڈیو فائلیں
+        allowMultiple: false,
       );
 
-      if (pickedFile != null) {
-       final file = File(pickedFile.path);
-       final fileName = pickedFile.name;
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        final fileName = result.files.single.name;
+        
+        widget.onFileUploaded(fileName, null);
+        
+        if (!mounted) return;
 
-       widget.onFileUploaded(fileName, null);
-
-       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(
-         content: Text('📷 تصویر منسلک ہو گئی: $fileName'),
-         backgroundColor: Colors.green,
-         duration: Duration(seconds: 2),
-        ),
-      );
-     }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎵 آڈیو منسلک ہو گئی: $fileName'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ ویڈیو منتخب کرنے میں خرابی: $e'),
+          content: Text('❌ آڈیو منتخب کرنے میں خرابی: $e'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  /// 📄 Pick File
+  /// 📄 Pick File (مکمل شدہ فنکشن)
   Future<void> _pickFile(BuildContext context) async {
-    // TODO: Implement file_picker package
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('📄 فائل پیکر جلد آرہا ہے'),
-        backgroundColor: Color(0xFF8B5CF6),
-      ),
-    );
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        final fileName = result.files.single.name;
+        
+        widget.onFileUploaded(fileName, null);
+        
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('📄 فائل منسلک ہو گئی: $fileName'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ فائل منتخب کرنے میں خرابی: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   /// 📋 Paste from Clipboard

@@ -178,43 +178,45 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
   }
 
   /// 🔌 API Integration Screen کھولیں (نیا فنکشن)
-  void _openApiIntegration(BuildContext context) {
-    // ✅ مثال کے طور پر ایک API Template بنائیں
-    // آپ اپنے پروجیکٹ کے مطابق اسے تبدیل کر سکتے ہیں
-    final apiTemplate = ApiTemplate(
-      name: 'OpenAI API',
-      provider: 'OpenAI',
-      category: 'AI/ML',
-      description: 'AI chat اور text generation کے لیے',
-      url: 'https://platform.openai.com',
-      keyRequired: true,
-      freeTierInfo: 'مفت ٹائر دستیاب ہے',
-    );
+  /// 🔌 API Integration Screen کھولیں (نیا فنکشن)
+void _openApiIntegration(BuildContext context) {
+  // ✅ درست ApiTemplate بنائیں (id شامل)
+  final apiTemplate = ApiTemplate(
+    id: 'openai_api_001',  // ✅ لائن 184 - یہ ID ضروری ہے
+    name: 'OpenAI API',
+    provider: 'OpenAI',
+    category: 'AI/ML',
+    description: 'AI chat اور text generation کے لیے',
+    url: 'https://platform.openai.com',
+    keyRequired: true,
+    freeTierInfo: 'مفت ٹائر دستیاب ہے',
+  );
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ApiIntegrationScreen(
-          apiTemplate: apiTemplate,
-          onApiKeySubmitted: (apiKey) {
-            // ✅ API Key ملنے پر کیا کرنا ہے
-            print('API Key موصول: $apiKey');
-            
-            // چیٹ میں میسج بھیجیں
-            final prompt = "API Key شامل کی گئی: ${apiTemplate.name}\nKey: ${apiKey.isNotEmpty ? '***' : 'خالی'}";
-            _controller.textController.text = prompt;
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('✅ API Key کامیابی سے شامل ہو گئی'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          },
-        ),
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ApiIntegrationScreen(
+        apiTemplate: apiTemplate,
+        onApiKeySubmitted: (apiKey) {
+          // ✅ API Key ملنے پر کیا کرنا ہے
+          print('API Key موصول: $apiKey');
+          
+          // چیٹ میں میسج بھیجیں
+          final prompt = "API Key شامل کی گئی: ${apiTemplate.name}\nKey: ${apiKey.isNotEmpty ? '***' : 'خالی'}";
+          _controller.textController.text = prompt;
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ API Key کامیابی سے شامل ہو گئی'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   /// 📋 Popup Menu
   Widget _buildPopupMenu() {

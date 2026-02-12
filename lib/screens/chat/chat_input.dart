@@ -406,18 +406,21 @@ class _ChatInputState extends State<ChatInput> {
       );
 
       if (pickedFile != null) {
-        final file = File(pickedFile.path);
-        final fileName = pickedFile.name;
-        
-        widget.onFileUploaded(fileName, null);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎥 ویڈیو منسلک ہو گئی: $fileName'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+       final file = File(pickedFile.path);
+       final fileName = pickedFile.name;
+
+       widget.onFileUploaded(fileName, file);
+
+       if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(
+         content: Text('📷 تصویر منسلک ہو گئی: $fileName'),
+         backgroundColor: Colors.green,
+         duration: Duration(seconds: 2),
+        ),
+      );
+     }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -5,17 +5,22 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/project_model.dart';
 import '../../services/gemini_service.dart';
 import '../../services/github_service.dart';
+
+// ✅ تمام 6 فائلوں کے imports
 import 'chat_controller.dart';
 import 'chat_input.dart';
 import 'chat_message.dart';
+import 'chat_ad_manager.dart';      // ✅ نیا
+import 'chat_file_manager.dart';    // ✅ نیا
+import 'ui_design_preview.dart';    // ✅ نیا
 
 /// 🏠 Main Chat Screen - صرف UI اور Scaffold
-class ChatMainScreen extends StatefulWidget {  // ✅ ChatScreen → ChatMainScreen
+class ChatMainScreen extends StatefulWidget {
   final GeminiService geminiService;
   final GitHubService githubService;
   final Project project;
 
-  const ChatMainScreen({  // ✅ ChatScreen → ChatMainScreen
+  const ChatMainScreen({
     super.key,
     required this.geminiService,
     required this.githubService,
@@ -23,11 +28,15 @@ class ChatMainScreen extends StatefulWidget {  // ✅ ChatScreen → ChatMainScr
   });
 
   @override
-  State<ChatMainScreen> createState() => _ChatMainScreenState();  // ✅ _ChatScreenState → _ChatMainScreenState
+  State<ChatMainScreen> createState() => _ChatMainScreenState();
 }
 
-class _ChatMainScreenState extends State<ChatMainScreen> {  // ✅ _ChatScreenState → _ChatMainScreenState
+class _ChatMainScreenState extends State<ChatMainScreen> {
   late ChatController _controller;
+  
+  // ✅ نئے managers
+  late ChatAdManager _adManager;
+  late ChatFileManager _fileManager;
 
   @override
   void initState() {
@@ -38,6 +47,24 @@ class _ChatMainScreenState extends State<ChatMainScreen> {  // ✅ _ChatScreenSt
       project: widget.project,
     );
     _controller.addListener(_onControllerUpdate);
+    
+    // ✅ managers initialize کریں
+    _adManager = ChatAdManager(
+      geminiService: widget.geminiService,
+      project: widget.project,
+      onCampaignCreated: (campaign) {
+        widget.project.addAdCampaign(campaign);
+      },
+    );
+    
+    _fileManager = ChatFileManager(
+      geminiService: widget.geminiService,
+      project: widget.project,
+      onFileUploaded: (fileName, content) {
+        final prompt = "فائل منسلک: $fileName\n${content ?? ''}";
+        _controller.textController.text = prompt;
+      },
+    );
   }
 
   void _onControllerUpdate() {
@@ -80,12 +107,14 @@ class _ChatMainScreenState extends State<ChatMainScreen> {  // ✅ _ChatScreenSt
               if (_controller.isAIThinking)
                 _buildThinkingIndicator(),
               
+              // ✅ File Upload Section (اب کام کرے گا)
+              _fileManager.buildFileUploadButtons(context),
+              
               // Chat Input with Gallery
               ChatInput(
                 controller: _controller,
                 onSend: () => _controller.sendMessage(_controller.textController.text),
                 onFileUploaded: (fileName, content) {
-                  // Handle file upload
                   final prompt = "فائل منسلک: $fileName\n${content ?? ''}";
                   _controller.textController.text = prompt;
                 },
@@ -359,7 +388,7 @@ class _ChatMainScreenState extends State<ChatMainScreen> {  // ✅ _ChatScreenSt
     );
   }
 
-  /// 🎨 Design Preview Panel
+  /// 🎨 Design Preview Panel - ✅ UIDesignPreview استعمال کریں
   Widget _buildDesignPreview() {
     return Container(
       margin: EdgeInsets.all(16),
@@ -393,21 +422,8 @@ class _ChatMainScreenState extends State<ChatMainScreen> {  // ✅ _ChatScreenSt
             ],
           ),
           SizedBox(height: 12),
-          // Design preview content here
-          Container(
-            height: 150,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Icon(Icons.design_services, size: 48, color: Colors.white),
-            ),
-          ),
+          // ✅ UIDesignPreview استعمال کریں
+          UIDesignPreview(designData: _controller.latestUIDesign!),
           SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => _controller.convertDesignToCode(context),

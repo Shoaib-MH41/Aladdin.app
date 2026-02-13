@@ -1,13 +1,15 @@
+// lib/screens/upload_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:lottie/lottie.dart';
 import '../models/project_model.dart';
 
 class UploadScreen extends StatefulWidget {
-  const UploadScreen({super.key});
+  final Project? project;  // ✅ یہ شامل کریں
+  
+  const UploadScreen({super.key, this.project});  // ✅ یہ درست کریں
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
@@ -22,6 +24,34 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isPicking = false;
   bool _isUploading = false;
   String _currentOperation = '';
+
+  // ... باقی سارا کوڈ ویسے ہی رہے گا ...
+  
+  @override
+  Widget build(BuildContext context) {
+    // ✅ پروجیکٹ حاصل کرنے کا بہتر طریقہ
+    final Project project;
+    
+    if (widget.project != null) {
+      project = widget.project!;  // Constructor سے آیا
+    } else {
+      project = ModalRoute.of(context)!.settings.arguments as Project;  // Route سے آیا
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('📁 Upload Assets'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: _isPicking || _isUploading
+          ? _buildLoadingState()
+          : _buildMainContent(project),
+    );
+  }
+  
+  // ... باقی سارا کوڈ ویسے ہی رہے گا ...
+}
 
   /// ✅ جدید Permission System (Android 10 → 14+)
   Future<bool> _requestFilePermission() async {

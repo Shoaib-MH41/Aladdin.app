@@ -331,4 +331,110 @@ class GitHubService {
       throw Exception('Repository لنک حاصل کرنے میں ناکامی: $e');
     }
   }
+
+  // ============= نیا ایڈ کردہ کوڈ (درست شدہ) =============
+
+  /// 🔹 GitHub Actions Workflow بنائیں
+  Future<void> createBuildWorkflow({
+    required String repoName,
+    required String framework,
+  }) async {
+    final token = await getSavedToken();
+    if (token == null) throw Exception('GitHub token not set');
+
+    final username = await _getUsername(token);
+    final sanitizedRepoName = _sanitizeRepoName(repoName);
+
+    String workflowContent = '''
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+        channel: 'stable'
+    
+    - name: Get dependencies
+      run: flutter pub get
+    
+    - name: Build APK
+      run: flutter build apk --release
+    
+    - name: Build AAB
+      run: flutter build appbundle --release
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+    
+    - name: Upload AAB
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-aab
+        path: build/app/outputs/bundle/release/app-release.aab
+''';
+
+    // ✅ Workflow فائل push کریں
+    await uploadFile(
+      repoName: sanitizedRepoName,  // یہ درست کیا
+      filePath: '.github/workflows/build.yml',
+      content: workflowContent,
+      commitMessage: 'Add GitHub Actions build workflow 🤖',
+    );
+
+    print('✅ GitHub Actions workflow push ہو گئی');
+  }
+
+  /// 🔹 بلڈ اسٹیٹس چیک کریں
+  Future<Map<String, dynamic>> checkBuildStatus({
+    required String repoName,
+  }) async {
+    final token = await getSavedToken();
+    if (token == null) throw Exception('GitHub token not set');
+
+    final username = await _getUsername(token);
+    final sanitizedRepoName = _sanitizeRepoName(repoName);
+
+    final response = await http.get(
+      Uri.parse('https://api.github.com/repos/$username/$sanitizedRepoName/actions/runs'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final runs = data['workflow_runs'] as List? ?? [];
+      
+      if (runs.isEmpty) {
+        return {'status': 'no_runs', 'message': 'ابھی کوئی بلڈ نہیں چلا'};
+      }
+
+      final latestRun = runs.first;
+      return {
+        'status': latestRun['status'] ?? 'unknown',
+        'conclusion': latestRun['conclusion'],
+        'run_id': latestRun['id'],
+        'html_url': latestRun['html_url'],
+        'created_at': latestRun['created_at'],
+      };
+    } else {
+      throw Exception('Status check failed: ${response.statusCode}');
+    }
+  }
 }

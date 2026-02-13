@@ -1,8 +1,8 @@
 // lib/screens/settings_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../services/gemini_service.dart'; // ✅ GeminiService استعمال کریں
+import 'package:url_launcher/url_launcher.dart';
+import '../services/gemini_service.dart';
 import '../services/github_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -13,29 +13,61 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _apiKeyController = TextEditingController();
-  final _githubController = TextEditingController();
-  final _customUrlController = TextEditingController();
-  final _storage = const FlutterSecureStorage();
-
+  // ============= 📝 Text Controllers =============
+  late final TextEditingController _apiKeyController;
+  late final TextEditingController _githubController;
+  late final TextEditingController _customUrlController;
+  
+  // ============= 🎯 State Variables =============
+  late final FlutterSecureStorage _storage;
+  late final GeminiService _aiService;
+  late final GitHubService _githubService;
+  
+  // Settings State
+  AIProvider _selectedProvider = AIProvider.gemini;
+  bool _showCustomUrlField = false;
+  
+  // UI State
+  bool _isLoading = true;
   bool _isSaving = false;
   bool _isTestingAI = false;
   bool _isTestingGitHub = false;
-  String _statusMessage = '';
-
-  late GeminiService _aiService; // ✅ GeminiService
-  final GitHubService _githubService = GitHubService();
   
-  AIProvider _selectedProvider = AIProvider.gemini;
-  bool _showCustomUrlField = false;
+  // Messages
+  String _statusMessage = '';
+  String _aiStatusMessage = '';
+  String _githubStatusMessage = '';
+  
+  // Colors
+  static const Color _primaryColor = Color(0xFF2563EB);
+  static const Color _successColor = Color(0xFF059669);
+  static const Color _errorColor = Color(0xFFDC2626);
+  static const Color _warningColor = Color(0xFFD97706);
+  static const Color _infoColor = Color(0xFF7C3AED);
 
   @override
   void initState() {
     super.initState();
-    _aiService = GeminiService(); // ✅ GeminiService instance
-    _loadSettings();
+    _initializeServices();
   }
 
+  // ============= 🚀 Initialization =============
+  
+  Future<void> _initializeServices() async {
+    _storage = const FlutterSecureStorage();
+    _aiService = GeminiService();
+    _githubService = GitHubService();
+    _apiKeyController = TextEditingController();
+    _githubController = TextEditingController();
+    _customUrlController = TextEditingController(text: 'http://localhost:11434');
+    
+    await _loadSettings();
+    
+    setState(() => _isLoading = false);
+  }
+
+  // ============= 📥 Load Settings =============
+  
   Future<void> _loadSettings() async {
     try {
       // Load AI Provider
@@ -44,223 +76,232 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _selectedProvider = _parseProvider(savedProvider);
       }
       
-      // Load API Key
+      // Load API Key (masked)
       final apiKey = await _storage.read(key: 'ai_api_key');
       _apiKeyController.text = apiKey ?? '';
       
-      // Load Custom URL for local provider
+      // Load Custom URL
       final customUrl = await _storage.read(key: 'ai_custom_url');
       _customUrlController.text = customUrl ?? 'http://localhost:11434';
       
-      // Load GitHub Token
+      // Load GitHub Token (masked)
       final githubToken = await _storage.read(key: 'github_token');
       _githubController.text = githubToken ?? '';
       
-      setState(() {
-        _showCustomUrlField = _selectedProvider == AIProvider.local;
-      });
+      _showCustomUrlField = _selectedProvider == AIProvider.local;
+      
+      // Check saved status
+      await _checkSavedStatus();
+      
     } catch (e) {
-      print('Error loading settings: $e');
+      _showError('Settings لوڈ کرنے میں مسئلہ: $e');
     }
   }
 
+  Future<void> _checkSavedStatus() async {
+    // Check AI status
+    final isAIInitialized = await _aiService.isInitialized();
+    _aiStatusMessage = isAIInitialized 
+        ? '✅ ${_selectedProvider.name} فعال ہے'
+        : '⚠️ ${_selectedProvider.name} سیٹ نہیں ہے';
+    
+    // Check GitHub status
+    final githubToken = await _githubService.getSavedToken();
+    _githubStatusMessage = githubToken != null
+        ? '✅ GitHub Token محفوظ ہے'
+        : '⚠️ GitHub Token سیٹ نہیں ہے';
+  }
+
+  // ============= 🔧 Helper Methods =============
+  
   AIProvider _parseProvider(String provider) {
     switch (provider.toLowerCase()) {
-      case 'deepseek':
-        return AIProvider.deepseek;
-      case 'openai':
-        return AIProvider.openai;
-      case 'local':
-        return AIProvider.local;
-      default:
-        return AIProvider.gemini;
+      case 'deepseek': return AIProvider.deepseek;
+      case 'openai': return AIProvider.openai;
+      case 'local': return AIProvider.local;
+      default: return AIProvider.gemini;
     }
   }
 
-  // 🔹 Save Settings with new AI Provider
+  String _maskApiKey(String key) {
+    if (key.length < 8) return key;
+    return '${key.substring(0, 4)}...${key.substring(key.length - 4)}';
+  }
+
+  // ============= 💾 Save Settings =============
+  
   Future<void> _saveSettings() async {
-    if (_selectedProvider != AIProvider.local && _apiKeyController.text.trim().isEmpty) {
-      setState(() {
-        _statusMessage = '❌ براہ کرم پہلے API key درج کریں';
-      });
-      return;
-    }
+    if (!_validateInputs()) return;
 
-    if (_selectedProvider == AIProvider.local && _customUrlController.text.trim().isEmpty) {
-      setState(() {
-        _statusMessage = '❌ براہ کرم لوکل API URL درج کریں';
-      });
-      return;
-    }
-
-    bool? shouldSave = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Settings محفوظ کریں'),
-        content: Text('کیا آپ واقعی یہ settings محفوظ کرنا چاہتے ہیں؟\n\nProvider: ${_selectedProvider.name.toUpperCase()}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('منسوخ'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('محفوظ کریں'),
-          ),
-        ],
-      ),
+    final confirm = await _showConfirmDialog(
+      title: 'Settings محفوظ کریں',
+      content: 'کیا آپ ${_selectedProvider.name} کے ساتھ settings محفوظ کرنا چاہتے ہیں؟',
+      confirmText: 'محفوظ کریں',
+      isDestructive: false,
     );
 
-    if (shouldSave == true) {
-      setState(() {
-        _isSaving = true;
-        _statusMessage = '';
-      });
+    if (confirm != true) return;
 
-      try {
-        // Save AI Provider and API Key using GeminiService
-        await _aiService.changeProvider(
-          _selectedProvider,
-          apiKey: _selectedProvider != AIProvider.local ? _apiKeyController.text.trim() : null,
-          customUrl: _selectedProvider == AIProvider.local ? _customUrlController.text.trim() : null,
-        );
-        
-        // Save GitHub Token if provided
-        if (_githubController.text.trim().isNotEmpty) {
-          final bool isGitHubValid = await _validateGitHubToken(_githubController.text.trim());
-          if (isGitHubValid) {
-            await _githubService.saveToken(_githubController.text.trim());
-          } else {
-            setState(() {
-              _isSaving = false;
-              _statusMessage = '❌ GitHub Token درست نہیں ہے';
-            });
-            return;
-          }
+    setState(() {
+      _isSaving = true;
+      _statusMessage = '';
+    });
+
+    try {
+      // Save AI Settings
+      await _aiService.changeProvider(
+        _selectedProvider,
+        apiKey: _selectedProvider != AIProvider.local ? _apiKeyController.text.trim() : null,
+        customUrl: _selectedProvider == AIProvider.local ? _customUrlController.text.trim() : null,
+      );
+      
+      // Save GitHub Token
+      if (_githubController.text.trim().isNotEmpty) {
+        final isValid = await _validateGitHubToken(_githubController.text.trim());
+        if (!isValid) {
+          throw Exception('GitHub Token درست نہیں ہے');
         }
+        await _githubService.saveToken(_githubController.text.trim());
+      }
 
-        setState(() {
-          _isSaving = false;
-          _statusMessage = '✅ تمام Settings کامیابی سے محفوظ ہو گئیں!';
-        });
-      } catch (e) {
-        setState(() {
-          _isSaving = false;
-          _statusMessage = '❌ Settings محفوظ نہیں ہو سکیں: $e';
-        });
+      await _checkSavedStatus();
+      
+      _showSuccess('✅ تمام Settings محفوظ ہو گئیں!');
+      
+    } catch (e) {
+      _showError('Settings محفوظ نہیں ہو سکیں: $e');
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  bool _validateInputs() {
+    if (_selectedProvider != AIProvider.local) {
+      if (_apiKeyController.text.trim().isEmpty) {
+        _showError('❌ براہ کرم API Key درج کریں');
+        return false;
       }
     }
+
+    if (_selectedProvider == AIProvider.local) {
+      if (_customUrlController.text.trim().isEmpty) {
+        _showError('❌ براہ کرم Local API URL درج کریں');
+        return false;
+      }
+    }
+
+    return true;
   }
 
-  // 🔹 Remove Settings
+  // ============= 🗑️ Remove Settings =============
+  
   Future<void> _removeSettings() async {
-    bool? shouldDelete = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تمام Settings حذف کریں'),
-        content: const Text('کیا آپ واقعی تمام API keys اور settings حذف کرنا چاہتے ہیں؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('منسوخ'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('حذف کریں'),
-          ),
-        ],
-      ),
+    final confirm = await _showConfirmDialog(
+      title: 'تمام Settings حذف کریں',
+      content: 'کیا آپ واقعی تمام API keys اور settings حذف کرنا چاہتے ہیں؟\nیہ عمل واپس نہیں ہو سکتا۔',
+      confirmText: 'حذف کریں',
+      isDestructive: true,
     );
 
-    if (shouldDelete == true) {
+    if (confirm != true) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      // Clear all services
       await _aiService.removeApiKey();
       await _githubService.removeToken();
+      
+      // Clear storage
       await _storage.delete(key: 'ai_provider');
       await _storage.delete(key: 'ai_custom_url');
       
+      // Clear controllers
+      _apiKeyController.clear();
+      _githubController.clear();
+      _customUrlController.text = 'http://localhost:11434';
+      
+      // Reset state
       setState(() {
-        _apiKeyController.clear();
-        _githubController.clear();
-        _customUrlController.clear();
         _selectedProvider = AIProvider.gemini;
         _showCustomUrlField = false;
-        _statusMessage = '🗑️ تمام Settings حذف کر دی گئیں۔';
+        _aiStatusMessage = '⚠️ AI سیٹ نہیں ہے';
+        _githubStatusMessage = '⚠️ GitHub سیٹ نہیں ہے';
       });
+      
+      _showSuccess('🗑️ تمام Settings حذف کر دی گئیں');
+      
+    } catch (e) {
+      _showError('Settings حذف کرنے میں مسئلہ: $e');
+    } finally {
+      setState(() => _isSaving = false);
     }
   }
 
-  // 🔹 Test AI Connection
+  // ============= 🧪 Test Connections =============
+  
   Future<void> _testAIConnection() async {
-    if (_selectedProvider != AIProvider.local && _apiKeyController.text.trim().isEmpty) {
-      setState(() {
-        _statusMessage = '❌ براہ کرم پہلے API key درج کریں';
-      });
-      return;
-    }
-
-    if (_selectedProvider == AIProvider.local && _customUrlController.text.trim().isEmpty) {
-      setState(() {
-        _statusMessage = '❌ براہ کرم لوکل API URL درج کریں';
-      });
-      return;
-    }
+    if (!_validateInputs()) return;
 
     setState(() => _isTestingAI = true);
-    
+
     try {
-      // Temporary service for testing using GeminiService factory constructors
       GeminiService testService;
       
-      if (_selectedProvider == AIProvider.gemini) {
-        testService = GeminiService.gemini(apiKey: _apiKeyController.text.trim());
-      } else if (_selectedProvider == AIProvider.deepseek) {
-        testService = GeminiService.deepseek(apiKey: _apiKeyController.text.trim());
-      } else if (_selectedProvider == AIProvider.openai) {
-        testService = GeminiService.openai(apiKey: _apiKeyController.text.trim());
-      } else {
-        testService = GeminiService.local(baseUrl: _customUrlController.text.trim());
+      switch (_selectedProvider) {
+        case AIProvider.gemini:
+          testService = GeminiService.gemini(apiKey: _apiKeyController.text.trim());
+          break;
+        case AIProvider.deepseek:
+          testService = GeminiService.deepseek(apiKey: _apiKeyController.text.trim());
+          break;
+        case AIProvider.openai:
+          testService = GeminiService.openai(apiKey: _apiKeyController.text.trim());
+          break;
+        case AIProvider.local:
+          testService = GeminiService.local(baseUrl: _customUrlController.text.trim());
+          break;
       }
       
       final success = await testService.testConnection();
+      
       setState(() {
         _isTestingAI = false;
-        _statusMessage = success
-            ? '✅ ${_selectedProvider.name.toUpperCase()} کنکشن کامیاب ہے!'
-            : '❌ ${_selectedProvider.name.toUpperCase()} کنکشن ناکام۔';
+        _aiStatusMessage = success
+            ? '✅ ${_selectedProvider.name} کنکشن کامیاب'
+            : '❌ ${_selectedProvider.name} کنکشن ناکام';
       });
+      
     } catch (e) {
       setState(() {
         _isTestingAI = false;
-        _statusMessage = '❌ کنکشن چیک میں مسئلہ: $e';
+        _aiStatusMessage = '❌ کنکشن میں خرابی: ${e.toString().substring(0, 50)}...';
       });
     }
   }
 
-  // 🔹 Test GitHub Connection
   Future<void> _testGitHubConnection() async {
     if (_githubController.text.trim().isEmpty) {
-      setState(() {
-        _statusMessage = '❌ براہ کرم پہلے GitHub Token درج کریں';
-      });
+      _showError('❌ براہ کرم GitHub Token درج کریں');
       return;
     }
 
     setState(() => _isTestingGitHub = true);
-    
+
     try {
       final success = await _githubService.checkConnection();
+      
       setState(() {
         _isTestingGitHub = false;
-        _statusMessage = success
-            ? '✅ GitHub کنکشن کامیاب ہے! Token درست ہے'
-            : '❌ GitHub کنکشن ناکام۔';
+        _githubStatusMessage = success
+            ? '✅ GitHub کنکشن کامیاب'
+            : '❌ GitHub کنکشن ناکام';
       });
+      
     } catch (e) {
       setState(() {
         _isTestingGitHub = false;
-        _statusMessage = '❌ GitHub کنکشن چیک میں مسئلہ: $e';
+        _githubStatusMessage = '❌ GitHub کنکشن میں خرابی';
       });
     }
   }
@@ -273,121 +314,259 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ============= 📋 Dialog Helpers =============
+  
+  Future<bool?> _showConfirmDialog({
+    required String title,
+    required String content,
+    required String confirmText,
+    required bool isDestructive,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'منسوخ',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDestructive ? _errorColor : _primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(confirmText),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============= 📢 Message Helpers =============
+  
+  void _showSuccess(String message) {
+    setState(() => _statusMessage = message);
+    _autoDismissMessage();
+  }
+
+  void _showError(String message) {
+    setState(() => _statusMessage = message);
+    _autoDismissMessage();
+  }
+
+  void _autoDismissMessage() {
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          if (_statusMessage == _statusMessage) {
+            _statusMessage = '';
+          }
+        });
+      }
+    });
+  }
+
+  // ============= 🔗 Link Helpers =============
+  
+  Future<void> _openLink(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  // ============= 🎨 UI Build =============
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('⚙️ Settings'),
-        backgroundColor: Colors.blue,
+        title: const Text(
+          '⚙️ Settings',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: _primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.grey[50]!, Colors.white],
+          ),
+        ),
+        child: _buildContent(),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🤖 AI Provider Section
+          _buildSection(
+            icon: Icons.auto_awesome,
+            title: 'AI Provider',
+            status: _aiStatusMessage,
+            statusColor: _aiStatusMessage.contains('✅') 
+                ? _successColor 
+                : _warningColor,
+            child: Column(
+              children: [
+                _buildAIProviderDropdown(),
+                const SizedBox(height: 16),
+                if (!_showCustomUrlField) _buildAPIKeyField(),
+                if (_showCustomUrlField) _buildCustomUrlField(),
+                const SizedBox(height: 12),
+                _buildTestButton(
+                  onPressed: _testAIConnection,
+                  isLoading: _isTestingAI,
+                  label: 'ٹیسٹ کنکشن',
+                  icon: Icons.wifi,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // 🐙 GitHub Section
+          _buildSection(
+            icon: Icons.code,
+            title: 'GitHub Integration',
+            status: _githubStatusMessage,
+            statusColor: _githubStatusMessage.contains('✅') 
+                ? _successColor 
+                : _warningColor,
+            child: Column(
+              children: [
+                _buildGitHubTokenField(),
+                const SizedBox(height: 12),
+                _buildTestButton(
+                  onPressed: _testGitHubConnection,
+                  isLoading: _isTestingGitHub,
+                  label: 'ٹیسٹ کنکشن',
+                  icon: Icons.wifi,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // 📚 Info Section
+          _buildInfoSection(),
+
+          const SizedBox(height: 24),
+
+          // 🔘 Action Buttons
+          _buildActionButtons(),
+
+          const SizedBox(height: 20),
+
+          // 📢 Status Message
+          if (_statusMessage.isNotEmpty) _buildStatusMessage(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection({
+    required IconData icon,
+    required String title,
+    required String status,
+    required Color statusColor,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('🤖 AI Provider'),
-            _buildAIProviderDropdown(),
-            const SizedBox(height: 20),
-
-            if (!_showCustomUrlField) _buildSectionTitle('🔑 API Key'),
-            if (!_showCustomUrlField)
-              _buildTextField(_apiKeyController, '${_selectedProvider.name.toUpperCase()} API Key درج کریں'),
-            
-            if (_showCustomUrlField) _buildSectionTitle('🌐 Local API URL'),
-            if (_showCustomUrlField)
-              _buildTextField(_customUrlController, 'لوکل API URL (مثال: http://localhost:11434)'),
-
-            const SizedBox(height: 8),
-            _buildTestButton(
-              onPressed: _testAIConnection,
-              isLoading: _isTestingAI,
-              label: 'AI کنکشن چیک کریں',
-            ),
-            const SizedBox(height: 20),
-
-            _buildSectionTitle('🐙 GitHub Token'),
-            _buildTextField(_githubController, 'GitHub Personal Access Token درج کریں'),
-            const SizedBox(height: 8),
-            _buildTestButton(
-              onPressed: _testGitHubConnection,
-              isLoading: _isTestingGitHub,
-              label: 'GitHub کنکشن چیک کریں',
-            ),
-
-            const SizedBox(height: 30),
-
-            // 🔘 Save Settings Button
-            _buildMainButton(
-              onPressed: _isSaving ? null : _saveSettings,
-              label: _isSaving ? 'محفوظ ہو رہا ہے...' : 'Settings محفوظ کریں',
-              icon: Icons.save,
-              color: Colors.blue,
-            ),
-
-            const SizedBox(height: 10),
-
-            // 🗑️ Remove Settings Button
-            _buildMainButton(
-              onPressed: _removeSettings,
-              label: 'تمام Settings حذف کریں',
-              icon: Icons.delete,
-              color: Colors.red,
-            ),
-
-            const SizedBox(height: 20),
-
-            // ℹ️ معلومات کارڈ
-            _buildInfoCard(),
-
-            const SizedBox(height: 20),
-
-            if (_statusMessage.isNotEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _statusMessage.contains('✅')
-                      ? Colors.green[50]
-                      : _statusMessage.contains('❌')
-                          ? Colors.red[50]
-                          : _statusMessage.contains('ℹ️')
-                              ? Colors.blue[50]
-                              : Colors.orange[50],
-                  border: Border.all(
-                    color: _statusMessage.contains('✅')
-                        ? Colors.green
-                        : _statusMessage.contains('❌')
-                            ? Colors.red
-                            : _statusMessage.contains('ℹ️')
-                                ? Colors.blue
-                                : Colors.orange,
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  borderRadius: BorderRadius.circular(8),
+                  child: Icon(icon, color: _primaryColor),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _statusMessage.contains('✅')
-                          ? Icons.check_circle
-                          : _statusMessage.contains('❌')
-                              ? Icons.error
-                              : _statusMessage.contains('ℹ️')
-                                  ? Icons.info
-                                  : Icons.warning,
-                      color: _statusMessage.contains('✅')
-                          ? Colors.green
-                          : _statusMessage.contains('❌')
-                              ? Colors.red
-                              : _statusMessage.contains('ℹ️')
-                                  ? Colors.blue
-                                  : Colors.orange,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(_statusMessage)),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            status,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: statusColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
+            ),
+            const Divider(height: 24),
+            child,
           ],
         ),
       ),
@@ -396,111 +575,187 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildAIProviderDropdown() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<AIProvider>(
+          value: _selectedProvider,
+          isExpanded: true,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          items: AIProvider.values.map((provider) {
+            return DropdownMenuItem<AIProvider>(
+              value: provider,
+              child: Row(
+                children: [
+                  _buildProviderIcon(provider),
+                  const SizedBox(width: 12),
+                  Text(
+                    provider.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  _buildProviderBadge(provider),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (AIProvider? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _selectedProvider = newValue;
+                _showCustomUrlField = newValue == AIProvider.local;
+                _statusMessage = '';
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProviderIcon(AIProvider provider) {
+    final iconData = switch (provider) {
+      AIProvider.gemini => Icons.auto_awesome,
+      AIProvider.deepseek => Icons.smart_toy,
+      AIProvider.openai => Icons.chat,
+      AIProvider.local => Icons.computer,
+    };
+    
+    final color = switch (provider) {
+      AIProvider.gemini => Colors.blue,
+      AIProvider.deepseek => Colors.purple,
+      AIProvider.openai => Colors.green,
+      AIProvider.local => Colors.orange,
+    };
+    
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: DropdownButton<AIProvider>(
-        value: _selectedProvider,
-        isExpanded: true,
-        underline: const SizedBox(),
-        items: AIProvider.values.map((provider) {
-          return DropdownMenuItem<AIProvider>(
-            value: provider,
-            child: Row(
-              children: [
-                _getProviderIcon(provider),
-                const SizedBox(width: 10),
-                Text(
-                  provider.name.toUpperCase(),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-        onChanged: (AIProvider? newValue) {
-          if (newValue != null) {
-            setState(() {
-              _selectedProvider = newValue;
-              _showCustomUrlField = newValue == AIProvider.local;
-              _statusMessage = '';
-            });
-          }
-        },
-      ),
+      child: Icon(iconData, color: color, size: 20),
     );
   }
 
-  Widget _getProviderIcon(AIProvider provider) {
+  Widget _buildProviderBadge(AIProvider provider) {
+    String badgeText;
+    Color badgeColor;
+    
     switch (provider) {
       case AIProvider.gemini:
-        return const Icon(Icons.g_mobiledata, color: Colors.blue);
+        badgeText = 'FREE';
+        badgeColor = Colors.green;
+        break;
       case AIProvider.deepseek:
-        return const Icon(Icons.code, color: Colors.purple);
+        badgeText = 'FREE';
+        badgeColor = Colors.green;
+        break;
       case AIProvider.openai:
-        return const Icon(Icons.chat_bubble, color: Colors.green);
+        badgeText = 'PAID';
+        badgeColor = Colors.amber;
+        break;
       case AIProvider.local:
-        return const Icon(Icons.computer, color: Colors.orange);
-      default:
-        return const Icon(Icons.auto_awesome);
+        badgeText = 'OFFLINE';
+        badgeColor = Colors.orange;
+        break;
     }
-  }
-
-  Widget _buildInfoCard() {
-    return Card(
-      color: Colors.blue[50],
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.info, color: Colors.blue),
-                SizedBox(width: 8),
-                Text(
-                  'رہنمائی',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text('• Gemini: Google کے Gemini API کے لیے (مفت)'),
-            Text('• DeepSeek: DeepSeek AI کے لیے (مفت)'),
-            Text('• OpenAI: ChatGPT API کے لیے (ادائیگی)'),
-            Text('• Local: Ollama یا دوسرے لوکل APIs کے لیے'),
-            const SizedBox(height: 8),
-            Text('• لوکل API چلانے کے لیے Ollama انسٹال کریں'),
-            Text('• GitHub Token: repositories بنانے کے لیے'),
-          ],
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: badgeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: badgeColor.withOpacity(0.3)),
+      ),
+      child: Text(
+        badgeText,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: badgeColor,
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-      );
-
-  Widget _buildTextField(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
+  Widget _buildAPIKeyField() {
+    return TextFormField(
+      controller: _apiKeyController,
       decoration: InputDecoration(
-        hintText: hint,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        prefixIcon: const Icon(Icons.vpn_key),
+        labelText: '${_selectedProvider.name} API Key',
+        hintText: 'sk-...',
+        prefixIcon: const Icon(Icons.vpn_key_outlined),
+        suffixIcon: _apiKeyController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () => setState(() => _apiKeyController.clear()),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
       ),
-      obscureText: hint.contains('API') || hint.contains('Token'),
+      obscureText: true,
+      obscuringCharacter: '•',
+    );
+  }
+
+  Widget _buildCustomUrlField() {
+    return TextFormField(
+      controller: _customUrlController,
+      decoration: InputDecoration(
+        labelText: 'Local API URL',
+        hintText: 'http://localhost:11434',
+        prefixIcon: const Icon(Icons.link),
+        suffixIcon: _customUrlController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () => setState(() => 
+                  _customUrlController.text = 'http://localhost:11434'
+                ),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+    );
+  }
+
+  Widget _buildGitHubTokenField() {
+    return TextFormField(
+      controller: _githubController,
+      decoration: InputDecoration(
+        labelText: 'GitHub Personal Access Token',
+        hintText: 'ghp_...',
+        prefixIcon: const Icon(Icons.lock_outlined),
+        suffixIcon: _githubController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () => setState(() => _githubController.clear()),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      obscureText: true,
+      obscuringCharacter: '•',
     );
   }
 
@@ -508,46 +763,244 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onPressed,
     required bool isLoading,
     required String label,
+    required IconData icon,
   }) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
+        onPressed: isLoading ? null : onPressed,
         icon: isLoading
             ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
-            : const Icon(Icons.wifi),
-        label: Text(isLoading ? 'چیک ہو رہا ہے...' : label),
-        onPressed: isLoading ? null : onPressed,
+            : Icon(icon, size: 18),
+        label: Text(label),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.teal,
+          backgroundColor: Colors.grey.shade800,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMainButton({
+  Widget _buildInfoSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _infoColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _infoColor.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, color: _infoColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'API Keys & Tokens',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _infoColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow(
+            '🤖 Gemini',
+            'Get API Key',
+            'https://makersuite.google.com/app/apikey',
+          ),
+          _buildInfoRow(
+            '🦋 DeepSeek',
+            'Get API Key',
+            'https://platform.deepseek.com/api_keys',
+          ),
+          _buildInfoRow(
+            '🧠 OpenAI',
+            'Get API Key',
+            'https://platform.openai.com/api-keys',
+          ),
+          _buildInfoRow(
+            '💻 Local',
+            'Install Ollama',
+            'https://ollama.ai',
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            '🐙 GitHub',
+            'Generate Token',
+            'https://github.com/settings/tokens',
+            description: 'repo, workflow scopes',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String title, String action, String url, {String? description}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                if (description != null)
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _openLink(url),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: Text(action),
+            style: TextButton.styleFrom(
+              foregroundColor: _primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionButton(
+            onPressed: _isSaving ? null : _saveSettings,
+            label: _isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں',
+            icon: Icons.save_outlined,
+            color: _primaryColor,
+            isLoading: _isSaving,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildActionButton(
+            onPressed: _removeSettings,
+            label: 'حذف کریں',
+            icon: Icons.delete_outline,
+            color: _errorColor,
+            isLoading: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
     required VoidCallback? onPressed,
     required String label,
     required IconData icon,
     required Color color,
+    required bool isLoading,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        icon: Icon(icon),
-        label: Text(label),
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: isLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: onPressed == null ? Colors.grey : color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
+        elevation: 0,
       ),
     );
+  }
+
+  Widget _buildStatusMessage() {
+    final isSuccess = _statusMessage.contains('✅');
+    final isError = _statusMessage.contains('❌');
+    
+    Color bgColor;
+    Color borderColor;
+    IconData icon;
+    
+    if (isSuccess) {
+      bgColor = _successColor.withOpacity(0.1);
+      borderColor = _successColor;
+      icon = Icons.check_circle_outline;
+    } else if (isError) {
+      bgColor = _errorColor.withOpacity(0.1);
+      borderColor = _errorColor;
+      icon = Icons.error_outline;
+    } else {
+      bgColor = _warningColor.withOpacity(0.1);
+      borderColor = _warningColor;
+      icon = Icons.warning_amber_outlined;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        border: Border.all(color: borderColor.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: borderColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _statusMessage,
+              style: TextStyle(
+                color: borderColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            color: borderColor,
+            onPressed: () => setState(() => _statusMessage = ''),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    _githubController.dispose();
+    _customUrlController.dispose();
+    super.dispose();
   }
 }

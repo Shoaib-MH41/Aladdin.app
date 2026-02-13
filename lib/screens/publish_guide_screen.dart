@@ -1,4 +1,4 @@
-
+// lib/screens/publish_guide_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -57,7 +57,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     }
   }
 
-  // ✅ GitHub ڈیسکٹاپ کھولیں (فائل اپلوڈ کے لیے)
+  // ✅ GitHub ڈیسکٹاپ کھولیں
   void _openGitHubDesktop() async {
     const githubDesktopUrl = 'https://desktop.github.com/';
     
@@ -65,10 +65,6 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
       await launchUrl(
         Uri.parse(githubDesktopUrl),
         mode: LaunchMode.externalApplication,
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ GitHub Desktop ڈاؤنلوڈ پیج نہیں کھل سکا')),
       );
     }
   }
@@ -81,10 +77,6 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
       await launchUrl(
         Uri.parse(playStoreUrl),
         mode: LaunchMode.externalApplication,
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ پلے اسٹور کنسول نہیں کھل سکا')),
       );
     }
   }
@@ -131,7 +123,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
 
             const SizedBox(height: 20),
 
-            // 📋 گائیڈ سٹیپس
+            // 📋 گائیڈ سٹیپس - اب AAB کے ساتھ
             _buildStepCard(
               stepNumber: 1,
               title: "GitHub پر ریپوزٹری بنائیں",
@@ -151,16 +143,25 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
 
             _buildStepCard(
               stepNumber: 3,
-              title: "APK فائل بنائیں",
-              description: "اپنے فریم ورک کے مطابق ریلیز APK بنائیں",
-              buttonText: "APK بنانے کی ہدایات",
-              onPressed: _showApkInstructions,
+              title: "GitHub Actions سے AAB بنائیں",
+              description: "GitHub Actions خودکار طور پر AAB فائل بنائے گا",
+              buttonText: "AAB بنانے کی ہدایات",
+              onPressed: _showAABInstructions,
+              isHighlighted: true,
             ),
 
             _buildStepCard(
               stepNumber: 4,
+              title: "AAB فائل ڈاؤنلوڈ کریں",
+              description: "GitHub Actions سے تیار شدہ AAB ڈاؤنلوڈ کریں",
+              buttonText: "AAB ڈاؤنلوڈ کی ہدایات",
+              onPressed: _showDownloadInstructions,
+            ),
+
+            _buildStepCard(
+              stepNumber: 5,
               title: "پلے اسٹور پر اپلوڈ کریں",
-              description: "APK فائل پلے اسٹور کنسول پر اپلوڈ کریں",
+              description: "AAB فائل پلے اسٹور کنسول پر اپلوڈ کریں",
               buttonText: "پلے اسٹور کنسول کھولیں",
               onPressed: _openPlayStoreConsole,
             ),
@@ -187,15 +188,12 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  _repoStatus,
-                  style: const TextStyle(fontSize: 14),
-                ),
+                child: Text(_repoStatus),
               ),
 
             const SizedBox(height: 20),
 
-            // 💡 اضافی ٹپس
+            // 💡 اضافی ٹپس - AAB کے ساتھ
             Card(
               color: Colors.orange[50],
               child: Padding(
@@ -204,7 +202,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "💡 اہم تجاویز",
+                      "💡 اہم تجاویز - پلے اسٹور کے لیے",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -212,11 +210,34 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildTip("ریپوزٹری کا نام آسان اور واضح رکھیں"),
-                    _buildTip("README.md فائل میں ایپ کی تفصیل لکھیں"),
-                    _buildTip("APK بناتے وقت signing key استعمال کریں"),
-                    _buildTip("پلے اسٹور کے لیے ایپ کی اسکرین شاٹس تیار کریں"),
-                    _buildTip("پرائیویسی پالیسی شامل کرنا نہ بھولیں"),
+                    _buildTip("⚠️ **نوٹ:** پلے اسٹور APK قبول نہیں کرتا، صرف AAB چلتا ہے!"),
+                    _buildTip("📦 AAB فائل APK سے 30% چھوٹی ہوتی ہے"),
+                    _buildTip("🔑 Signing key ضروری ہے - اسے محفوظ رکھیں"),
+                    _buildTip("📸 اسکرین شاٹس (2-8) تیار کریں"),
+                    _buildTip("📄 پرائیویسی پالیسی ویب سائٹ پر اپلوڈ کریں"),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "🎯 GitHub Actions سے AAB بنانے کا طریقہ:",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 8),
+                          Text("1. Build Screen پر جائیں"),
+                          Text("2. 'GitHub Actions سے بلڈ کریں' بٹن دبائیں"),
+                          Text("3. 5-10 منٹ انتظار کریں"),
+                          Text("4. 'APK ڈاؤنلوڈ کریں' کے ساتھ AAB بھی ملے گا"),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -227,7 +248,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     );
   }
 
-  // 🎯 ہر سٹیپ کا کارڈ
+  // 🎯 ہر سٹیپ کا کارڈ - اب AAB والا نمایاں
   Widget _buildStepCard({
     required int stepNumber,
     required String title,
@@ -235,9 +256,11 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     required String buttonText,
     required VoidCallback onPressed,
     bool isLoading = false,
+    bool isHighlighted = false,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      color: isHighlighted ? Colors.blue[50] : null,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -248,8 +271,8 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
                 Container(
                   width: 30,
                   height: 30,
-                  decoration: const BoxDecoration(
-                    color: Colors.deepPurple,
+                  decoration: BoxDecoration(
+                    color: isHighlighted ? Colors.blue : Colors.deepPurple,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -266,12 +289,29 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: isHighlighted ? Colors.blue[800] : null,
                     ),
                   ),
                 ),
+                if (isHighlighted)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      "IMPORTANT",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -282,7 +322,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
               child: ElevatedButton(
                 onPressed: isLoading ? null : onPressed,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: isHighlighted ? Colors.blue : Colors.deepPurple,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -313,24 +353,75 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
         children: [
           const Icon(Icons.lightbulb_outline, size: 16, color: Colors.orange),
           const SizedBox(width: 8),
-          Expanded(child: Text(text)),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                children: _parseTipText(text),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // 📱 APK بنانے کی ہدایات
-  void _showApkInstructions() {
+  List<TextSpan> _parseTipText(String text) {
+    if (text.contains('**')) {
+      final parts = text.split('**');
+      return parts.asMap().entries.map((entry) {
+        final isBold = entry.key.isOdd;
+        return TextSpan(
+          text: entry.value,
+          style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
+        );
+      }).toList();
+    }
+    return [TextSpan(text: text)];
+  }
+
+  // 📱 AAB بنانے کی ہدایات
+  void _showAABInstructions() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("📱 APK بنانے کی ہدایات"),
+        title: const Text("📦 AAB فائل بنانے کی ہدایات"),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView(
             shrinkWrap: true,
             children: [
-              _buildFrameworkInstructions(),
+              const Text(
+                "پلے اسٹور کے لیے AAB (Android App Bundle) ضروری ہے:",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _buildInstructionStep("1️⃣ Build Screen کھولیں"),
+              _buildInstructionStep("2️⃣ 'GitHub Actions سے بلڈ کریں' بٹن دبائیں"),
+              _buildInstructionStep("3️⃣ 5-10 منٹ انتظار کریں"),
+              _buildInstructionStep("4️⃣ 'AAB ڈاؤنلوڈ کریں' بٹن دبائیں"),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "✅ AAB کے فوائد:",
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
+                    SizedBox(height: 8),
+                    Text("• APK سے 30% چھوٹی فائل"),
+                    Text("• Google Play آپٹمائزڈ APKs بناتا ہے"),
+                    Text("• صارفین کو کم ڈیٹا استعمال ہوتا ہے"),
+                    Text("• 150MB سے بڑی ایپس اپلوڈ کر سکتے ہیں"),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -344,78 +435,41 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     );
   }
 
-  // 🔧 فریم ورک کے مطابق ہدایات
-  Widget _buildFrameworkInstructions() {
-    switch (widget.framework.toLowerCase()) {
-      case 'flutter':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInstructionStep("1. Termux یا کمانڈ لائن کھولیں"),
-            _buildInstructionStep("2. پروجیکٹ ڈائرکٹری میں جائیں", "cd ${widget.appName}"),
-            _buildInstructionStep("3. APK بنائیں", "flutter build apk --release"),
-            _buildInstructionStep("4. APK فائل ملے گی", "build/app/outputs/flutter-apk/app-release.apk"),
-          ],
-        );
-      
-      case 'react':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInstructionStep("1. کمانڈ لائن کھولیں"),
-            _buildInstructionStep("2. پروجیکٹ ڈائرکٹری میں جائیں", "cd ${widget.appName}"),
-            _buildInstructionStep("3. Build بنائیں", "npm run build"),
-            _buildInstructionStep("4. build/ فولڈر میں فائلیں ملیں گی"),
-          ],
-        );
-      
-      case 'android native':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInstructionStep("1. Android Studio کھولیں"),
-            _buildInstructionStep("2. پروجیکٹ ایمپورٹ کریں"),
-            _buildInstructionStep("3. Build > Generate Signed Bundle/APK"),
-            _buildInstructionStep("4. signing key بنائیں اور APK جنریٹ کریں"),
-          ],
-        );
-      
-      default:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInstructionStep("1. اپنے فریم ورک کے مطابق build کمانڈ استعمال کریں"),
-            _buildInstructionStep("2. production build بنائیں"),
-            _buildInstructionStep("3. output فولڈر میں فائلیں چیک کریں"),
-          ],
-        );
-    }
+  // 📥 ڈاؤنلوڈ ہدایات
+  void _showDownloadInstructions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("📥 AAB فائل ڈاؤنلوڈ کریں"),
+        content: const Text(
+          "GitHub Actions سے AAB ڈاؤنلوڈ کرنے کا طریقہ:\n\n"
+          "1. Build Screen پر جائیں\n"
+          "2. بلڈ مکمل ہونے کے بعد 'APK ڈاؤنلوڈ کریں' کے بٹن کے ساتھ\n"
+          "   'AAB ڈاؤنلوڈ کریں' کا بٹن بھی ہوگا\n"
+          "3. اس بٹن کو دبائیں\n"
+          "4. GitHub Actions کے artifacts صفحہ کھل جائے گا\n"
+          "5. 'release-aab.zip' ڈاؤنلوڈ کریں\n"
+          "6. ZIP فائل کو Extract کریں، AAB فائل مل جائے گی",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   // 📝 ہدایت کا سٹیپ
-  Widget _buildInstructionStep(String step, [String? command]) {
+  Widget _buildInstructionStep(String step) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(step),
-          if (command != null)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: SelectableText(
-                command,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                ),
-              ),
-            ),
+          const Text("• ", style: TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(child: Text(step)),
         ],
       ),
     );

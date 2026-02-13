@@ -1,3 +1,4 @@
+// lib/services/gemini_service.dart
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -76,29 +77,33 @@ class GeminiService {
       final apiKey = await _secureStorage.read(key: _apiKeyKey);
       final customUrl = await _secureStorage.read(key: _customUrlKey);
       
-      // Initialize Gemini model if provider is Gemini and API key exists
+      // Initialize ONLY for Gemini
       if (_currentProvider == AIProvider.gemini && apiKey != null && apiKey.isNotEmpty) {
         _geminiModel = GenerativeModel(
           model: 'gemini-1.5-flash',
           apiKey: apiKey,
         );
-        _isInitialized = true;
-        print('✅ GeminiService initialized with ${_currentProvider.name}');
-      } else if (apiKey != null && apiKey.isNotEmpty) {
-        // Other providers just need API key
-        _isInitialized = true;
-        print('✅ GeminiService initialized with ${_currentProvider.name}');
-      } else if (_currentProvider == AIProvider.local && customUrl != null) {
-        // Local provider needs custom URL
-        _isInitialized = true;
-        print('✅ GeminiService initialized with Local API');
-      } else {
-        _isInitialized = false;
-        print('⚠️ AI Service not initialized - credentials missing');
       }
+      
+      // Service is initialized if credentials exist
+      _isInitialized = _hasValidCredentials(apiKey, customUrl);
+      
+      print('✅ GeminiService initialized with ${_currentProvider.name}');
     } catch (e) {
       _isInitialized = false;
       print('❌ GeminiService initialization failed: $e');
+    }
+  }
+  
+  /// 🔹 Check if provider has valid credentials
+  bool _hasValidCredentials(String? apiKey, String? customUrl) {
+    switch (_currentProvider) {
+      case AIProvider.gemini:
+      case AIProvider.deepseek:
+      case AIProvider.openai:
+        return apiKey != null && apiKey.isNotEmpty;
+      case AIProvider.local:
+        return customUrl != null && customUrl.isNotEmpty;
     }
   }
 
@@ -123,7 +128,7 @@ class GeminiService {
   AIProvider get currentProvider => _currentProvider;
 
   // ==============================================================
-  // 🔹 آپ کے موجودہ میتھڈز (بالکل ویسے ہی رہیں گے)
+  // 🔹 API Key Management
   // ==============================================================
 
   Future<String?> getSavedApiKey() async {
@@ -138,7 +143,7 @@ class GeminiService {
   Future<void> saveApiKey(String apiKey) async {
     try {
       await _secureStorage.write(key: _apiKeyKey, value: apiKey.trim());
-      await _initializeFromStorage(); // Re-initialize
+      await _initializeFromStorage();
       print('🔐 API key securely saved for ${_currentProvider.name}');
     } catch (e) {
       throw Exception('API key save failed: $e');
@@ -162,7 +167,7 @@ class GeminiService {
   }
 
   // ==============================================================
-  // 🚀 CORE AI FUNCTIONS (Universal بنائیں)
+  // 🚀 CORE AI FUNCTIONS (Universal)
   // ==============================================================
 
   /// 🔹 General Code Generation (Universal)
@@ -180,13 +185,10 @@ class GeminiService {
       switch (_currentProvider) {
         case AIProvider.gemini:
           return await _generateWithGemini(frameworkPrompt);
-          
         case AIProvider.deepseek:
           return await _generateWithDeepSeek(frameworkPrompt);
-          
         case AIProvider.openai:
           return await _generateWithOpenAI(frameworkPrompt);
-          
         case AIProvider.local:
           return await _generateWithLocal(frameworkPrompt);
       }
@@ -206,24 +208,8 @@ class GeminiService {
     }
 
     try {
-      const systemInstruction = '''
-آپ ایک ماہر Modern UI/UX ڈیزائنر ہیں جو Flutter کے لیے ڈیزائن تخلیق کرتے ہیں۔
-صرف JSON لوٹائیں، کوئی اضافی متن نہیں۔
-''';
-
-      final userPrompt = componentType.toLowerCase() == 'auto'
-          ? prompt
-          : "Create a modern $componentType for: $prompt";
-
-      final fullPrompt = '''
-$systemInstruction
-
-User Request: $userPrompt
-
-Generate a modern, visually appealing UI component.
-Return only valid JSON.
-''';
-
+      final fullPrompt = _buildUIDesignPrompt(prompt, componentType);
+      
       switch (_currentProvider) {
         case AIProvider.gemini:
           if (_geminiModel == null) throw Exception('Gemini model not initialized');
@@ -254,39 +240,21 @@ Return only valid JSON.
 
     try {
       final designJson = json.encode(designData);
+      final prompt = _buildFlutterCodePrompt(designJson, includeComments, addDependencies);
       
-      final prompt = '''
-You are a senior Flutter developer. Convert this UI design JSON into complete, working Flutter code.
-
-DESIGN DATA:
-$designJson
-
-REQUIREMENTS:
-1. Generate COMPLETE, COMPILABLE Flutter code
-2. Use StatelessWidget for simple components
-3. Use StatefulWidget if interaction is needed
-4. Follow Flutter best practices
-5. ${includeComments ? 'Add helpful comments' : 'No comments needed'}
-6. ${addDependencies ? 'Add necessary imports' : 'Only core Flutter imports'}
-
-Return ONLY Flutter Dart code:
-''';
-
-      final response = await _geminiModel!.generateContent([Content.text(prompt)]);
-      String generatedCode = response.text?.trim() ?? '';
-
-      if (generatedCode.isEmpty) {
-        throw Exception('AI نے کوئی کوڈ واپس نہیں کیا');
+      // یہ صرف Gemini کے لیے ہے
+      if (_currentProvider == AIProvider.gemini) {
+        if (_geminiModel == null) throw Exception('Gemini model not initialized');
+        final response = await _geminiModel!.generateContent([Content.text(prompt)]);
+        return _cleanGeneratedCode(response.text?.trim() ?? '', 'flutter');
+      } else {
+        // باقی providers کے لیے general code generation استعمال کریں
+        return await generateCode(
+          prompt: prompt,
+          framework: 'flutter',
+          platforms: ['android', 'ios'],
+        );
       }
-
-      // Clean the code
-      generatedCode = generatedCode
-          .replaceAll(RegExp(r'```[a-z]*\n'), '')
-          .replaceAll('```', '')
-          .trim();
-
-      return generatedCode;
-
     } catch (e) {
       print('❌ Flutter Code Generation Failed: $e');
       return _generateFallbackFlutterCode(designData);
@@ -304,34 +272,25 @@ Return ONLY Flutter Dart code:
     }
 
     try {
-      final prompt = '''
-Generate a complete UI Kit for a $appTheme themed Flutter app.
-Include these components: ${components.join(', ')}.
-
-Return a JSON array where each element is a UI component design.
-''';
-
-      final response = await _geminiModel!.generateContent([Content.text(prompt)]);
-      String rawResponse = response.text?.trim() ?? '[]';
-
-      // Clean JSON
-      String cleanJson = rawResponse
-          .replaceAll('```json', '')
-          .replaceAll('```', '')
-          .trim();
-
-      List<Map<String, dynamic>> componentsList;
-      try {
-        final List<dynamic> parsed = json.decode(cleanJson);
-        componentsList = parsed.cast<Map<String, dynamic>>();
-      } catch (e) {
-        print('⚠️ Failed to parse UI Kit, using fallback');
-        componentsList = _generateFallbackUIKit(appTheme, components);
+      final prompt = _buildUIKitPrompt(appTheme, components);
+      
+      String responseText;
+      
+      switch (_currentProvider) {
+        case AIProvider.gemini:
+          if (_geminiModel == null) throw Exception('Gemini model not initialized');
+          final response = await _geminiModel!.generateContent([Content.text(prompt)]);
+          responseText = response.text?.trim() ?? '[]';
+          break;
+          
+        case AIProvider.deepseek:
+        case AIProvider.openai:
+        case AIProvider.local:
+          responseText = await _generateTextWithOpenAICompatible(prompt);
+          break;
       }
 
-      print('🎨 Generated UI Kit with ${componentsList.length} components');
-      return componentsList;
-
+      return _parseUIKitResponse(responseText, appTheme, components);
     } catch (e) {
       print('❌ UI Kit Generation Failed: $e');
       return _generateFallbackUIKit(appTheme, components);
@@ -351,19 +310,8 @@ Return a JSON array where each element is a UI component design.
     }
 
     try {
-      final debugPrompt = """
-You are a senior $framework developer. Fix this code:
-
-ORIGINAL PROMPT: $originalPrompt
-
-FAULTY CODE:
-$faultyCode
-
-ERROR: $errorDescription
-
-Return ONLY corrected code:
-""";
-
+      final debugPrompt = _buildDebugPrompt(faultyCode, errorDescription, framework, originalPrompt);
+      
       return await generateCode(
         prompt: debugPrompt,
         framework: framework,
@@ -372,11 +320,6 @@ Return ONLY corrected code:
     } catch (e) {
       throw Exception('ڈیبگنگ ناکام: $e');
     }
-  }
-
-  /// 🔹 API Suggestion (Universal)
-  Future<Map<String, dynamic>?> getApiSuggestion(String category) async {
-    return _getFallbackSuggestion(category);
   }
 
   /// 🔹 Test Connection (Universal)
@@ -408,7 +351,6 @@ Return ONLY corrected code:
   // 🔧 PRIVATE HELPER METHODS
   // ==============================================================
 
-  // ✅ یہ methods class کے اندر ہیں
   void _saveApiKeyDirectly(String apiKey) {
     _secureStorage.write(key: _apiKeyKey, value: apiKey);
   }
@@ -424,6 +366,71 @@ Return ONLY corrected code:
       case 'local': return AIProvider.local;
       default: return AIProvider.gemini;
     }
+  }
+
+  // Prompt builders
+  String _buildFrameworkPrompt(String userPrompt, String framework, List<String> platforms) {
+    final platformList = platforms.join(', ');
+    return '''
+Generate COMPLETE $framework code for: $userPrompt
+Platforms: $platformList
+RETURN ONLY CODE. NO EXPLANATIONS.
+''';
+  }
+
+  String _buildUIDesignPrompt(String prompt, String componentType) {
+    final type = componentType.toLowerCase() == 'auto' ? 'UI component' : componentType;
+    return '''
+You are a UI/UX designer. Create a modern, beautiful $type design for:
+$prompt
+
+Return ONLY JSON with this structure:
+{
+  "componentType": "$componentType",
+  "label": "Title",
+  "properties": {},
+  "style": {
+    "backgroundColor": "#HEX",
+    "borderRadius": 0,
+    "gradient": {}
+  }
+}
+''';
+  }
+
+  String _buildFlutterCodePrompt(String designJson, bool comments, bool dependencies) {
+    return '''
+Convert this UI design JSON into Flutter code:
+$designJson
+
+${comments ? 'Add helpful comments' : 'No comments'}
+${dependencies ? 'Add imports' : 'Core Flutter only'}
+
+Return ONLY Flutter code:
+''';
+  }
+
+  String _buildUIKitPrompt(String theme, List<String> components) {
+    return '''
+Generate UI Kit for $theme app with: ${components.join(', ')}
+Return JSON array where each item has componentType, label, and style.
+ONLY JSON.
+''';
+  }
+
+  String _buildDebugPrompt(String code, String error, String framework, String original) {
+    return '''
+Fix this $framework code:
+
+ORIGINAL: $original
+
+CODE:
+$code
+
+ERROR: $error
+
+Return ONLY fixed code:
+''';
   }
 
   // Gemini implementation
@@ -450,11 +457,15 @@ Return ONLY corrected code:
           {'role': 'system', 'content': 'You are a coding assistant. Return only code.'},
           {'role': 'user', 'content': prompt},
         ],
+        'temperature': 0.1,
       }),
     );
     
-    final data = json.decode(response.body);
-    return data['choices'][0]['message']['content'].trim();
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['choices'][0]['message']['content'].trim();
+    }
+    throw Exception('DeepSeek API error: ${response.statusCode}');
   }
   
   // OpenAI implementation
@@ -474,11 +485,15 @@ Return ONLY corrected code:
           {'role': 'system', 'content': 'You are a coding assistant. Return only code.'},
           {'role': 'user', 'content': prompt},
         ],
+        'temperature': 0.1,
       }),
     );
     
-    final data = json.decode(response.body);
-    return data['choices'][0]['message']['content'].trim();
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['choices'][0]['message']['content'].trim();
+    }
+    throw Exception('OpenAI API error: ${response.statusCode}');
   }
   
   // Local (Ollama) implementation
@@ -490,18 +505,22 @@ Return ONLY corrected code:
       Uri.parse('$customUrl/api/generate'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
-        'model': 'llama3',
-        'prompt': 'You are a coding assistant. Return only code.\n\n$prompt',
+        'model': 'codellama',
+        'prompt': prompt,
         'stream': false,
+        'temperature': 0.1,
       }),
     );
     
-    final data = json.decode(response.body);
-    return data['response'].trim();
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['response'].trim();
+    }
+    throw Exception('Local API error: ${response.statusCode}');
   }
   
-  // OpenAI-compatible UI Design
-  Future<Map<String, dynamic>> _generateUIDesignWithOpenAICompatible(String prompt) async {
+  // OpenAI-compatible text generation
+  Future<String> _generateTextWithOpenAICompatible(String prompt) async {
     final apiKey = await getSavedApiKey();
     String baseUrl = 'https://api.openai.com/v1';
     String model = 'gpt-3.5-turbo';
@@ -525,15 +544,24 @@ Return ONLY corrected code:
       body: json.encode({
         'model': model,
         'messages': [
-          {'role': 'system', 'content': 'You are a UI/UX designer. Return only JSON.'},
+          {'role': 'system', 'content': 'You are a helpful assistant. Return only the requested data.'},
           {'role': 'user', 'content': prompt},
         ],
+        'temperature': 0.1,
       }),
     );
     
-    final data = json.decode(response.body);
-    final content = data['choices'][0]['message']['content'];
-    return _parseDesignResponse(content);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return data['choices'][0]['message']['content'].trim();
+    }
+    throw Exception('API error: ${response.statusCode}');
+  }
+  
+  // OpenAI-compatible UI Design
+  Future<Map<String, dynamic>> _generateUIDesignWithOpenAICompatible(String prompt) async {
+    final responseText = await _generateTextWithOpenAICompatible(prompt);
+    return _parseDesignResponse(responseText);
   }
   
   // Connection tests
@@ -578,15 +606,6 @@ Return ONLY corrected code:
     }
   }
 
-  String _buildFrameworkPrompt(String userPrompt, String framework, List<String> platforms) {
-    final platformList = platforms.join(', ');
-    return '''
-Generate COMPLETE $framework code for: $userPrompt
-Platforms: $platformList
-RETURN ONLY CODE.
-''';
-  }
-
   String _cleanGeneratedCode(String code, String framework) {
     code = code.replaceAll(RegExp(r'```[a-z]*\n'), '');
     code = code.replaceAll('```', '');
@@ -611,6 +630,25 @@ RETURN ONLY CODE.
     }
   }
 
+  List<Map<String, dynamic>> _parseUIKitResponse(String response, String theme, List<String> components) {
+    try {
+      String cleaned = response
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+      
+      final jsonMatch = RegExp(r'\[[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*\]').firstMatch(cleaned);
+      if (jsonMatch != null) {
+        cleaned = jsonMatch.group(0)!;
+      }
+      
+      final List<dynamic> parsed = json.decode(cleaned);
+      return parsed.cast<Map<String, dynamic>>();
+    } catch (e) {
+      return _generateFallbackUIKit(theme, components);
+    }
+  }
+
   Map<String, dynamic> _createFallbackDesign(String prompt, String componentType) {
     return {
       'componentType': componentType == 'auto' ? 'container' : componentType,
@@ -622,39 +660,6 @@ RETURN ONLY CODE.
         'gradient': {'colors': ['#6366F1', '#8B5CF6']},
       },
     };
-  }
-
-  Map<String, dynamic>? _getFallbackSuggestion(String category) {
-    final fallbacks = {
-      'ai': {
-        'name': 'OpenAI API',
-        'url': 'https://platform.openai.com/api-keys',
-        'note': 'Create account and generate API key'
-      },
-      'firebase': {
-        'name': 'Google Firebase',
-        'url': 'https://console.firebase.google.com',
-        'note': 'Create project and enable APIs'
-      },
-      'weather': {
-        'name': 'OpenWeather Map',
-        'url': 'https://openweathermap.org/api',
-        'note': 'Free tier available with signup'
-      },
-      'authentication': {
-        'name': 'Firebase Auth',
-        'url': 'https://console.firebase.google.com',
-        'note': 'Enable Authentication in Firebase Console'
-      },
-      'database': {
-        'name': 'Firebase Firestore',
-        'url': 'https://console.firebase.google.com',
-        'note': 'Enable Firestore in Firebase Console'
-      }
-    };
-    
-    final key = category.toLowerCase();
-    return fallbacks[key] ?? fallbacks['ai'];
   }
 
   String _generateFallbackFlutterCode(Map<String, dynamic> design) {
@@ -683,7 +688,7 @@ class ${_toPascalCase(type)}Widget extends StatelessWidget {
       ),
       padding: EdgeInsets.all(16),
       child: Center(
-        child: Text(label),
+        child: Text(label, style: TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -695,37 +700,23 @@ class ${_toPascalCase(type)}Widget extends StatelessWidget {
     return components.map((component) {
       return {
         'componentType': component,
-        'label': '$theme $component',
-        'style': {'backgroundColor': '#6366F1', 'borderRadius': 16.0},
+        'label': '$theme ${component[0].toUpperCase()}${component.substring(1)}',
+        'style': {
+          'backgroundColor': '#6366F1',
+          'borderRadius': 16.0,
+          'textColor': '#FFFFFF',
+        },
       };
     }).toList();
   }
 
   String _toPascalCase(String input) {
     if (input.isEmpty) return '';
-    return input[0].toUpperCase() + input.substring(1);
-  }
-
-  Future<String> getFirebaseAuthGuide() async {
-    await _initialization;
-    if (_geminiModel == null) throw Exception('Gemini model not initialized');
-    final response = await _geminiModel!.generateContent([Content.text("Firebase Auth guide")]);
-    return response.text ?? 'Guide unavailable.';
-  }
-
-  Future<String> getFirebaseDatabaseGuide() async {
-    await _initialization;
-    if (_geminiModel == null) throw Exception('Gemini model not initialized');
-    final response = await _geminiModel!.generateContent([Content.text("Firebase Firestore guide")]);
-    return response.text ?? 'Guide unavailable.';
-  }
-
-  Future<String> generateGeminiLink(String topic, {bool open = false}) async {
-    final key = await getSavedApiKey();
-    if (key == null || key.isEmpty) throw Exception('API key not found.');
-    final link = "https://aistudio.google.com/app/prompts/new?prompt=${Uri.encodeComponent(topic)}";
-    if (open) await LinkHelper.openLink(link);
-    return link;
+    final words = input.split(RegExp(r'[_-\s]'));
+    return words.map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join();
   }
 }
 

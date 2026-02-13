@@ -43,7 +43,28 @@ class ChatController extends ChangeNotifier {
   List<Map<String, dynamic>> uiKit = [];
   bool isGeneratingUI = false;
 
+  // ✅ نیا: آخری جنریٹ شدہ کوڈ محفوظ کریں
+  String? get generatedCode {
+    try {
+      final lastCodeMsg = messages.lastWhere(
+        (msg) => msg.sender == "ai" && msg.isCode,
+        orElse: () => ChatMessage(
+          id: '0',
+          sender: 'ai',
+          text: '',
+          timestamp: DateTime.now(),
+        ),
+      );
+      return lastCodeMsg.text.isNotEmpty ? lastCodeMsg.text : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   late AIApiFinder aiApiFinder;
+  
+  // ... باقی سب ویسے ہی
+}
 
   /// 🔹 Check AI Connection
   Future<void> _checkConnection() async {

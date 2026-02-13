@@ -15,20 +15,13 @@ import '../api_integration_screen.dart';
 
 /// 🎯 Chat Controller - تمام logic اور state مینجمنٹ
 class ChatController extends ChangeNotifier {
+  // ============= 📊 Required Services =============
   final GeminiService geminiService;
   final GitHubService githubService;
   final Project project;
+  late AIApiFinder aiApiFinder;
 
-  ChatController({
-    required this.geminiService,
-    required this.githubService,
-    required this.project,
-  }) {
-    aiApiFinder = AIApiFinder(geminiService: geminiService);
-    _checkConnection();
-  }
-
-  // State Variables
+  // ============= 📊 State Variables =============
   final List<ChatMessage> messages = [];
   final TextEditingController textController = TextEditingController();
   final ScrollController scrollController = ScrollController();
@@ -43,7 +36,17 @@ class ChatController extends ChangeNotifier {
   List<Map<String, dynamic>> uiKit = [];
   bool isGeneratingUI = false;
 
-  // ✅ نیا: آخری جنریٹ شدہ کوڈ محفوظ کریں
+  // ============= 🏗️ Constructor =============
+  ChatController({
+    required this.geminiService,
+    required this.githubService,
+    required this.project,
+  }) {
+    aiApiFinder = AIApiFinder(geminiService: geminiService);
+    _checkConnection();
+  }
+
+  // ============= 📌 Getters =============
   String? get generatedCode {
     try {
       final lastCodeMsg = messages.lastWhere(
@@ -61,12 +64,7 @@ class ChatController extends ChangeNotifier {
     }
   }
 
-  late AIApiFinder aiApiFinder;
-  
-  // ... باقی سب ویسے ہی
-}
-
-  /// 🔹 Check AI Connection
+  // ============= 🔌 Connection Functions =============
   Future<void> _checkConnection() async {
     try {
       await geminiService.testConnection();
@@ -79,20 +77,20 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔹 Auto Scroll to Bottom
+  // ============= 📜 Scroll Functions =============
   void scrollToBottom() {
     if (scrollController.hasClients) {
-      Future.delayed(Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 100), () {
         scrollController.animateTo(
           scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       });
     }
   }
 
-  /// 🔹 Send Message
+  // ============= 💬 Message Functions =============
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -170,33 +168,32 @@ $text
     }
   }
 
-  /// 🔹 Copy Message Text
   void copyMessage(String text, BuildContext context) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('✅ متن کاپی ہو گیا!'),
+        content: const Text('✅ متن کاپی ہو گیا!'),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
-  /// 🔹 Delete Message
   void deleteMessage(String messageId) {
     messages.removeWhere((msg) => msg.id == messageId);
     notifyListeners();
   }
 
-  /// 🔹 Edit Message (paste to input)
   void editMessage(String text) {
     textController.text = text;
     notifyListeners();
   }
 
-  /// 🎨 Generate UI Design
+  // ============= 🎨 UI Design Functions =============
+  
+  /// ⚠️ **یہ فنکشن غائب تھا - اب شامل کیا**
   Future<void> generateUIDesign() async {
     if (textController.text.trim().isEmpty) return;
 
@@ -233,7 +230,7 @@ $text
     }
   }
 
-  /// 🎨 Convert Design to Code
+  /// ⚠️ **یہ فنکشن غائب تھا - اب شامل کیا**
   Future<void> convertDesignToCode(BuildContext context) async {
     if (latestUIDesign == null) return;
 
@@ -264,7 +261,7 @@ $text
       await _saveToGitHub(flutterCode);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('✅ کوڈ GitHub پر محفوظ ہو گیا!'),
           backgroundColor: Colors.green,
         ),
@@ -276,7 +273,7 @@ $text
     }
   }
 
-  /// 🎨 Generate UI Kit
+  /// ⚠️ **یہ فنکشن غائب تھا - اب شامل کیا**
   Future<void> generateUIKit(BuildContext context) async {
     isGeneratingUI = true;
     notifyListeners();
@@ -284,7 +281,7 @@ $text
     try {
       uiKit = await geminiService.generateUIKit(
         appTheme: project.name,
-        components: ['button', 'card', 'textfield', 'appbar', 'navbar'],
+        components: const ['button', 'card', 'textfield', 'appbar', 'navbar'],
       );
 
       isGeneratingUI = false;
@@ -305,29 +302,20 @@ $text
     }
   }
 
-  /// 🔹 Debug Current Code
+  /// ⚠️ **یہ فنکشن غائب تھا - اب شامل کیا**
+  void hideDesignPreview() {
+    showDesignPreview = false;
+    notifyListeners();
+  }
+
+  // ============= 🔧 Debug Functions =============
   Future<void> debugCurrentCode(BuildContext context) async {
-    if (messages.isEmpty) {
+    if (generatedCode == null) {
       _showSnackBar(context, '❌ پہلے کوڈ جنریٹ کریں', Colors.orange);
       return;
     }
 
     try {
-      final lastAIMessage = messages.lastWhere(
-        (msg) => msg.sender == "ai" && msg.isCode,
-        orElse: () => ChatMessage(
-          id: '0',
-          sender: 'ai',
-          text: '',
-          timestamp: DateTime.now(),
-        ),
-      );
-
-      if (lastAIMessage.text.isEmpty) {
-        _showSnackBar(context, '❌ پہلے کوڈ جنریٹ کریں', Colors.orange);
-        return;
-      }
-
       isAIThinking = true;
       notifyListeners();
 
@@ -335,7 +323,7 @@ $text
 اس ${project.framework} کوڈ میں ممکنہ مسائل ڈھونڈیں اور بہتر بنائیں:
 
 کوڈ:
-${lastAIMessage.text}
+${generatedCode!}
 
 ہدایات:
 1. ممکنہ syntax errors درست کریں
@@ -371,7 +359,7 @@ ${lastAIMessage.text}
     }
   }
 
-  /// 🔹 Discover APIs - ✅ براہ راست ApiDiscoveryScreen
+  // ============= 🌐 API Functions =============
   Future<void> discoverApis(BuildContext context) async {
     if (isAIThinking) return;
 
@@ -393,7 +381,6 @@ ${lastAIMessage.text}
         appName: project.name,
       );
 
-      // ✅ براہ راست ApiDiscoveryScreen کھولیں
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -412,7 +399,6 @@ ${lastAIMessage.text}
     }
   }
 
-  /// 🔹 Start API Integration - ✅ براہ راست ApiIntegrationScreen
   void startApiIntegration(BuildContext context, ApiTemplate apiTemplate) {
     Navigator.push(
       context,
@@ -427,7 +413,6 @@ ${lastAIMessage.text}
     );
   }
 
-  /// 🔹 Handle API Key Submission
   void _handleApiKeySubmission(ApiTemplate apiTemplate, String apiKey) {
     String prompt = """
 میں نے ${apiTemplate.name} کی API key جمع کرا دی ہے۔
@@ -447,27 +432,15 @@ API URL: ${apiTemplate.url}
     sendMessage(prompt);
   }
 
-  /// 🔹 View Generated Code - ✅ براہ راست BuildScreen
+  // ============= 🚀 Navigation Functions =============
   void viewGeneratedCode(BuildContext context) {
-    if (messages.isEmpty) return;
+    if (generatedCode == null) return;
 
-    final lastAIMessage = messages.lastWhere(
-      (msg) => msg.sender == "ai" && msg.isCode,
-      orElse: () => ChatMessage(
-        id: '0',
-        sender: 'ai',
-        text: '// ابھی تک کوئی کوڈ جنریٹ نہیں ہوا',
-        timestamp: DateTime.now(),
-        isCode: true,
-      ),
-    );
-
-    // ✅ براہ راست BuildScreen کھولیں
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => BuildScreen(
-          generatedCode: lastAIMessage.text,
+          generatedCode: generatedCode!,
           projectName: project.name,
           framework: project.framework,
         ),
@@ -475,13 +448,7 @@ API URL: ${apiTemplate.url}
     );
   }
 
-  /// 🔹 Hide Design Preview
-  void hideDesignPreview() {
-    showDesignPreview = false;
-    notifyListeners();
-  }
-
-  /// 🔹 Helper: Validate Code
+  // ============= 🛠️ Helper Functions =============
   bool _isValidCode(String code) {
     switch (project.framework.toLowerCase()) {
       case 'flutter':
@@ -499,7 +466,6 @@ API URL: ${apiTemplate.url}
     }
   }
 
-  /// 🔹 Helper: Save to GitHub
   Future<void> _saveToGitHub(String code) async {
     try {
       final repoName = '${project.name}_${DateTime.now().millisecondsSinceEpoch}';
@@ -509,17 +475,17 @@ API URL: ${apiTemplate.url}
     }
   }
 
-  /// 🔹 Helper: Show SnackBar
   void _showSnackBar(BuildContext context, String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: color,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
+  // ============= 🧹 Dispose =============
   @override
   void dispose() {
     textController.dispose();

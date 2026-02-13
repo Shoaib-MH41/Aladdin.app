@@ -19,6 +19,9 @@ class SelectionScreen extends StatefulWidget {
 
 class _SelectionScreenState extends State<SelectionScreen>
     with SingleTickerProviderStateMixin {
+  // ============= 📝 PROJECT NAME - نیا فیچر =============
+  final TextEditingController _projectNameController = TextEditingController();
+  
   // choices
   final List<String> _platforms = [];
   String _framework = 'Flutter';
@@ -40,10 +43,14 @@ class _SelectionScreenState extends State<SelectionScreen>
     );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeInOut);
     _animController.forward();
+    
+    // ✅ Default project name
+    _projectNameController.text = 'MyApp_${DateTime.now().millisecondsSinceEpoch}';
   }
 
   @override
   void dispose() {
+    _projectNameController.dispose();
     _animController.dispose();
     super.dispose();
   }
@@ -59,6 +66,15 @@ class _SelectionScreenState extends State<SelectionScreen>
   }
 
   void _saveSelection() {
+    // ✅ Validate project name
+    String projectName = _projectNameController.text.trim();
+    if (projectName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('براہ کرم پروجیکٹ کا نام لکھیں')),
+      );
+      return;
+    }
+
     if (_platforms.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select at least one platform')),
@@ -68,7 +84,7 @@ class _SelectionScreenState extends State<SelectionScreen>
 
     final project = Project(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: 'project_${DateTime.now().millisecondsSinceEpoch}',
+      name: projectName,  // ✅ اب صارف کا لکھا ہوا نام استعمال ہوگا
       framework: _framework,
       platforms: _platforms,
       assets: {},
@@ -103,13 +119,54 @@ class _SelectionScreenState extends State<SelectionScreen>
       opacity: _fadeAnim,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('New Project'),
+          title: const Text('نیا پروجیکٹ'),
           backgroundColor: Colors.blueAccent,
+          foregroundColor: Colors.white,
         ),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // ============= 📝 PROJECT NAME SECTION - نیا =============
+              _sectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.drive_file_rename_outline, color: Colors.blueAccent),
+                        SizedBox(width: 8),
+                        Text(
+                          'پروجیکٹ کا نام',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _projectNameController,
+                      decoration: InputDecoration(
+                        hintText: '例如: MyFirstApp',
+                        prefixIcon: const Icon(Icons.edit, color: Colors.blueAccent),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                      ),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'اپنے پروجیکٹ کا نام لکھیں',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
               _sectionCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

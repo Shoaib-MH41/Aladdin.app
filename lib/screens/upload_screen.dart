@@ -7,9 +7,9 @@ import 'package:path_provider/path_provider.dart';
 import '../models/project_model.dart';
 
 class UploadScreen extends StatefulWidget {
-  final Project? project;  // ✅ یہ شامل کریں
+  final Project? project;
   
-  const UploadScreen({super.key, this.project});  // ✅ یہ درست کریں
+  const UploadScreen({super.key, this.project});
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
@@ -25,39 +25,11 @@ class _UploadScreenState extends State<UploadScreen> {
   bool _isUploading = false;
   String _currentOperation = '';
 
-  // ... باقی سارا کوڈ ویسے ہی رہے گا ...
+  // ============= 🔐 Permission Methods =============
   
-  @override
-  Widget build(BuildContext context) {
-    // ✅ پروجیکٹ حاصل کرنے کا بہتر طریقہ
-    final Project project;
-    
-    if (widget.project != null) {
-      project = widget.project!;  // Constructor سے آیا
-    } else {
-      project = ModalRoute.of(context)!.settings.arguments as Project;  // Route سے آیا
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('📁 Upload Assets'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: _isPicking || _isUploading
-          ? _buildLoadingState()
-          : _buildMainContent(project),
-    );
-  }
-  
-  // ... باقی سارا کوڈ ویسے ہی رہے گا ...
-}
-
-  /// ✅ جدید Permission System (Android 10 → 14+)
   Future<bool> _requestFilePermission() async {
     try {
       if (Platform.isAndroid) {
-        // 🔹 Android 13+ (API 33+) کے لیے میڈیا permissions
         if (await Permission.photos.isDenied ||
             await Permission.videos.isDenied ||
             await Permission.audio.isDenied) {
@@ -68,12 +40,10 @@ class _UploadScreenState extends State<UploadScreen> {
           ].request();
         }
 
-        // 🔹 پرانے ورژن (Android 10–12)
         if (await Permission.storage.isDenied) {
           await Permission.storage.request();
         }
 
-        // 🔹 اگر کسی ایک بھی اجازت ملی تو اوکے
         if (await Permission.storage.isGranted ||
             await Permission.photos.isGranted ||
             await Permission.videos.isGranted ||
@@ -81,7 +51,6 @@ class _UploadScreenState extends State<UploadScreen> {
           return true;
         }
 
-        // ❌ اگر ہمیشہ کے لیے deny کیا گیا
         if (await Permission.storage.isPermanentlyDenied ||
             await Permission.photos.isPermanentlyDenied) {
           _showPermissionSettingsDialog();
@@ -93,7 +62,6 @@ class _UploadScreenState extends State<UploadScreen> {
         return false;
       }
 
-      // 🔹 iOS کے لیے
       if (Platform.isIOS) {
         final status = await Permission.photos.request();
         return status.isGranted;
@@ -147,7 +115,8 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 
-  /// ✅ جدید File Picker System (Complete File Manager)
+  // ============= 📁 File Picker Methods =============
+
   Future<void> _pickFiles(String type) async {
     try {
       setState(() {
@@ -164,7 +133,6 @@ class _UploadScreenState extends State<UploadScreen> {
         );
       } catch (e) {
         debugPrint('⚠️ FilePicker error: $e');
-        // Fallback
         result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
           allowedExtensions: [
@@ -213,6 +181,8 @@ class _UploadScreenState extends State<UploadScreen> {
       });
     }
   }
+
+  // ============= ☁️ Upload Methods =============
 
   Future<void> _uploadAllFilesTogether(Project project) async {
     try {
@@ -278,9 +248,25 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
+  // ============= 🎨 UI Build Methods =============
+
   @override
   Widget build(BuildContext context) {
-    final project = ModalRoute.of(context)!.settings.arguments as Project;
+    // ✅ FIX 1: Project کو صحیح طریقے سے حاصل کریں
+    final Project project;
+    
+    if (widget.project != null) {
+      project = widget.project!;
+    } else {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args == null) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Error')),
+          body: const Center(child: Text('No project provided')),
+        );
+      }
+      project = args as Project;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -351,8 +337,11 @@ class _UploadScreenState extends State<UploadScreen> {
                           trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () {
-                              setState(() => files.remove(f));
-                              _allSelectedFiles.remove(f);
+                              // ✅ FIX 2: setState کو صحیح طریقے سے استعمال کریں
+                              setState(() {
+                                files.remove(f);
+                                _allSelectedFiles.remove(f);
+                              });
                             },
                           ),
                         ))

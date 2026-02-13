@@ -130,7 +130,7 @@ class GitHubService {
           'name': sanitizedRepoName,
           'description': description,
           'private': private,
-          'auto_init': true, // README.md خود بخود بن جائے گی
+          'auto_init': true,
           'has_issues': true,
           'has_projects': false,
           'has_wiki': false,
@@ -143,7 +143,6 @@ class GitHubService {
         print('✅ Repository created: $repoUrl');
         return repoUrl;
       } else if (response.statusCode == 422) {
-        // Repository پہلے سے موجود ہے
         final username = await _getUsername(token);
         final repoUrl = 'https://github.com/$username/$sanitizedRepoName';
         print('⚠️ Repository already exists: $repoUrl');
@@ -201,7 +200,6 @@ class GitHubService {
         final errorMessage = errorBody['message'] ?? 'Upload failed';
         
         if (errorMessage.contains('already exists')) {
-          // فائل پہلے سے موجود ہے، update کریں
           await _updateFile(
             token: token,
             username: username,
@@ -231,7 +229,6 @@ class GitHubService {
     required String commitMessage,
   }) async {
     try {
-      // پہلے موجودہ فائل کا SHA حاصل کریں
       final existingFileResponse = await http.get(
         Uri.parse('https://api.github.com/repos/$username/$repoName/contents/$filePath'),
         headers: {
@@ -259,7 +256,7 @@ class GitHubService {
           'message': commitMessage,
           'content': encodedContent,
           'branch': branch,
-          'sha': sha, // موجودہ فائل کو اپڈیٹ کرنے کے لیے SHA ضروری ہے
+          'sha': sha,
           'committer': {
             'name': 'Aladdin AI App Factory',
             'email': 'hello@aladdin.app'
@@ -280,7 +277,7 @@ class GitHubService {
   /// 🔹 مکمل پروجیکٹ اپلوڈ کریں
   Future<void> uploadCompleteProject({
     required String repoName,
-    required Map<String, String> files, // filePath -> content
+    required Map<String, String> files,
     String branch = 'main',
   }) async {
     final token = await getSavedToken();
@@ -292,7 +289,6 @@ class GitHubService {
       final username = await _getUsername(token);
       final sanitizedRepoName = _sanitizeRepoName(repoName);
 
-      // ہر فائل اپلوڈ کریں
       for (final entry in files.entries) {
         final filePath = entry.key;
         final content = entry.value;
@@ -305,7 +301,6 @@ class GitHubService {
           commitMessage: 'Add $filePath - Aladdin AI Project',
         );
 
-        // تھوڑا سا وقفہ دیں تاکہ GitHub rate limit نہ ہو
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
@@ -332,7 +327,7 @@ class GitHubService {
     }
   }
 
-  // ============= نیا ایڈ کردہ کوڈ (درست شدہ) =============
+  // ============= 🚀 GitHub Actions Workflow Functions =============
 
   /// 🔹 GitHub Actions Workflow بنائیں
   Future<void> createBuildWorkflow({
@@ -388,9 +383,8 @@ jobs:
         path: build/app/outputs/bundle/release/app-release.aab
 ''';
 
-    // ✅ Workflow فائل push کریں
     await uploadFile(
-      repoName: sanitizedRepoName,  // یہ درست کیا
+      repoName: sanitizedRepoName,
       filePath: '.github/workflows/build.yml',
       content: workflowContent,
       commitMessage: 'Add GitHub Actions build workflow 🤖',

@@ -1,4 +1,6 @@
-import 'ad_model.dart'; // ✅ یہ ایمپورٹ شامل کریں
+// lib/models/project_model.dart
+import 'ad_model.dart'; // ✅ اشتہار ماڈل ایمپورٹ
+
 class Project {
   final String id;
   String name;
@@ -17,12 +19,37 @@ class Project {
   
   String? generatedCode;
   String? apkLink;
-  String? githubRepoUrl;
+  
+  // ⚠️ **یہاں دیکھیں - یہ githubRepoUrl ہے، repoUrl نہیں!**
+  String? githubRepoUrl;  // ✅ یہ درست ہے
+  
   String? geminiPrompt;
   String? status;
   DateTime createdAt;
   DateTime? lastUpdated;
 
+  // ============= 📌 GETTERS =============
+  
+  /// 🔥 **نیا: repoUrl getter - یہ وہ چیز تھی جو missing تھی!**
+  String? get repoUrl => githubRepoUrl;
+  
+  /// 🔥 **نیا: isOnGitHub چیک کریں**
+  bool get isOnGitHub => githubRepoUrl != null && githubRepoUrl!.isNotEmpty;
+  
+  bool get isGenerated => generatedCode != null && generatedCode!.isNotEmpty;
+  bool get hasError => status == 'error';
+  
+  // ✅ نیا: کیا اشتہار فعال ہے؟
+  bool get hasActiveAds => adEnabled == true && activeAdCampaigns.isNotEmpty;
+  
+  // ✅ نیا: اشتہار کے لیے باقی بجٹ
+  double get remainingAdBudget {
+    if (adBudget == null) return 0.0;
+    return adBudget! - totalAdSpent;
+  }
+
+  // ============= 🏗️ CONSTRUCTOR =============
+  
   Project({
     required this.id,
     required this.name,
@@ -39,13 +66,15 @@ class Project {
     
     this.generatedCode,
     this.apkLink,
-    this.githubRepoUrl,
+    this.githubRepoUrl,  // ✅ یہ استعمال کریں
     this.geminiPrompt,
     this.status = 'draft',
     required this.createdAt,
     this.lastUpdated,
   });
 
+  // ============= 💾 TO MAP =============
+  
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -63,7 +92,7 @@ class Project {
       
       'generatedCode': generatedCode,
       'apkLink': apkLink,
-      'githubRepoUrl': githubRepoUrl,
+      'githubRepoUrl': githubRepoUrl,  // ✅ یہ استعمال کریں
       'geminiPrompt': geminiPrompt,
       'status': status,
       'createdAt': createdAt.toIso8601String(),
@@ -71,6 +100,8 @@ class Project {
     };
   }
 
+  // ============= 📖 FROM MAP =============
+  
   factory Project.fromMap(Map<String, dynamic> map) {
     return Project(
       id: map['id'],
@@ -94,7 +125,7 @@ class Project {
       
       generatedCode: map['generatedCode'],
       apkLink: map['apkLink'],
-      githubRepoUrl: map['githubRepoUrl'],
+      githubRepoUrl: map['githubRepoUrl'],  // ✅ یہ استعمال کریں
       geminiPrompt: map['geminiPrompt'],
       status: map['status'] ?? 'draft',
       createdAt: DateTime.parse(map['createdAt']),
@@ -104,14 +135,15 @@ class Project {
     );
   }
 
-  // ✅ نیا: اشتہار مہمیں شامل کرنے کا طریقہ
+  // ============= 🎯 AD CAMPAIGN METHODS =============
+  
+  /// ✅ نیا: اشتہار مہمیں شامل کرنے کا طریقہ
   void addAdCampaign(AdCampaign campaign) {
-    adCampaigns ??= []; // اگر null ہے تو خالی لسٹ بنائیں
+    adCampaigns ??= [];
     adCampaigns!.add(campaign);
     lastAdCampaignDate = DateTime.now();
     adEnabled = true;
     
-    // بجٹ اپ ڈیٹ کریں
     if (adBudget != null) {
       adBudget = adBudget! + campaign.dailyBudget;
     } else {
@@ -119,7 +151,7 @@ class Project {
     }
   }
 
-  // ✅ نیا: فعال اشتہار مہمیں حاصل کرنے کا طریقہ
+  /// ✅ نیا: فعال اشتہار مہمیں حاصل کرنے کا طریقہ
   List<AdCampaign> get activeAdCampaigns {
     if (adCampaigns == null) return [];
     return adCampaigns!.where((campaign) =>
@@ -127,7 +159,7 @@ class Project {
     ).toList();
   }
 
-  // ✅ نیا: کل اشتہار اخراجات
+  /// ✅ نیا: کل اشتہار اخراجات
   double get totalAdSpent {
     if (adCampaigns == null) return 0.0;
     double total = 0.0;
@@ -137,7 +169,7 @@ class Project {
     return total;
   }
 
-  // ✅ نیا: اشتہار کارکردگی حاصل کریں
+  /// ✅ نیا: اشتہار کارکردگی حاصل کریں
   Map<String, dynamic> get adPerformance {
     if (adCampaigns == null || adCampaigns!.isEmpty) {
       return {
@@ -169,16 +201,52 @@ class Project {
     };
   }
 
-  bool get isGenerated => generatedCode != null && generatedCode!.isNotEmpty;
-  bool get hasError => status == 'error';
-  bool get isOnGitHub => githubRepoUrl != null && githubRepoUrl!.isNotEmpty;
+  // ============= 🛠️ UTILITY METHODS =============
   
-  // ✅ نیا: کیا اشتہار فعال ہے؟
-  bool get hasActiveAds => adEnabled == true && activeAdCampaigns.isNotEmpty;
+  /// 🔥 **نیا: GitHub repo URL سیٹ کرنے کا طریقہ**
+  void setGitHubRepoUrl(String url) {
+    githubRepoUrl = url;
+    lastUpdated = DateTime.now();
+  }
   
-  // ✅ نیا: اشتہار کے لیے باقی بجٹ
-  double get remainingAdBudget {
-    if (adBudget == null) return 0.0;
-    return adBudget! - totalAdSpent;
+  /// 🔥 **نیا: copyWith method**
+  Project copyWith({
+    String? id,
+    String? name,
+    String? framework,
+    List<String>? platforms,
+    Map<String, dynamic>? assets,
+    Map<String, String>? features,
+    List<AdCampaign>? adCampaigns,
+    double? adBudget,
+    bool? adEnabled,
+    DateTime? lastAdCampaignDate,
+    String? generatedCode,
+    String? apkLink,
+    String? githubRepoUrl,
+    String? geminiPrompt,
+    String? status,
+    DateTime? createdAt,
+    DateTime? lastUpdated,
+  }) {
+    return Project(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      framework: framework ?? this.framework,
+      platforms: platforms ?? this.platforms,
+      assets: assets ?? this.assets,
+      features: features ?? this.features,
+      adCampaigns: adCampaigns ?? this.adCampaigns,
+      adBudget: adBudget ?? this.adBudget,
+      adEnabled: adEnabled ?? this.adEnabled,
+      lastAdCampaignDate: lastAdCampaignDate ?? this.lastAdCampaignDate,
+      generatedCode: generatedCode ?? this.generatedCode,
+      apkLink: apkLink ?? this.apkLink,
+      githubRepoUrl: githubRepoUrl ?? this.githubRepoUrl,
+      geminiPrompt: geminiPrompt ?? this.geminiPrompt,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      lastUpdated: lastUpdated ?? DateTime.now(),
+    );
   }
 }

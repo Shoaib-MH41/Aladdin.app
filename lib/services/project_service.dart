@@ -1,13 +1,14 @@
+// lib/services/project_service.dart
 import '../models/project_model.dart';
-import 'debug_service.dart';
+import 'gemini_service.dart';  // ✅ GeminiService استعمال کریں
 import 'github_service.dart';
 
 class ProjectService {
   final List<Project> _projects = [];
-  final DebugService? debugService;
+  final GeminiService? geminiService;  // ✅ DebugService -> GeminiService
   final GitHubService? githubService;
 
-  ProjectService({this.debugService, this.githubService});
+  ProjectService({this.geminiService, this.githubService});  // ✅ نام درست کیا
 
   List<Project> getProjects() => _projects;
 
@@ -16,7 +17,7 @@ class ProjectService {
   }
 
   void deleteProject(String id) {
-    _projects.removeWhere((p) => p.id == id); // ✅ درست
+    _projects.removeWhere((p) => p.id == id);
   }
 
   // ✅ Gemini کے ساتھ پروجیکٹ بنانا
@@ -38,17 +39,24 @@ class ProjectService {
       
       addProject(project);
 
-      // Gemini سے کوڈ جنریٹ کریں
-      if (debugService != null) {
+      // ✅ GeminiService سے کوڈ جنریٹ کریں
+      if (geminiService != null) {
         try {
-          project.generatedCode = await debugService!.generateCode(
-            prompt: prompt,
-            framework: framework,
-            platforms: project.platforms,
-          );
+          final isInitialized = await geminiService!.isInitialized();
+          if (isInitialized) {
+            project.generatedCode = await geminiService!.generateCode(
+              prompt: prompt,
+              framework: framework,
+              platforms: project.platforms,
+            );
+          } else {
+            project.generatedCode = '// ⚠️ Gemini API key سیٹ نہیں ہے۔ Settings میں API key شامل کریں۔';
+          }
         } catch (e) {
-          project.generatedCode = '// کوڈ جنریٹ نہیں ہوا: $e';
+          project.generatedCode = '// ❌ کوڈ جنریٹ نہیں ہوا: $e';
         }
+      } else {
+        project.generatedCode = '// ⚠️ GeminiService دستیاب نہیں ہے';
       }
 
       return project;
@@ -60,7 +68,7 @@ class ProjectService {
         framework: framework,
         platforms: ['Android', 'iOS'],
         assets: {},
-        generatedCode: '',
+        generatedCode: '// ❌ پروجیکٹ بنانے میں ناکامی: $e',
         createdAt: DateTime.now(),
       );
       addProject(errorProject);
@@ -71,6 +79,42 @@ class ProjectService {
 
   // ✅ پروجیکٹ ڈھونڈنے کے لیے helper method
   Project findProjectById(String id) {
-    return _projects.firstWhere((p) => p.id == id);
+    try {
+      return _projects.firstWhere((p) => p.id == id);
+    } catch (e) {
+      throw Exception('پروجیکٹ نہیں ملا: $id');
+    }
+  }
+
+  // ✅ پروجیکٹ اپڈیٹ کریں
+  void updateProject(Project updatedProject) {
+    final index = _projects.indexWhere((p) => p.id == updatedProject.id);
+    if (index != -1) {
+      _projects[index] = updatedProject;
+    }
+  }
+
+  // ✅ GitHub پر پروجیکٹ اپلوڈ کریں
+  Future<String?> uploadToGitHub(Project project) async {
+    if (githubService == null) {
+      throw Exception('GitHubService دستیاب نہیں ہے');
+    }
+
+    try {
+      // پہلے repo بنائیں
+      final repoUrl = await githubService.createRepository(
+        project.name,
+        description: 'AI-generated app: ${project.name}',
+        private: false,
+      );
+
+      // پروجیکٹ اپڈیٹ کریں
+      project.githubRepoUrl = repoUrl;
+      updateProject(project);
+
+      return repoUrl;
+    } catch (e) {
+      throw Exception('GitHub اپلوڈ ناکام: $e');
+    }
   }
 }

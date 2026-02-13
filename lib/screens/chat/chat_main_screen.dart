@@ -112,7 +112,7 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
                 _buildThinkingIndicator(),
               
               // ✅ File Upload Section (اب کام کرے گا)
-              _fileManager.buildFileUploadButtons(context),
+              //_fileManager.buildFileUploadButtons(context),
               
               // Chat Input with Gallery
               ChatInput(

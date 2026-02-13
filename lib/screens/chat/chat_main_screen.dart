@@ -6,19 +6,23 @@ import '../../models/project_model.dart';
 import '../../services/gemini_service.dart';
 import '../../services/github_service.dart';
 
-// ✅ تمام 6 فائلوں کے imports
+// ✅ تمام imports
 import 'chat_controller.dart';
 import 'chat_input.dart';
 import 'chat_message.dart';
-import 'chat_ad_manager.dart';      // ✅ نیا
-import 'chat_file_manager.dart';    // ✅ نیا
-import 'ui_design_preview.dart';    // ✅ نیا
+import 'chat_ad_manager.dart';
+import 'chat_file_manager.dart';
+import 'ui_design_preview.dart';
 
 // ✅ API Integration Screen کا import
 import '../api_integration_screen.dart';
 import '../../models/api_template_model.dart';
 
-/// 🏠 Main Chat Screen - صرف UI اور Scaffold
+// ✅ نئے imports - Build اور Publish Guide
+import '../build_screen.dart';
+import '../publish_guide_screen.dart';
+
+/// 🏠 Main Chat Screen
 class ChatMainScreen extends StatefulWidget {
   final GeminiService geminiService;
   final GitHubService githubService;
@@ -37,8 +41,6 @@ class ChatMainScreen extends StatefulWidget {
 
 class _ChatMainScreenState extends State<ChatMainScreen> {
   late ChatController _controller;
-  
-  // ✅ نئے managers
   late ChatAdManager _adManager;
   late ChatFileManager _fileManager;
 
@@ -52,7 +54,6 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
     );
     _controller.addListener(_onControllerUpdate);
     
-    // ✅ managers initialize کریں
     _adManager = ChatAdManager(
       geminiService: widget.geminiService,
       project: widget.project,
@@ -88,12 +89,15 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
       animation: _controller,
       builder: (context, child) {
         return Scaffold(
-          backgroundColor: Color(0xFF0F172A),
+          backgroundColor: const Color(0xFF0F172A),
           appBar: _buildAppBar(),
           body: Column(
             children: [
               // Project Info Header
               _buildProjectHeader(),
+              
+              // ✅ نیا: Build & Publish Buttons Row
+              _buildBuildPublishButtons(),
               
               // Magic Design Button
               _buildMagicDesignButton(),
@@ -111,9 +115,6 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
               if (_controller.isAIThinking)
                 _buildThinkingIndicator(),
               
-              // ✅ File Upload Section (اب کام کرے گا)
-              //_fileManager.buildFileUploadButtons(context),
-              
               // Chat Input with Gallery
               ChatInput(
                 controller: _controller,
@@ -130,7 +131,7 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
     );
   }
 
-  /// 📱 App Bar - ✅ API Integration Button شامل
+  /// 📱 App Bar
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: Text(
@@ -140,89 +141,233 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
           color: Colors.white,
         ),
       ),
-      backgroundColor: Color(0xFF1E293B),
+      backgroundColor: const Color(0xFF1E293B),
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           bottom: Radius.circular(20),
         ),
       ),
       actions: [
-        // ✅ API Integration Button (نیا)
+        // API Integration Button
         IconButton(
-          icon: Icon(Icons.api, color: Color(0xFF8B5CF6)),
+          icon: const Icon(Icons.api, color: Color(0xFF8B5CF6)),
           tooltip: 'API انٹیگریشن',
           onPressed: _controller.isAIThinking ? null : () => _openApiIntegration(context),
         ),
         
         // Magic Design
         IconButton(
-          icon: Icon(Icons.palette),
+          icon: const Icon(Icons.palette),
           tooltip: 'Magic Design',
           onPressed: _controller.textController.text.isNotEmpty 
               ? _controller.generateUIDesign 
               : null,
         ),
+        
         // Search APIs
         IconButton(
-          icon: Icon(Icons.search),
+          icon: const Icon(Icons.search),
           tooltip: 'AI سے APIs ڈھونڈیں',
           onPressed: _controller.isAIThinking ? null : () => _controller.discoverApis(context),
         ),
+        
         // More Options
         _buildPopupMenu(),
       ],
     );
   }
 
-  /// 🔌 API Integration Screen کھولیں (نیا فنکشن)
-  /// 🔌 API Integration Screen کھولیں (نیا فنکشن)
-void _openApiIntegration(BuildContext context) {
-  // ✅ درست ApiTemplate بنائیں (id شامل)
-  final apiTemplate = ApiTemplate(
-    id: 'openai_api_001',  // ✅ لائن 184 - یہ ID ضروری ہے
-    name: 'OpenAI API',
-    provider: 'OpenAI',
-    category: 'AI/ML',
-    description: 'AI chat اور text generation کے لیے',
-    url: 'https://platform.openai.com',
-    keyRequired: true,
-    freeTierInfo: 'مفت ٹائر دستیاب ہے',
-  );
-
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ApiIntegrationScreen(
-        apiTemplate: apiTemplate,
-        onApiKeySubmitted: (apiKey) {
-          // ✅ API Key ملنے پر کیا کرنا ہے
-          print('API Key موصول: $apiKey');
-          
-          // چیٹ میں میسج بھیجیں
-          final prompt = "API Key شامل کی گئی: ${apiTemplate.name}\nKey: ${apiKey.isNotEmpty ? '***' : 'خالی'}";
-          _controller.textController.text = prompt;
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ API Key کامیابی سے شامل ہو گئی'),
-              backgroundColor: Colors.green,
+  /// ✅ نیا: Build & Publish Buttons (اہم ترین تبدیلی)
+  Widget _buildBuildPublishButtons() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          // ⚡ Build Button
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _openBuildScreen(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.build, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '⚡ بلڈ کریں',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          );
-        },
+          ),
+          
+          const SizedBox(width: 12),
+          
+          // 🚀 Publish Guide Button
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0EA5E9).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _openPublishGuide(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.rocket_launch, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '🚀 پبلش کریں',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-    ),
-  );
-}
+    );
+  }
 
+  /// ⚡ Build Screen کھولیں (نیا فنکشن)
+  void _openBuildScreen(BuildContext context) {
+    // چیک کریں کہ کوڈ موجود ہے یا نہیں
+    final generatedCode = _controller.generatedCode ?? '';
+    
+    if (generatedCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ پہلے کوڈ جنریٹ کریں! "کوڈ دیکھیں" پر کلک کریں۔'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BuildScreen(
+          generatedCode: generatedCode,
+          projectName: widget.project.name,
+          framework: widget.project.framework,
+          repoUrl: widget.project.repoUrl, // اگر موجود ہو
+        ),
+      ),
+    );
+  }
+
+  /// 🚀 Publish Guide Screen کھولیں (نیا فنکشن)
+  void _openPublishGuide(BuildContext context) {
+    final generatedCode = _controller.generatedCode ?? '';
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublishGuideScreen(
+          appName: widget.project.name,
+          generatedCode: generatedCode.isNotEmpty ? generatedCode : '// کوڈ موجود نہیں',
+          framework: widget.project.framework,
+        ),
+      ),
+    );
+  }
+
+  /// 🔌 API Integration Screen کھولیں
+  void _openApiIntegration(BuildContext context) {
+    final apiTemplate = ApiTemplate(
+      id: 'openai_api_001',
+      name: 'OpenAI API',
+      provider: 'OpenAI',
+      category: 'AI/ML',
+      description: 'AI chat اور text generation کے لیے',
+      url: 'https://platform.openai.com',
+      keyRequired: true,
+      freeTierInfo: 'مفت ٹائر دستیاب ہے',
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ApiIntegrationScreen(
+          apiTemplate: apiTemplate,
+          onApiKeySubmitted: (apiKey) {
+            print('API Key موصول: $apiKey');
+            final prompt = "API Key شامل کی گئی: ${apiTemplate.name}\nKey: ${apiKey.isNotEmpty ? '***' : 'خالی'}";
+            _controller.textController.text = prompt;
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✅ API Key کامیابی سے شامل ہو گئی'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   /// 📋 Popup Menu
   Widget _buildPopupMenu() {
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert),
-      color: Color(0xFF1E293B),
+      icon: const Icon(Icons.more_vert),
+      color: const Color(0xFF1E293B),
       onSelected: (value) {
         switch (value) {
           case 'code':
@@ -234,6 +379,12 @@ void _openApiIntegration(BuildContext context) {
           case 'uikit':
             _controller.generateUIKit(context);
             break;
+          case 'build':
+            _openBuildScreen(context);
+            break;
+          case 'publish':
+            _openPublishGuide(context);
+            break;
         }
       },
       itemBuilder: (context) => [
@@ -241,8 +392,8 @@ void _openApiIntegration(BuildContext context) {
           value: 'code',
           child: Row(
             children: [
-              Icon(Icons.code, color: Color(0xFF8B5CF6), size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.code, color: Color(0xFF8B5CF6), size: 20),
+              const SizedBox(width: 8),
               Text('کوڈ دیکھیں', style: GoogleFonts.poppins(color: Colors.white)),
             ],
           ),
@@ -251,8 +402,8 @@ void _openApiIntegration(BuildContext context) {
           value: 'debug',
           child: Row(
             children: [
-              Icon(Icons.bug_report, color: Color(0xFF10B981), size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.bug_report, color: Color(0xFF10B981), size: 20),
+              const SizedBox(width: 8),
               Text('ڈیبگ کریں', style: GoogleFonts.poppins(color: Colors.white)),
             ],
           ),
@@ -261,9 +412,30 @@ void _openApiIntegration(BuildContext context) {
           value: 'uikit',
           child: Row(
             children: [
-              Icon(Icons.widgets, color: Color(0xFFEC4899), size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.widgets, color: Color(0xFFEC4899), size: 20),
+              const SizedBox(width: 8),
               Text('UI Kit بنائیں', style: GoogleFonts.poppins(color: Colors.white)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'build',
+          child: Row(
+            children: [
+              const Icon(Icons.build, color: Color(0xFF10B981), size: 20),
+              const SizedBox(width: 8),
+              Text('⚡ بلڈ کریں', style: GoogleFonts.poppins(color: Colors.white)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'publish',
+          child: Row(
+            children: [
+              const Icon(Icons.rocket_launch, color: Color(0xFF0EA5E9), size: 20),
+              const SizedBox(width: 8),
+              Text('🚀 پبلش کریں', style: GoogleFonts.poppins(color: Colors.white)),
             ],
           ),
         ),
@@ -271,11 +443,11 @@ void _openApiIntegration(BuildContext context) {
     );
   }
 
-  /// 📊 Project Header
+  /// 📊 Project Header (ویسے ہی)
   Widget _buildProjectHeader() {
     return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF1E293B), Color(0xFF334155)],
           begin: Alignment.topLeft,
@@ -296,13 +468,13 @@ void _openApiIntegration(BuildContext context) {
               color: Colors.white,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Row(
             children: [
-              _buildTag(widget.project.framework, Color(0xFF8B5CF6)),
-              SizedBox(width: 8),
-              _buildTag(widget.project.platforms.join(', '), Color(0xFF0EA5E9)),
-              Spacer(),
+              _buildTag(widget.project.framework, const Color(0xFF8B5CF6)),
+              const SizedBox(width: 8),
+              _buildTag(widget.project.platforms.join(', '), const Color(0xFF0EA5E9)),
+              const Spacer(),
               _buildConnectionStatus(),
             ],
           ),
@@ -314,9 +486,9 @@ void _openApiIntegration(BuildContext context) {
   /// 🏷️ Tag Widget
   Widget _buildTag(String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Color(0xFF334155),
+        color: const Color(0xFF334155),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -332,9 +504,9 @@ void _openApiIntegration(BuildContext context) {
   /// 🔌 Connection Status
   Widget _buildConnectionStatus() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _controller.isConnected ? Color(0xFF10B981) : Color(0xFFEF4444),
+        color: _controller.isConnected ? const Color(0xFF10B981) : const Color(0xFFEF4444),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -344,7 +516,7 @@ void _openApiIntegration(BuildContext context) {
             size: 12,
             color: Colors.white,
           ),
-          SizedBox(width: 6),
+          const SizedBox(width: 6),
           Text(
             _controller.connectionMessage.split(' ').first,
             style: GoogleFonts.poppins(
@@ -357,16 +529,16 @@ void _openApiIntegration(BuildContext context) {
     );
   }
 
-  /// ✨ Magic Design Button
+  /// ✨ Magic Design Button (ویسے ہی)
   Widget _buildMagicDesignButton() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
@@ -374,9 +546,9 @@ void _openApiIntegration(BuildContext context) {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFF8B5CF6).withOpacity(0.3),
+                    color: const Color(0xFF8B5CF6).withOpacity(0.3),
                     blurRadius: 8,
-                    offset: Offset(0, 4),
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -386,12 +558,12 @@ void _openApiIntegration(BuildContext context) {
                   onTap: _controller.isGeneratingUI ? null : _controller.generateUIDesign,
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (_controller.isGeneratingUI)
-                          SizedBox(
+                          const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
@@ -400,8 +572,8 @@ void _openApiIntegration(BuildContext context) {
                             ),
                           )
                         else
-                          Icon(Icons.auto_awesome, color: Colors.white),
-                        SizedBox(width: 12),
+                          const Icon(Icons.auto_awesome, color: Colors.white),
+                        const SizedBox(width: 12),
                         Text(
                           _controller.isGeneratingUI ? 'ڈیزائن بن رہا ہے...' : '🎨 Magic Design',
                           style: GoogleFonts.poppins(
@@ -417,10 +589,10 @@ void _openApiIntegration(BuildContext context) {
               ),
             ),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Container(
             decoration: BoxDecoration(
-              color: Color(0xFF0F172A),
+              color: const Color(0xFF0F172A),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Material(
@@ -429,8 +601,8 @@ void _openApiIntegration(BuildContext context) {
                 onTap: () => _controller.generateUIKit(context),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: EdgeInsets.all(16),
-                  child: Icon(Icons.widgets, color: Color(0xFF8B5CF6)),
+                  padding: const EdgeInsets.all(16),
+                  child: const Icon(Icons.widgets, color: Color(0xFF8B5CF6)),
                 ),
               ),
             ),
@@ -440,16 +612,16 @@ void _openApiIntegration(BuildContext context) {
     );
   }
 
-  /// 🎨 Design Preview Panel - ✅ UIDesignPreview استعمال کریں
+  /// 🎨 Design Preview Panel
   Widget _buildDesignPreview() {
     return Container(
-      margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0xFF1E293B),
+        color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Color(0xFF8B5CF6).withOpacity(0.3),
+          color: const Color(0xFF8B5CF6).withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -468,21 +640,20 @@ void _openApiIntegration(BuildContext context) {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close, size: 18, color: Colors.white70),
+                icon: const Icon(Icons.close, size: 18, color: Colors.white70),
                 onPressed: _controller.hideDesignPreview,
               ),
             ],
           ),
-          SizedBox(height: 12),
-          // ✅ UIDesignPreview استعمال کریں
+          const SizedBox(height: 12),
           UIDesignPreview(designData: _controller.latestUIDesign!),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => _controller.convertDesignToCode(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF8B5CF6),
+              backgroundColor: const Color(0xFF8B5CF6),
               foregroundColor: Colors.white,
-              minimumSize: Size(double.infinity, 48),
+              minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -490,8 +661,8 @@ void _openApiIntegration(BuildContext context) {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.code, size: 18),
-                SizedBox(width: 8),
+                const Icon(Icons.code, size: 18),
+                const SizedBox(width: 8),
                 Text(
                   'کوڈ میں تبدیل کریں',
                   style: GoogleFonts.poppins(
@@ -510,10 +681,10 @@ void _openApiIntegration(BuildContext context) {
   /// 💬 Messages List
   Widget _buildMessagesList() {
     return Container(
-      color: Color(0xFF0F172A),
+      color: const Color(0xFF0F172A),
       child: ListView.builder(
         controller: _controller.scrollController,
-        padding: EdgeInsets.only(top: 16, bottom: 16),
+        padding: const EdgeInsets.only(top: 16, bottom: 16),
         itemCount: _controller.messages.length,
         itemBuilder: (context, index) {
           final message = _controller.messages[index];
@@ -530,12 +701,12 @@ void _openApiIntegration(BuildContext context) {
   /// 🤔 AI Thinking Indicator
   Widget _buildThinkingIndicator() {
     return Container(
-      padding: EdgeInsets.all(16),
-      color: Color(0xFF1E293B),
+      padding: const EdgeInsets.all(16),
+      color: const Color(0xFF1E293B),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
+          const SizedBox(
             width: 24,
             height: 24,
             child: CircularProgressIndicator(
@@ -543,7 +714,7 @@ void _openApiIntegration(BuildContext context) {
               color: Color(0xFF8B5CF6),
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Text(
             "AI سوچ رہا ہے...",
             style: GoogleFonts.poppins(

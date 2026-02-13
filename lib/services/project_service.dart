@@ -1,14 +1,14 @@
 // lib/services/project_service.dart
 import '../models/project_model.dart';
-import 'gemini_service.dart';  // ✅ GeminiService استعمال کریں
+import 'gemini_service.dart';
 import 'github_service.dart';
 
 class ProjectService {
   final List<Project> _projects = [];
-  final GeminiService? geminiService;  // ✅ DebugService -> GeminiService
+  final GeminiService? geminiService;
   final GitHubService? githubService;
 
-  ProjectService({this.geminiService, this.githubService});  // ✅ نام درست کیا
+  ProjectService({this.geminiService, this.githubService});
 
   List<Project> getProjects() => _projects;
 
@@ -39,7 +39,6 @@ class ProjectService {
       
       addProject(project);
 
-      // ✅ GeminiService سے کوڈ جنریٹ کریں
       if (geminiService != null) {
         try {
           final isInitialized = await geminiService!.isInitialized();
@@ -61,7 +60,6 @@ class ProjectService {
 
       return project;
     } catch (e) {
-      // Error handling
       final errorProject = Project(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
@@ -94,21 +92,20 @@ class ProjectService {
     }
   }
 
-  // ✅ GitHub پر پروجیکٹ اپلوڈ کریں
+  // ✅ GitHub پر پروجیکٹ اپلوڈ کریں - ✅ درست شدہ
   Future<String?> uploadToGitHub(Project project) async {
     if (githubService == null) {
       throw Exception('GitHubService دستیاب نہیں ہے');
     }
 
     try {
-      // پہلے repo بنائیں
-      final repoUrl = await githubService.createRepository(
+      // ✅ ?. استعمال نہ کریں، ! استعمال کریں کیونکہ اوپر check کر لیا ہے
+      final repoUrl = await githubService!.createRepository(
         project.name,
         description: 'AI-generated app: ${project.name}',
         private: false,
       );
 
-      // پروجیکٹ اپڈیٹ کریں
       project.githubRepoUrl = repoUrl;
       updateProject(project);
 

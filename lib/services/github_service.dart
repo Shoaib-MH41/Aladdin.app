@@ -1,3 +1,4 @@
+// lib/services/github_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -95,13 +96,10 @@ class GitHubService {
 
   /// 🔹 Repository نام درست کریں
   String _sanitizeRepoName(String repoName) {
-    // صرف allowed characters رکھیں
     String sanitized = repoName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '-');
-    // 100 characters سے زیادہ نہ ہو
     if (sanitized.length > 100) {
       sanitized = sanitized.substring(0, 100);
     }
-    // lowercase میں تبدیل کریں
     return sanitized.toLowerCase();
   }
 
@@ -429,6 +427,156 @@ jobs:
       };
     } else {
       throw Exception('Status check failed: ${response.statusCode}');
+    }
+  }
+
+  // ============= 📥 DOWNLOAD ARTIFACTS =============
+
+  /// 🔹 تمام artifacts کی لسٹ حاصل کریں
+  Future<List<dynamic>> listArtifacts({
+    required String repoName,
+    int? runId,
+  }) async {
+    final token = await getSavedToken();
+    if (token == null) throw Exception('GitHub token not set');
+
+    final username = await _getUsername(token);
+    final sanitizedRepoName = _sanitizeRepoName(repoName);
+
+    String url;
+    if (runId != null) {
+      url = 'https://api.github.com/repos/$username/$sanitizedRepoName/actions/runs/$runId/artifacts';
+    } else {
+      url = 'https://api.github.com/repos/$username/$sanitizedRepoName/actions/artifacts';
+    }
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['artifacts'] ?? [];
+    } else {
+      throw Exception('Failed to list artifacts: ${response.statusCode}');
+    }
+  }
+
+  /// 🔹 Artifact کا ڈاؤن لوڈ URL حاصل کریں
+  Future<String?> getArtifactDownloadUrl({
+    required String repoName,
+    required int runId,
+    required String artifactName,
+  }) async {
+    try {
+      final artifacts = await listArtifacts(repoName: repoName, runId: runId);
+      
+      for (final artifact in artifacts) {
+        if (artifact['name'] == artifactName) {
+          return artifact['archive_download_url'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('❌ Failed to get artifact URL: $e');
+      return null;
+    }
+  }
+
+  /// 🔹 APK artifact ڈاؤن لوڈ کریں
+  Future<Map<String, dynamic>?> downloadAPK({
+    required String repoName,
+    required int runId,
+  }) async {
+    return await _downloadArtifact(
+      repoName: repoName,
+      runId: runId,
+      artifactName: 'release-apk',
+    );
+  }
+
+  /// 🔹 AAB artifact ڈاؤن لوڈ کریں
+  Future<Map<String, dynamic>?> downloadAAB({
+    required String repoName,
+    required int runId,
+  }) async {
+    return await _downloadArtifact(
+      repoName: repoName,
+      runId: runId,
+      artifactName: 'release-aab',
+    );
+  }
+
+  /// 🔹 Artifact ڈاؤن لوڈ کریں (پرائیویٹ)
+  Future<Map<String, dynamic>?> _downloadArtifact({
+    required String repoName,
+    required int runId,
+    required String artifactName,
+  }) async {
+    final token = await getSavedToken();
+    if (token == null) throw Exception('GitHub token not set');
+
+    try {
+      final downloadUrl = await getArtifactDownloadUrl(
+        repoName: repoName,
+        runId: runId,
+        artifactName: artifactName,
+      );
+
+      if (downloadUrl == null) {
+        throw Exception('Artifact not found: $artifactName');
+      }
+
+      final response = await http.get(
+        Uri.parse(downloadUrl),
+        headers: {
+          'Authorization': 'token $token',
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          'name': '$artifactName.zip',
+          'content': response.bodyBytes,
+          'url': downloadUrl,
+        };
+      } else {
+        throw Exception('Download failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Artifact download failed: $e');
+      return null;
+    }
+  }
+
+  /// 🔹 براہ راست GitHub Actions صفحہ کھولیں
+  Future<void> openActionsPage({
+    required String repoName,
+    int? runId,
+  }) async {
+    final token = await getSavedToken();
+    if (token == null) throw Exception('GitHub token not set');
+
+    final username = await _getUsername(token);
+    final sanitizedRepoName = _sanitizeRepoName(repoName);
+
+    String url;
+    if (runId != null) {
+      url = 'https://github.com/$username/$sanitizedRepoName/actions/runs/$runId';
+    } else {
+      url = 'https://github.com/$username/$sanitizedRepoName/actions';
+    }
+
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw Exception('Cannot open GitHub Actions page');
     }
   }
 }

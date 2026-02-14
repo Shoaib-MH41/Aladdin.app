@@ -1,23 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.aladdin.aladdin_app">  <!-- ✅ درست package name -->
+    package="com.example.aladdin_app">
 
-    <!-- ✅ minSdkVersion 21 شامل کریں -->
-    <uses-sdk
-        android:minSdkVersion="21"
-        android:targetSdkVersion="34" />
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
 
-    <!-- 🌐 انٹرنیٹ اور نیٹ ورک کی اجازت -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
-    <!-- 📁 Storage Permissions -->
-    <!-- ✅ Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
-    <!-- ✅ Android 10–12 (Legacy Support) -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -32,6 +27,10 @@
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
         tools:targetApi="33">
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
 
         <activity
             android:name=".MainActivity"
@@ -48,13 +47,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ نیا: AdMob App ID (placeholder) -->
-        <!-- ⚠️ بعد میں درست App ID سے replace کریں -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
-
-        <!-- 🧠 Flutter Embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

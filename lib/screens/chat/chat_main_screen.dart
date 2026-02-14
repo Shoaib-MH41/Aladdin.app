@@ -25,6 +25,9 @@ import '../publish_guide_screen.dart';
 // ✅ نیا: Upload Screen کا import (یہ شامل کریں)
 import '../upload_screen.dart';
 
+// ✅ نیا: AdMob Integration Screen کا import (یہ شامل کریں)
+import '../admob_integration_screen.dart';
+
 /// 🏠 Main Chat Screen
 class ChatMainScreen extends StatefulWidget {
   final GeminiService geminiService;
@@ -161,6 +164,13 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
           onPressed: () => _openUploadScreen(context),
         ),
         
+        // ✅ نیا: AdMob Button (AppBar میں)
+        IconButton(
+          icon: const Icon(Icons.monetization_on, color: Colors.orange),
+          tooltip: 'AdMob Integration',
+          onPressed: () => _openAdMobIntegration(context),
+        ),
+        
         // API Integration Button
         IconButton(
           icon: const Icon(Icons.api, color: Color(0xFF8B5CF6)),
@@ -197,6 +207,32 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
       MaterialPageRoute(
         builder: (context) => UploadScreen(
           project: widget.project,
+        ),
+      ),
+    );
+  }
+
+  /// ✅ نیا: AdMob Integration Screen کھولنے کا فنکشن
+  void _openAdMobIntegration(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdMobIntegrationScreen(
+          onAdMobSubmitted: (appId, adUnitIds) {
+            print('✅ App ID: $appId');
+            print('✅ Ad Units: $adUnitIds');
+            
+            // Project میں save کریں
+            widget.project.adMobAppId = appId;
+            widget.project.adMobAdUnitIds = adUnitIds;
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✅ AdMob کامیابی سے integrate ہو گیا'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
         ),
       ),
     );
@@ -410,6 +446,9 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
           case 'upload':  // ✅ نیا: Upload option
             _openUploadScreen(context);
             break;
+          case 'admob':  // ✅ نیا: AdMob option
+            _openAdMobIntegration(context);
+            break;
         }
       },
       itemBuilder: (context) => [
@@ -452,6 +491,17 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
               const Icon(Icons.upload_file, color: Color(0xFFFFA726), size: 20),
               const SizedBox(width: 8),
               Text('📁 فائلیں اپلوڈ کریں', style: GoogleFonts.poppins(color: Colors.white)),
+            ],
+          ),
+        ),
+        // ✅ نیا: AdMob option
+        PopupMenuItem(
+          value: 'admob',
+          child: Row(
+            children: [
+              const Icon(Icons.monetization_on, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              Text('💰 AdMob سیٹ اپ', style: GoogleFonts.poppins(color: Colors.white)),
             ],
           ),
         ),

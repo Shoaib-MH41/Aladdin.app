@@ -26,12 +26,8 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 🔥 IMPORTANT FIX
-      - name: Fix Android Project Structure
-        run: |
-          echo "🔧 Regenerating Android folder..."
-          rm -rf android
-          flutter create --platforms=android .
+      - name: Flutter Doctor
+        run: flutter doctor -v
 
       - name: Clean project
         run: flutter clean
@@ -51,3 +47,4 @@ jobs:
       - name: Display Build Info
         run: |
           echo "🎉 APK Build Completed Successfully!"
+          echo "📦 APK Location: build/app/outputs/flutter-apk/app-release.apk"

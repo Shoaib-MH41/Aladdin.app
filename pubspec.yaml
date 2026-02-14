@@ -42,7 +42,6 @@ dependencies:
   firebase_core: ^2.24.0
   firebase_auth: ^4.16.0
   google_sign_in: ^6.1.5
-  flutter_facebook_auth: ^6.0.3
   
   # ✅ نیا: AdMob for Monetization
   google_mobile_ads: ^4.0.0

@@ -1,6 +1,11 @@
-manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.aladdin_app">
+    package="com.aladdin.aladdin_app">  <!-- ✅ درست package name -->
+
+    <!-- ✅ minSdkVersion 21 شامل کریں -->
+    <uses-sdk
+        android:minSdkVersion="21"
+        android:targetSdkVersion="34" />
 
     <!-- 🌐 انٹرنیٹ اور نیٹ ورک کی اجازت -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -42,6 +47,12 @@ manifest xmlns:android="http://schemas.android.com/apk/res/android"
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ✅ نیا: AdMob App ID (placeholder) -->
+        <!-- ⚠️ بعد میں درست App ID سے replace کریں -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <!-- 🧠 Flutter Embedding -->
         <meta-data

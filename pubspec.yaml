@@ -11,45 +11,45 @@ dependencies:
     sdk: flutter
   
   # 🎨 UI & Animations
-  lottie: ^2.7.0
-  cupertino_icons: ^1.0.2
+  lottie: ^3.1.0           # اپ ڈیٹ کیا گیا
+  cupertino_icons: ^1.0.6  # اپ ڈیٹ کیا گیا
   google_fonts: ^6.1.0
-  font_awesome_flutter: 10.7.0  # ✅ درست ورژن
+  font_awesome_flutter: 10.7.0  # ✅ یہ بلکل ٹھیک ہے، اسے نہ چھیڑیں
 
   # 🔹 File & Storage Handling
-  file_picker: ^6.1.1
-  permission_handler: ^10.2.0
-  path_provider: ^2.1.1
-  archive: ^3.3.6
-  image_picker: ^1.0.4
+  file_picker: ^8.0.0      # اپ ڈیٹ کیا گیا (پرانا ورژن ایرر دے سکتا ہے)
+  permission_handler: ^11.3.0 # ✅ بہت ضروری اپ ڈیٹ (Kotlin ایرر ختم کرنے کے لیے)
+  path_provider: ^2.1.2
+  archive: ^3.4.10
+  image_picker: ^1.0.7
 
   # 🔹 Network & APIs
-  http: ^1.1.0
-  url_launcher: ^6.2.0
-  google_generative_ai: ^0.2.1
+  http: ^1.2.0
+  url_launcher: ^6.2.5
+  google_generative_ai: ^0.2.2
 
   # 🔹 Local Storage
   shared_preferences: ^2.2.2
   flutter_secure_storage: ^9.0.0
 
   # 🔹 Authentication & Security
-  local_auth: ^2.1.7
+  local_auth: ^2.1.8
 
   # 🔹 Syntax Highlighting (Code Preview)
   flutter_highlight: ^0.7.0
 
-  # ============= 🔥 FIREBASE DEPENDENCIES =============
-  firebase_core: ^2.24.0
-  firebase_auth: ^4.16.0
-  google_sign_in: ^6.1.5
+  # ============= 🔥 FIREBASE DEPENDENCIES (Stable Versions) =============
+  firebase_core: ^2.27.0   # ✅ نیا ورژن
+  firebase_auth: ^4.17.8   # ✅ نیا ورژن
+  google_sign_in: ^6.2.1
   
   # ✅ نیا: AdMob for Monetization
-  google_mobile_ads: ^4.0.0
+  google_mobile_ads: ^5.1.0  # ⚠️ بہت اہم: ورژن 4.0 پرانا ہے اور Kotlin کا ایرر دیتا ہے
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^3.0.1
 
 flutter:
   uses-material-design: true

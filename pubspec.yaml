@@ -14,7 +14,7 @@ dependencies:
   lottie: ^2.7.0
   cupertino_icons: ^1.0.2
   google_fonts: ^6.1.0
-  font_awesome_flutter: ^10.7.0  # ✅ درست ورژن
+  font_awesome_flutter: 10.7.0  # ✅ درست ورژن
 
   # 🔹 File & Storage Handling
   file_picker: ^6.1.1

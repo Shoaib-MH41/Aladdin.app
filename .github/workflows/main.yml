@@ -25,8 +25,45 @@ jobs:
           flutter-version: '3.19.5'
           channel: 'stable'
 
-      # ❌ ہم نے "Create Fresh Project" والا حصہ نکال دیا ہے
-      # تاکہ آپ کی کی گئی تبدیلیاں (minSdkVersion 21) محفوظ رہیں
+      # ✅ MASTER FIX: Recreate Project AND Auto-Fix Version 21
+      - name: Recreate Project & Fix Version
+        run: |
+          echo "🔄 Creating fresh Flutter project..."
+          
+          # 1. بیک اپ (Backup)
+          mkdir -p /tmp/backup
+          cp -r lib/ /tmp/backup/ || true
+          cp -r assets/ /tmp/backup/ || true
+          cp pubspec.yaml /tmp/backup/ || true
+          cp android/app/google-services.json /tmp/backup/ || echo "⚠️ No google-services.json found"
+          cp -r android/app/src/main/res/ /tmp/backup/android_res/ || true
+          
+          # 2. پرانا اور خراب فولڈر ڈیلیٹ
+          rm -rf android ios linux macos windows test
+          
+          # 3. نیا پروجیکٹ بنائیں
+          flutter create --project-name aladdin_app --org com.example.aladdin_app .
+          
+          # 4. 🛠️ JADOO (Magic Fix): minSdkVersion 21 سیٹ کریں
+          # یہ کمانڈ خود بخود فائل میں جا کر 19 یا ڈیفالٹ کو 21 کر دے گی
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle
+          sed -i 's/minSdkVersion 19/minSdkVersion 21/g' android/app/build.gradle
+          
+          # 5. بیک اپ واپس لائیں (Restore)
+          echo "📦 Restoring files..."
+          cp -r /tmp/backup/lib/* lib/ || true
+          cp -r /tmp/backup/assets/* assets/ || true
+          cp /tmp/backup/pubspec.yaml . || true
+          
+          if [ -f "/tmp/backup/google-services.json" ]; then
+             cp /tmp/backup/google-services.json android/app/
+          fi
+          
+          if [ -d "/tmp/backup/android_res" ]; then
+            cp -r /tmp/backup/android_res/* android/app/src/main/res/ || true
+          fi
+          
+          echo "✅ Project fixed and ready!"
 
       - name: Get dependencies
         run: flutter pub get
@@ -46,4 +83,3 @@ jobs:
       - name: Display Build Info
         run: |
           echo "🎉 APK Build Completed Successfully!"
-          echo "📦 APK Location: build/app/outputs/flutter-apk/app-release.apk"

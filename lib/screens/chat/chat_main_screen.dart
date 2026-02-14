@@ -22,6 +22,9 @@ import '../../models/api_template_model.dart';
 import '../build_screen.dart';
 import '../publish_guide_screen.dart';
 
+// ✅ نیا: Upload Screen کا import (یہ شامل کریں)
+import '../upload_screen.dart';
+
 /// 🏠 Main Chat Screen
 class ChatMainScreen extends StatefulWidget {
   final GeminiService geminiService;
@@ -151,6 +154,13 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
         ),
       ),
       actions: [
+        // ✅ نیا: Upload Button (AppBar میں)
+        IconButton(
+          icon: const Icon(Icons.upload_file, color: Color(0xFFFFA726)),
+          tooltip: 'فائلیں اپلوڈ کریں',
+          onPressed: () => _openUploadScreen(context),
+        ),
+        
         // API Integration Button
         IconButton(
           icon: const Icon(Icons.api, color: Color(0xFF8B5CF6)),
@@ -177,6 +187,18 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
         // More Options
         _buildPopupMenu(),
       ],
+    );
+  }
+
+  /// ✅ نیا: Upload Screen کھولنے کا فنکشن
+  void _openUploadScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UploadScreen(
+          project: widget.project,
+        ),
+      ),
     );
   }
 
@@ -385,6 +407,9 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
           case 'publish':
             _openPublishGuide(context);
             break;
+          case 'upload':  // ✅ نیا: Upload option
+            _openUploadScreen(context);
+            break;
         }
       },
       itemBuilder: (context) => [
@@ -415,6 +440,18 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
               const Icon(Icons.widgets, color: Color(0xFFEC4899), size: 20),
               const SizedBox(width: 8),
               Text('UI Kit بنائیں', style: GoogleFonts.poppins(color: Colors.white)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        // ✅ نیا: Upload option
+        PopupMenuItem(
+          value: 'upload',
+          child: Row(
+            children: [
+              const Icon(Icons.upload_file, color: Color(0xFFFFA726), size: 20),
+              const SizedBox(width: 8),
+              Text('📁 فائلیں اپلوڈ کریں', style: GoogleFonts.poppins(color: Colors.white)),
             ],
           ),
         ),

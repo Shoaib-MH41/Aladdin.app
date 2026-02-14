@@ -107,7 +107,7 @@ class GeminiService {
     }
   }
 
-  /// 🔹 Change AI Provider (نیا فیچر)
+  /// 🔹 Change AI Provider
   Future<void> changeProvider(AIProvider provider, {String? apiKey, String? customUrl}) async {
     _currentProvider = provider;
     
@@ -124,7 +124,7 @@ class GeminiService {
     await _initializeFromStorage();
   }
 
-  /// 🔹 Get Current Provider (نیا فیچر)
+  /// 🔹 Get Current Provider
   AIProvider get currentProvider => _currentProvider;
 
   // ==============================================================
@@ -242,13 +242,11 @@ class GeminiService {
       final designJson = json.encode(designData);
       final prompt = _buildFlutterCodePrompt(designJson, includeComments, addDependencies);
       
-      // یہ صرف Gemini کے لیے ہے
       if (_currentProvider == AIProvider.gemini) {
         if (_geminiModel == null) throw Exception('Gemini model not initialized');
         final response = await _geminiModel!.generateContent([Content.text(prompt)]);
         return _cleanGeneratedCode(response.text?.trim() ?? '', 'flutter');
       } else {
-        // باقی providers کے لیے general code generation استعمال کریں
         return await generateCode(
           prompt: prompt,
           framework: 'flutter',
@@ -347,6 +345,34 @@ class GeminiService {
     }
   }
 
+  /// 🔹 API Suggestion (Universal)
+  Future<Map<String, dynamic>?> getApiSuggestion(String category) async {
+    await _initialization;
+    
+    try {
+      final prompt = '''
+Generate API suggestion for category: $category
+Return JSON with name, url, and note.
+''';
+
+      switch (_currentProvider) {
+        case AIProvider.gemini:
+          if (_geminiModel == null) throw Exception('Gemini model not initialized');
+          final response = await _geminiModel!.generateContent([Content.text(prompt)]);
+          return _parseApiSuggestion(response.text ?? '{}');
+          
+        case AIProvider.deepseek:
+        case AIProvider.openai:
+        case AIProvider.local:
+          final response = await _generateTextWithOpenAICompatible(prompt);
+          return _parseApiSuggestion(response);
+      }
+    } catch (e) {
+      print('⚠️ API suggestion failed: $e');
+      return _getFallbackSuggestion(category);
+    }
+  }
+
   // ==============================================================
   // 🔧 PRIVATE HELPER METHODS
   // ==============================================================
@@ -368,9 +394,54 @@ class GeminiService {
     }
   }
 
-  // Prompt builders
+  // ============= 📝 PROMPT BUILDERS =============
+
   String _buildFrameworkPrompt(String userPrompt, String framework, List<String> platforms) {
     final platformList = platforms.join(', ');
+    
+    // ✅ Check if user wants login/authentication
+    if (userPrompt.toLowerCase().contains('login') || 
+        userPrompt.toLowerCase().contains('sign in') ||
+        userPrompt.toLowerCase().contains('authentication') ||
+        userPrompt.toLowerCase().contains('auth') ||
+        userPrompt.toLowerCase().contains('user account')) {
+      
+      return '''
+Generate COMPLETE $framework code with Firebase Authentication for: $userPrompt
+
+REQUIREMENTS:
+- User can login with email and password
+- User can sign up with email and password
+- User can sign out
+- Show appropriate error messages
+- Include loading states
+
+PLATFORMS: $platformList
+
+FILES NEEDED (User will upload them separately):
+- Android: google-services.json
+- iOS: GoogleService-Info.plist
+
+INSTRUCTIONS:
+1. Include firebase_core and firebase_auth dependencies
+2. Initialize Firebase in main()
+3. Create Login screen with email/password
+4. Create Sign Up screen
+5. Add Sign Out functionality
+6. Protect screens (only logged-in users can access)
+7. Return COMPLETE working code
+8. Add comments explaining Firebase setup
+
+IMPORTANT: Tell user they need to:
+- Get google-services.json from Firebase Console
+- Get GoogleService-Info.plist from Firebase Console
+- Enable Email/Password in Firebase Authentication
+
+CODE:
+''';
+    }
+    
+    // Normal code without authentication
     return '''
 Generate COMPLETE $framework code for: $userPrompt
 Platforms: $platformList
@@ -433,14 +504,14 @@ Return ONLY fixed code:
 ''';
   }
 
-  // Gemini implementation
+  // ============= 🤖 AI IMPLEMENTATIONS =============
+
   Future<String> _generateWithGemini(String prompt) async {
     if (_geminiModel == null) throw Exception('Gemini model not initialized');
     final response = await _geminiModel!.generateContent([Content.text(prompt)]);
     return _cleanGeneratedCode(response.text?.trim() ?? '', 'flutter');
   }
   
-  // DeepSeek implementation
   Future<String> _generateWithDeepSeek(String prompt) async {
     final apiKey = await getSavedApiKey();
     if (apiKey == null) throw Exception('DeepSeek API key not found');
@@ -468,7 +539,6 @@ Return ONLY fixed code:
     throw Exception('DeepSeek API error: ${response.statusCode}');
   }
   
-  // OpenAI implementation
   Future<String> _generateWithOpenAI(String prompt) async {
     final apiKey = await getSavedApiKey();
     if (apiKey == null) throw Exception('OpenAI API key not found');
@@ -496,7 +566,6 @@ Return ONLY fixed code:
     throw Exception('OpenAI API error: ${response.statusCode}');
   }
   
-  // Local (Ollama) implementation
   Future<String> _generateWithLocal(String prompt) async {
     final customUrl = await _secureStorage.read(key: _customUrlKey);
     if (customUrl == null) throw Exception('Local API URL not found');
@@ -519,7 +588,6 @@ Return ONLY fixed code:
     throw Exception('Local API error: ${response.statusCode}');
   }
   
-  // OpenAI-compatible text generation
   Future<String> _generateTextWithOpenAICompatible(String prompt) async {
     final apiKey = await getSavedApiKey();
     String baseUrl = 'https://api.openai.com/v1';
@@ -557,127 +625,14 @@ Return ONLY fixed code:
     }
     throw Exception('API error: ${response.statusCode}');
   }
-
-  // lib/services/gemini_service.dart میں یہ میتھڈ شامل کریں
-
-/// 🔹 API Suggestion (Universal)
-Future<Map<String, dynamic>?> getApiSuggestion(String category) async {
-  await _initialization;
   
-  try {
-    final prompt = '''
-Generate API suggestion for category: $category
-Return JSON with name, url, and note.
-''';
-
-    switch (_currentProvider) {
-      case AIProvider.gemini:
-        if (_geminiModel == null) throw Exception('Gemini model not initialized');
-        final response = await _geminiModel!.generateContent([Content.text(prompt)]);
-        return _parseApiSuggestion(response.text ?? '{}');
-        
-      case AIProvider.deepseek:
-      case AIProvider.openai:
-      case AIProvider.local:
-        final response = await _generateTextWithOpenAICompatible(prompt);
-        return _parseApiSuggestion(response);
-    }
-  } catch (e) {
-    print('⚠️ API suggestion failed: $e');
-    return _getFallbackSuggestion(category);
-  }
-}
-
-/// 🔹 Parse API suggestion response
-Map<String, dynamic>? _parseApiSuggestion(String response) {
-  try {
-    String cleaned = response
-        .replaceAll('```json', '')
-        .replaceAll('```', '')
-        .trim();
-    
-    final jsonMatch = RegExp(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}').firstMatch(cleaned);
-    if (jsonMatch != null) {
-      cleaned = jsonMatch.group(0)!;
-    }
-    
-    return json.decode(cleaned);
-  } catch (e) {
-    return null;
-  }
-}
-
-/// 🔹 Fallback API suggestions
-Map<String, dynamic>? _getFallbackSuggestion(String category) {
-  final fallbacks = {
-    'ai': {
-      'name': 'OpenAI API',
-      'url': 'https://platform.openai.com/api-keys',
-      'note': 'Create account and generate API key'
-    },
-    'firebase': {
-      'name': 'Google Firebase',
-      'url': 'https://console.firebase.google.com',
-      'note': 'Create project and enable APIs'
-    },
-    'weather': {
-      'name': 'OpenWeather Map',
-      'url': 'https://openweathermap.org/api',
-      'note': 'Free tier available with signup'
-    },
-    'authentication': {
-      'name': 'Firebase Auth',
-      'url': 'https://console.firebase.google.com',
-      'note': 'Enable Authentication in Firebase Console'
-    },
-    'database': {
-      'name': 'Firebase Firestore',
-      'url': 'https://console.firebase.google.com',
-      'note': 'Enable Firestore in Firebase Console'
-    },
-    'payment': {
-      'name': 'Stripe API',
-      'url': 'https://dashboard.stripe.com/apikeys',
-      'note': 'Test and live keys available'
-    },
-    'maps': {
-      'name': 'Google Maps Platform',
-      'url': 'https://console.cloud.google.com/google/maps-apis',
-      'note': 'Enable Maps SDK and get API key'
-    },
-    'social': {
-      'name': 'Facebook Graph API',
-      'url': 'https://developers.facebook.com/docs/facebook-login/guides/access-tokens/',
-      'note': 'Create Facebook App to get credentials'
-    },
-    'storage': {
-      'name': 'AWS S3',
-      'url': 'https://aws.amazon.com/s3/',
-      'note': 'Create AWS account and get access keys'
-    },
-    'email': {
-      'name': 'SendGrid API',
-      'url': 'https://sendgrid.com/docs/for-developers/sending-email/api-getting-started/',
-      'note': 'Sign up for free tier'
-    },
-    'sms': {
-      'name': 'Twilio API',
-      'url': 'https://www.twilio.com/docs/usage/api',
-      'note': 'Get Account SID and Auth Token'
-    }
-  };
-  
-  final key = category.toLowerCase();
-  return fallbacks[key] ?? fallbacks['ai'];
-}
-  
-  // OpenAI-compatible UI Design
   Future<Map<String, dynamic>> _generateUIDesignWithOpenAICompatible(String prompt) async {
     final responseText = await _generateTextWithOpenAICompatible(prompt);
     return _parseDesignResponse(responseText);
   }
   
-  // Connection tests
+  // ============= 🔌 CONNECTION TESTS =============
+  
   Future<bool> _testOpenAICompatibleConnection() async {
     final apiKey = await getSavedApiKey();
     if (apiKey == null) return false;
@@ -718,6 +673,8 @@ Map<String, dynamic>? _getFallbackSuggestion(String category) {
       return false;
     }
   }
+
+  // ============= 📊 PARSING METHODS =============
 
   String _cleanGeneratedCode(String code, String framework) {
     code = code.replaceAll(RegExp(r'```[a-z]*\n'), '');
@@ -761,6 +718,89 @@ Map<String, dynamic>? _getFallbackSuggestion(String category) {
       return _generateFallbackUIKit(theme, components);
     }
   }
+
+  Map<String, dynamic>? _parseApiSuggestion(String response) {
+    try {
+      String cleaned = response
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+      
+      final jsonMatch = RegExp(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}').firstMatch(cleaned);
+      if (jsonMatch != null) {
+        cleaned = jsonMatch.group(0)!;
+      }
+      
+      return json.decode(cleaned);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic>? _getFallbackSuggestion(String category) {
+    final fallbacks = {
+      'ai': {
+        'name': 'OpenAI API',
+        'url': 'https://platform.openai.com/api-keys',
+        'note': 'Create account and generate API key'
+      },
+      'firebase': {
+        'name': 'Google Firebase',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Create project and enable APIs'
+      },
+      'weather': {
+        'name': 'OpenWeather Map',
+        'url': 'https://openweathermap.org/api',
+        'note': 'Free tier available with signup'
+      },
+      'authentication': {
+        'name': 'Firebase Auth',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Authentication in Firebase Console'
+      },
+      'database': {
+        'name': 'Firebase Firestore',
+        'url': 'https://console.firebase.google.com',
+        'note': 'Enable Firestore in Firebase Console'
+      },
+      'payment': {
+        'name': 'Stripe API',
+        'url': 'https://dashboard.stripe.com/apikeys',
+        'note': 'Test and live keys available'
+      },
+      'maps': {
+        'name': 'Google Maps Platform',
+        'url': 'https://console.cloud.google.com/google/maps-apis',
+        'note': 'Enable Maps SDK and get API key'
+      },
+      'social': {
+        'name': 'Facebook Graph API',
+        'url': 'https://developers.facebook.com/docs/facebook-login/guides/access-tokens/',
+        'note': 'Create Facebook App to get credentials'
+      },
+      'storage': {
+        'name': 'AWS S3',
+        'url': 'https://aws.amazon.com/s3/',
+        'note': 'Create AWS account and get access keys'
+      },
+      'email': {
+        'name': 'SendGrid API',
+        'url': 'https://sendgrid.com/docs/for-developers/sending-email/api-getting-started/',
+        'note': 'Sign up for free tier'
+      },
+      'sms': {
+        'name': 'Twilio API',
+        'url': 'https://www.twilio.com/docs/usage/api',
+        'note': 'Get Account SID and Auth Token'
+      }
+    };
+    
+    final key = category.toLowerCase();
+    return fallbacks[key] ?? fallbacks['ai'];
+  }
+
+  // ============= 🎨 FALLBACK METHODS =============
 
   Map<String, dynamic> _createFallbackDesign(String prompt, String componentType) {
     return {

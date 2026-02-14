@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/project_model.dart';
 
 class UploadScreen extends StatefulWidget {
@@ -16,20 +17,30 @@ class UploadScreen extends StatefulWidget {
 }
 
 class _UploadScreenState extends State<UploadScreen> {
+  // ============= 📁 FILE LISTS =============
   List<File> _iconFiles = [];
   List<File> _fontFiles = [];
   List<File> _animationFiles = [];
+  List<File> _firebaseJsonFiles = [];  // ✅ NEW: Firebase JSON files
   List<File> _allSelectedFiles = [];
 
+  // ============= ⚡ UI STATE =============
   bool _isPicking = false;
   bool _isUploading = false;
   String _currentOperation = '';
 
-  // ============= 🔐 Permission Methods =============
+  @override
+  void initState() {
+    super.initState();
+    _requestFilePermission();
+  }
+
+  // ============= 🔐 PERMISSIONS =============
   
   Future<bool> _requestFilePermission() async {
     try {
       if (Platform.isAndroid) {
+        // Android 13+ (API 33+)
         if (await Permission.photos.isDenied ||
             await Permission.videos.isDenied ||
             await Permission.audio.isDenied) {
@@ -40,10 +51,12 @@ class _UploadScreenState extends State<UploadScreen> {
           ].request();
         }
 
+        // Android 10-12
         if (await Permission.storage.isDenied) {
           await Permission.storage.request();
         }
 
+        // Check if any permission granted
         if (await Permission.storage.isGranted ||
             await Permission.photos.isGranted ||
             await Permission.videos.isGranted ||
@@ -51,14 +64,14 @@ class _UploadScreenState extends State<UploadScreen> {
           return true;
         }
 
+        // If permanently denied
         if (await Permission.storage.isPermanentlyDenied ||
             await Permission.photos.isPermanentlyDenied) {
           _showPermissionSettingsDialog();
           return false;
         }
 
-        _showPermissionDialog(
-            'Storage permission is required to open the full File Manager.');
+        _showPermissionDialog('Storage permission is required to open file manager.');
         return false;
       }
 
@@ -96,13 +109,14 @@ class _UploadScreenState extends State<UploadScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Storage Access Needed'),
         content: const Text(
-          'This app needs access to your files for icon, font, and animation uploads.\n\n'
+          'This app needs access to your files for uploads.\n\n'
           'Please allow storage or media access in App Settings.',
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -115,7 +129,7 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 
-  // ============= 📁 File Picker Methods =============
+  // ============= 📁 FILE PICKER =============
 
   Future<void> _pickFiles(String type) async {
     try {
@@ -124,20 +138,37 @@ class _UploadScreenState extends State<UploadScreen> {
         _currentOperation = 'Opening file manager...';
       });
 
+      // Allowed extensions based on type
+      List<String> allowedExtensions = [];
+      switch (type) {
+        case 'icon':
+          allowedExtensions = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'ico'];
+          break;
+        case 'font':
+          allowedExtensions = ['ttf', 'otf', 'woff', 'woff2'];
+          break;
+        case 'animation':
+          allowedExtensions = ['json', 'lottie', 'zip', 'gif'];
+          break;
+        case 'firebase_json':
+          allowedExtensions = ['json', 'plist'];  // ✅ Firebase files
+          break;
+      }
+
       FilePickerResult? result;
       try {
         result = await FilePicker.platform.pickFiles(
-          type: FileType.any,
+          type: FileType.custom,
+          allowedExtensions: allowedExtensions,
           allowMultiple: true,
           dialogTitle: 'Select ${type.toUpperCase()} Files',
         );
       } catch (e) {
         debugPrint('⚠️ FilePicker error: $e');
+        // Fallback
         result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: [
-            'png', 'jpg', 'jpeg', 'svg', 'webp', 'ttf', 'otf', 'json', 'zip'
-          ],
+          type: FileType.any,
+          allowMultiple: true,
         );
       }
 
@@ -157,9 +188,20 @@ class _UploadScreenState extends State<UploadScreen> {
       }
 
       setState(() {
-        if (type == 'icon') _iconFiles.addAll(selectedFiles);
-        if (type == 'font') _fontFiles.addAll(selectedFiles);
-        if (type == 'animation') _animationFiles.addAll(selectedFiles);
+        switch (type) {
+          case 'icon':
+            _iconFiles.addAll(selectedFiles);
+            break;
+          case 'font':
+            _fontFiles.addAll(selectedFiles);
+            break;
+          case 'animation':
+            _animationFiles.addAll(selectedFiles);
+            break;
+          case 'firebase_json':
+            _firebaseJsonFiles.addAll(selectedFiles);  // ✅ Add to Firebase list
+            break;
+        }
         _allSelectedFiles.addAll(selectedFiles);
       });
 
@@ -182,7 +224,7 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ============= ☁️ Upload Methods =============
+  // ============= ☁️ UPLOAD ALL =============
 
   Future<void> _uploadAllFilesTogether(Project project) async {
     try {
@@ -195,6 +237,7 @@ class _UploadScreenState extends State<UploadScreen> {
         ..._iconFiles,
         ..._fontFiles,
         ..._animationFiles,
+        ..._firebaseJsonFiles,  // ✅ Include Firebase files
       ];
 
       if (allFiles.isEmpty) {
@@ -204,14 +247,17 @@ class _UploadScreenState extends State<UploadScreen> {
         return;
       }
 
+      // Simulate upload (in real app, upload to server/GitHub)
       for (final file in allFiles) {
         await Future.delayed(const Duration(milliseconds: 400));
         debugPrint('Uploaded: ${file.path}');
       }
 
+      // Save paths to project assets
       project.assets['icons'] = _iconFiles.map((e) => e.path).toList();
       project.assets['fonts'] = _fontFiles.map((e) => e.path).toList();
       project.assets['animations'] = _animationFiles.map((e) => e.path).toList();
+      project.assets['firebase_json'] = _firebaseJsonFiles.map((e) => e.path).toList();  // ✅ Save Firebase paths
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -220,7 +266,8 @@ class _UploadScreenState extends State<UploadScreen> {
         ),
       );
 
-      Navigator.pushNamed(context, '/publish', arguments: project);
+      // Navigate to next screen
+      Navigator.pushNamed(context, '/chat', arguments: project);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Upload failed: $e')),
@@ -233,28 +280,21 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  Future<void> _downloadToLocal(File file) async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final newFile = File('${dir.path}/${file.path.split('/').last}');
-      await file.copy(newFile.path);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved to ${newFile.path}')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: $e')),
-      );
-    }
+  // ============= 🗑️ DELETE FILE =============
+
+  void _deleteFile(List<File> fileList, File file) {
+    setState(() {
+      fileList.remove(file);
+      _allSelectedFiles.remove(file);
+    });
   }
 
-  // ============= 🎨 UI Build Methods =============
+  // ============= 🎨 UI BUILD =============
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX 1: Project کو صحیح طریقے سے حاصل کریں
+    // Get project from either constructor or route arguments
     final Project project;
-    
     if (widget.project != null) {
       project = widget.project!;
     } else {
@@ -280,74 +320,240 @@ class _UploadScreenState extends State<UploadScreen> {
     );
   }
 
-  Widget _buildLoadingState() => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 12),
-            Text(_currentOperation),
-          ],
-        ),
-      );
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 12),
+          Text(_currentOperation),
+        ],
+      ),
+    );
+  }
 
-  Widget _buildMainContent(Project project) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            _buildAssetSection('🖼️ Icons', _iconFiles, 'icon', project),
-            _buildAssetSection('🔤 Fonts', _fontFiles, 'font', project),
-            _buildAssetSection('🎬 Animations', _animationFiles, 'animation', project),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () => _uploadAllFilesTogether(project),
-              icon: const Icon(Icons.cloud_upload),
-              label: const Text('Upload All & Continue'),
-            ),
-          ],
-        ),
-      );
+  Widget _buildMainContent(Project project) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ListView(
+        children: [
+          _buildAssetSection('🖼️ Icons', _iconFiles, 'icon', Icons.image),
+          const SizedBox(height: 8),
+          _buildAssetSection('🔤 Fonts', _fontFiles, 'font', Icons.font_download),
+          const SizedBox(height: 8),
+          _buildAssetSection('🎬 Animations', _animationFiles, 'animation', Icons.animation),
+          const SizedBox(height: 8),
+          _buildFirebaseSection(),  // ✅ NEW: Firebase JSON section
+          const SizedBox(height: 20),
+          _buildUploadButton(project),
+        ],
+      ),
+    );
+  }
 
-  Widget _buildAssetSection(
-      String title, List<File> files, String type, Project project) {
+  // ✅ NEW: Firebase JSON Section
+  Widget _buildFirebaseSection() {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: () => _pickFiles(type),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add'),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(FontAwesomeIcons.fire, color: Colors.orange, size: 20),
                 ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    '🔥 Firebase Configuration',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                _buildAddButton('firebase_json'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '📱 Login System کے لیے JSON files:',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.android, color: Colors.green, size: 16),
+                      const SizedBox(width: 4),
+                      const Text('Android: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Expanded(
+                        child: Text(
+                          'google-services.json',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.apple, color: Colors.black, size: 16),
+                      const SizedBox(width: 4),
+                      const Text('iOS: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Expanded(
+                        child: Text(
+                          'GoogleService-Info.plist',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (_firebaseJsonFiles.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text(
+                  '⚠️ کوئی JSON فائل منتخب نہیں',
+                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                ),
+              )
+            else
+              Column(
+                children: _firebaseJsonFiles.map((file) {
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.insert_drive_file, color: Colors.orange),
+                    title: Text(
+                      file.path.split('/').last,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: () => _deleteFile(_firebaseJsonFiles, file),
+                    ),
+                  );
+                }).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssetSection(String title, List<File> files, String type, IconData icon) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: Colors.blue, size: 20),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                _buildAddButton(type),
               ],
             ),
             const SizedBox(height: 8),
             if (files.isEmpty)
-              const Text('No files selected')
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('کوئی فائل منتخب نہیں'),
+              )
             else
               Column(
-                children: files
-                    .map((f) => ListTile(
-                          title: Text(f.path.split('/').last),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              // ✅ FIX 2: setState کو صحیح طریقے سے استعمال کریں
-                              setState(() {
-                                files.remove(f);
-                                _allSelectedFiles.remove(f);
-                              });
-                            },
-                          ),
-                        ))
-                    .toList(),
+                children: files.map((file) {
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(icon, size: 18),
+                    title: Text(
+                      file.path.split('/').last,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: () => _deleteFile(files, file),
+                    ),
+                  );
+                }).toList(),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(String type) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: IconButton(
+        icon: const Icon(Icons.add, size: 20),
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.all(0),
+        ),
+        onPressed: () => _pickFiles(type),
+      ),
+    );
+  }
+
+  Widget _buildUploadButton(Project project) {
+    return ElevatedButton.icon(
+      onPressed: () => _uploadAllFilesTogether(project),
+      icon: const Icon(Icons.cloud_upload),
+      label: const Text(
+        'Upload All & Continue',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );

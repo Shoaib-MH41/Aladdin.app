@@ -1,7 +1,7 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';  // ✅ نیا
+import 'package:google_mobile_ads/google_mobile_ads.dart';  // ✅ نیا
 
 // ✅ سروسز کے امپورٹس
 import 'services/gemini_service.dart';
@@ -15,8 +15,6 @@ import 'screens/pin_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
-// ❌ Upload Screen ہٹا دی - اب Chat Screen سے استعمال ہوگی
-// import 'screens/upload_screen.dart';
 import 'screens/chat/chat_main_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
@@ -31,8 +29,16 @@ import 'models/api_template_model.dart';
 import 'models/project_model.dart';
 import 'models/ad_model.dart';
 
-void main() {
+// ✅ نیا: main() async ہونا چاہیے
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 🔥 Firebase initialize
+  await Firebase.initializeApp();
+
+  // 🔥 AdMob initialize
+  await MobileAds.instance.initialize();
+
   _optimizePerformance();
   runApp(const AladdinApp());
 }

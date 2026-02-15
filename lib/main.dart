@@ -15,7 +15,8 @@ import 'screens/pin_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
-import 'screens/upload_screen.dart';
+// ❌ Upload Screen ہٹا دی - اب Chat Screen سے استعمال ہوگی
+// import 'screens/upload_screen.dart';
 import 'screens/chat/chat_main_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
@@ -126,19 +127,8 @@ class AladdinApp extends StatelessWidget {
               githubService: githubService,
             ),
 
-        '/upload': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-          if (args is Project) {
-            // اگر UploadScreen پروجیکٹ لیتا ہے تو یہاں تبدیل کریں
-            return const UploadScreen();
-          } else {
-            return _buildErrorScreen(
-              context, 
-              'Upload screen requires project data.\nPlease go back and try again.'
-            );
-          }
-        },
-
+        // ❌ '/upload' روٹ ہٹا دیا - اب Chat Screen سے استعمال ہوگی
+        
         '/chat': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {

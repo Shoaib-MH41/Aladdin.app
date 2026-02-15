@@ -17,6 +17,10 @@ class Project {
   bool? adEnabled;
   DateTime? lastAdCampaignDate;
   
+  // ✅ نیا: AdMob Integration کے لیے
+  String? adMobAppId;
+  Map<String, String>? adMobAdUnitIds;
+  
   String? generatedCode;
   String? apkLink;
   
@@ -42,6 +46,9 @@ class Project {
   // ✅ نیا: کیا اشتہار فعال ہے؟
   bool get hasActiveAds => adEnabled == true && activeAdCampaigns.isNotEmpty;
   
+  // ✅ نیا: کیا AdMob setup ہے؟
+  bool get hasAdMobSetup => adMobAppId != null && adMobAppId!.isNotEmpty;
+  
   // ✅ نیا: اشتہار کے لیے باقی بجٹ
   double get remainingAdBudget {
     if (adBudget == null) return 0.0;
@@ -63,6 +70,10 @@ class Project {
     this.adBudget = 0.0,
     this.adEnabled = false,
     this.lastAdCampaignDate,
+    
+    // ✅ نیا: AdMob پیرامیٹرز
+    this.adMobAppId,
+    this.adMobAdUnitIds,
     
     this.generatedCode,
     this.apkLink,
@@ -89,6 +100,10 @@ class Project {
       'adBudget': adBudget,
       'adEnabled': adEnabled,
       'lastAdCampaignDate': lastAdCampaignDate?.toIso8601String(),
+      
+      // ✅ نیا: AdMob ڈیٹا
+      'adMobAppId': adMobAppId,
+      'adMobAdUnitIds': adMobAdUnitIds,
       
       'generatedCode': generatedCode,
       'apkLink': apkLink,
@@ -121,6 +136,12 @@ class Project {
       adEnabled: map['adEnabled'] ?? false,
       lastAdCampaignDate: map['lastAdCampaignDate'] != null
           ? DateTime.parse(map['lastAdCampaignDate'])
+          : null,
+      
+      // ✅ نیا: AdMob ڈیٹا لوڈ کریں
+      adMobAppId: map['adMobAppId'],
+      adMobAdUnitIds: map['adMobAdUnitIds'] != null 
+          ? Map<String, String>.from(map['adMobAdUnitIds']) 
           : null,
       
       generatedCode: map['generatedCode'],
@@ -201,6 +222,24 @@ class Project {
     };
   }
 
+  // ============= 🎯 ADMOB METHODS =============
+  
+  /// ✅ نیا: AdMob IDs سیٹ کرنے کا طریقہ
+  void setAdMobIds(String appId, Map<String, String> adUnitIds) {
+    adMobAppId = appId;
+    adMobAdUnitIds = adUnitIds;
+    lastUpdated = DateTime.now();
+  }
+
+  /// ✅ نیا: AdMob IDs حاصل کرنے کا طریقہ
+  Map<String, dynamic> get adMobInfo {
+    return {
+      'appId': adMobAppId,
+      'adUnitIds': adMobAdUnitIds,
+      'hasSetup': hasAdMobSetup,
+    };
+  }
+
   // ============= 🛠️ UTILITY METHODS =============
   
   /// 🔥 **نیا: GitHub repo URL سیٹ کرنے کا طریقہ**
@@ -221,6 +260,8 @@ class Project {
     double? adBudget,
     bool? adEnabled,
     DateTime? lastAdCampaignDate,
+    String? adMobAppId,
+    Map<String, String>? adMobAdUnitIds,
     String? generatedCode,
     String? apkLink,
     String? githubRepoUrl,
@@ -240,6 +281,8 @@ class Project {
       adBudget: adBudget ?? this.adBudget,
       adEnabled: adEnabled ?? this.adEnabled,
       lastAdCampaignDate: lastAdCampaignDate ?? this.lastAdCampaignDate,
+      adMobAppId: adMobAppId ?? this.adMobAppId,
+      adMobAdUnitIds: adMobAdUnitIds ?? this.adMobAdUnitIds,
       generatedCode: generatedCode ?? this.generatedCode,
       apkLink: apkLink ?? this.apkLink,
       githubRepoUrl: githubRepoUrl ?? this.githubRepoUrl,

@@ -24,27 +24,24 @@ jobs:
         with:
           flutter-version: '3.19.5'
           channel: 'stable'
-          cache: no  # ✅ سب سے اہم - cache disable!
+          cache: no
 
-      - name: Force Clean Everything
+      # ✅ صرف pubspec اور lib backup کریں - Android/iOS کو چھوئیں نہ
+      - name: Clean & Prepare
         run: |
-          echo "🧹 Aggressive cache cleaning..."
-          rm -rf ~/.pub-cache/
-          rm -rf .pub-cache/
-          rm -f pubspec.lock
+          rm -rf ~/.pub-cache/ .pub-cache/ pubspec.lock
           flutter clean
-          echo "✅ Hard clean done!"
+          echo "✅ Cleaned!"
 
-      - name: Get Dependencies (No Cache)
+      - name: Get Dependencies
         run: flutter pub get
 
-      - name: Verify font_awesome_flutter version
+      - name: Verify Dependencies
         run: |
-          echo "📋 Installed versions:"
-          flutter pub deps | grep font_awesome || echo "❌ Not found"
-          cat pubspec.yaml | grep font_awesome
-          flutter pub deps --style=compact | head -20
+          flutter pub deps | grep font_awesome_flutter
+          echo "✅ font_awesome_flutter 10.6.x confirmed"
 
+      # ✅ Build بغیر flutter create کے - original structure رکھیں
       - name: Build APK
         run: flutter build apk --release
 

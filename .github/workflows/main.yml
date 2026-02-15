@@ -2,8 +2,8 @@ name: Build Flutter APK
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   build:
@@ -24,29 +24,61 @@ jobs:
         with:
           flutter-version: '3.19.5'
           channel: 'stable'
-          cache: no
 
-      # ✅ صرف pubspec اور lib backup کریں - Android/iOS کو چھوئیں نہ
-      - name: Clean & Prepare
+      # ✅ نیا اور درست project creation
+      - name: Create Fresh Flutter Project
         run: |
-          rm -rf ~/.pub-cache/ .pub-cache/ pubspec.lock
-          flutter clean
-          echo "✅ Cleaned!"
+          echo "🔄 Creating fresh Flutter project..."
+          
+          # Important files کو backup کریں
+          mkdir -p /tmp/backup
+          cp -r lib/ /tmp/backup/ || true
+          cp -r assets/ /tmp/backup/ || true
+          cp pubspec.yaml /tmp/backup/ || true
+          cp -r android/app/src/main/res/ /tmp/backup/android_res/ || true
+          cp -r ios/Runner/Assets.xcassets/ /tmp/backup/ios_assets/ || true
+          
+          # پرانی فولڈرز ڈیلیٹ کریں
+          rm -rf android ios linux macos windows
+          
+          # نیا project بنائیں
+          flutter create --project-name aladdin_app --org com.aladdin .
+          
+          # Backup files restore کریں
+          echo "📦 Restoring files from backup..."
+          cp -r /tmp/backup/lib/* lib/ || true
+          cp -r /tmp/backup/assets/* assets/ || true
+          cp /tmp/backup/pubspec.yaml . || true
+          
+          # Icons restore کریں
+          if [ -d "/tmp/backup/android_res" ]; then
+            echo "🎨 Restoring Android icons..."
+            cp -r /tmp/backup/android_res/* android/app/src/main/res/ || true
+          fi
+          
+          if [ -d "/tmp/backup/ios_assets" ]; then
+            echo "🎨 Restoring iOS assets..."
+            cp -r /tmp/backup/ios_assets/* ios/Runner/Assets.xcassets/ || true
+          fi
+          
+          echo "✅ Project recreation completed!"
 
-      - name: Get Dependencies
+      - name: Get dependencies
         run: flutter pub get
 
-      - name: Verify Dependencies
-        run: |
-          flutter pub deps | grep font_awesome_flutter
-          echo "✅ font_awesome_flutter 10.6.x confirmed"
+      - name: Clean project
+        run: flutter clean
 
-      # ✅ Build بغیر flutter create کے - original structure رکھیں
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build release APK
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aladdin-app-${{ github.sha }}
+          name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Display Build Info
+        run: |
+          echo "🎉 APK Build Completed Successfully!"
+          echo "📦 APK Location: build/app/outputs/flutter-apk/app-release.apk"

@@ -14,7 +14,7 @@ dependencies:
   lottie: ^2.7.0
   cupertino_icons: ^1.0.2
   google_fonts: ^6.1.0
-  font_awesome_flutter: ^10.7.0  # ✅ درست ورژن
+  font_awesome_flutter: ^10.6.0
 
   # 🔹 File & Storage Handling
   file_picker: ^6.1.1
@@ -39,13 +39,19 @@ dependencies:
   flutter_highlight: ^0.7.0
 
   # ============= 🔥 FIREBASE DEPENDENCIES =============
-  firebase_core: ^2.24.0
-  firebase_auth: ^4.16.0
-  google_sign_in: ^6.1.5
-  flutter_facebook_auth: ^6.0.3
+  # 🔥 یہ اس لیے شامل کیے کہ Aladdin AI سے بننے والی ایپس میں Login System ہو سکے
   
-  # ✅ نیا: AdMob for Monetization
-  google_mobile_ads: ^4.0.0
+  # 🔥 Firebase Core - ضروری
+  firebase_core: ^2.24.0
+  
+  # 🔥 Firebase Authentication - Login/Signup کے لیے
+  firebase_auth: ^4.16.0
+  
+  # 🔥 (اختیاری) Google Sign In - اگر صارف Google سے Login کرنا چاہے
+  google_sign_in: ^6.1.5
+  
+  # 🔥 (اختیاری) Facebook Login - اگر صارف Facebook سے Login کرنا چاہے
+  flutter_facebook_auth: ^6.0.3
 
 dev_dependencies:
   flutter_test:

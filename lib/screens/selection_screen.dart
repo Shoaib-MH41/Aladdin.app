@@ -29,6 +29,9 @@ class _SelectionScreenState extends State<SelectionScreen>
   String _font = 'default';
   String _apiIntegration = 'none';
   String _webBuild = 'flutter_web';
+  
+  // ✅ نیا: AdMob Integration choice
+  String _adMobIntegration = 'none';
 
   // animation controller for subtle UI transitions
   late final AnimationController _animController;
@@ -93,16 +96,13 @@ class _SelectionScreenState extends State<SelectionScreen>
         'font': _font,
         'api': _apiIntegration,
         'webBuild': _webBuild,
+        'adMob': _adMobIntegration,  // ✅ نیا: AdMob feature save
       },
       createdAt: DateTime.now(),
     );
 
-    // If user needs to upload fonts/icons/animations, go to UploadScreen
-    if (_animation != 'none' || _font == 'custom') {
-      Navigator.pushNamed(context, '/upload', arguments: project);
-    } else {
-      Navigator.pushNamed(context, '/chat', arguments: project);
-    }
+    // ✅ تبدیلی: اب ہمیشہ سیدھا Chat Screen پر جائے، Upload Screen نہیں
+    Navigator.pushNamed(context, '/chat', arguments: project);
   }
 
   Widget _sectionCard({required Widget child}) {
@@ -357,6 +357,53 @@ class _SelectionScreenState extends State<SelectionScreen>
                       value: 'firebase',
                       groupValue: _apiIntegration,
                       onChanged: (v) => setState(() => _apiIntegration = v ?? _apiIntegration),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ✅ نیا: AdMob Integration Section
+              const SizedBox(height: 14),
+
+              _sectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: const [
+                      Icon(Icons.monetization_on, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('AdMob Integration', 
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                    ]),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      title: const Text('No Ads'),
+                      value: 'none',
+                      groupValue: _adMobIntegration,
+                      onChanged: (v) => setState(() => _adMobIntegration = v ?? _adMobIntegration),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Banner Ads Only'),
+                      value: 'banner',
+                      groupValue: _adMobIntegration,
+                      onChanged: (v) => setState(() => _adMobIntegration = v ?? _adMobIntegration),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Banner + Interstitial'),
+                      value: 'banner_interstitial',
+                      groupValue: _adMobIntegration,
+                      onChanged: (v) => setState(() => _adMobIntegration = v ?? _adMobIntegration),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('All Ad Types (Banner + Interstitial + Rewarded)'),
+                      value: 'all',
+                      groupValue: _adMobIntegration,
+                      onChanged: (v) => setState(() => _adMobIntegration = v ?? _adMobIntegration),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '💡 AdMob IDs بعد میں Chat Screen میں setup کیے جائیں گے',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
                   ],
                 ),

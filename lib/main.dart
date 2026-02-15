@@ -1,7 +1,7 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_core/firebase_core.dart';  // ✅ نیا
-import 'package:google_mobile_ads/google_mobile_ads.dart';  // ✅ نیا
 
 // ✅ سروسز کے امپورٹس
 import 'services/gemini_service.dart';
@@ -15,6 +15,7 @@ import 'screens/pin_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/project_screen.dart';
 import 'screens/selection_screen.dart';
+import 'screens/upload_screen.dart';
 import 'screens/chat/chat_main_screen.dart';
 import 'screens/build_screen.dart';
 import 'screens/settings_screen.dart';
@@ -29,16 +30,8 @@ import 'models/api_template_model.dart';
 import 'models/project_model.dart';
 import 'models/ad_model.dart';
 
-// ✅ نیا: main() async ہونا چاہیے
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 🔥 Firebase initialize
-  await Firebase.initializeApp();
-
-  // 🔥 AdMob initialize
-  await MobileAds.instance.initialize();
-
   _optimizePerformance();
   runApp(const AladdinApp());
 }
@@ -133,8 +126,19 @@ class AladdinApp extends StatelessWidget {
               githubService: githubService,
             ),
 
-        // ❌ '/upload' روٹ ہٹا دیا - اب Chat Screen سے استعمال ہوگی
-        
+        '/upload': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Project) {
+            // اگر UploadScreen پروجیکٹ لیتا ہے تو یہاں تبدیل کریں
+            return const UploadScreen();
+          } else {
+            return _buildErrorScreen(
+              context, 
+              'Upload screen requires project data.\nPlease go back and try again.'
+            );
+          }
+        },
+
         '/chat': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
           if (args is Project) {

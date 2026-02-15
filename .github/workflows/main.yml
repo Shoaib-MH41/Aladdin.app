@@ -2,9 +2,8 @@ name: Build Flutter APK
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:  # ✅ Manual trigger بھی
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,82 +24,32 @@ jobs:
         with:
           flutter-version: '3.19.5'
           channel: 'stable'
+          cache: no  # ✅ سب سے اہم - cache disable!
 
-      # ✅ بہتر backup اور recreation
-      - name: Prepare Flutter Project
+      - name: Force Clean Everything
         run: |
-          echo "🔄 Preparing Flutter project..."
-          
-          # Important files backup
-          mkdir -p /tmp/backup
-          cp -r lib/ /tmp/backup/ || true
-          cp -r assets/ /tmp/backup/ || true
-          cp pubspec.yaml /tmp/backup/ || true
-          cp -r android/app/src/main/res/ /tmp/backup/android_res/ || true || true
-          cp -r ios/Runner/Assets.xcassets/ /tmp/backup/ios_assets/ || true
-          
-          # Platform folders صاف کریں
-          rm -rf android ios linux macos windows
-          
-          # ✅ نیا Flutter project بنائیں
-          flutter create --project-name aladdin_app --org com.aladdin .
-          
-          # ✅ Backup restore کریں
-          echo "📦 Restoring custom files..."
-          rm -f pubspec.yaml pubspec.lock  # پرانے files ہٹائیں
-          cp /tmp/backup/pubspec.yaml . 
-          cp -r /tmp/backup/lib/* lib/ || true
-          
-          # ✅ Assets اور icons restore
-          mkdir -p assets/
-          cp -r /tmp/backup/assets/* assets/ || true
-          
-          if [ -d "/tmp/backup/android_res" ]; then
-            mkdir -p android/app/src/main/res/
-            cp -r /tmp/backup/android_res/* android/app/src/main/res/ || true
-          fi
-          
-          if [ -d "/tmp/backup/ios_assets" ]; then
-            mkdir -p ios/Runner/Assets.xcassets/
-            cp -r /tmp/backup/ios_assets/* ios/Runner/Assets.xcassets/ || true
-          fi
-          
-          echo "✅ Project preparation completed!"
-
-      # ✅ Pub cache مکمل صاف کریں
-      - name: Clean Everything
-        run: |
-          flutter clean
-          flutter pub cache clean
+          echo "🧹 Aggressive cache cleaning..."
+          rm -rf ~/.pub-cache/
+          rm -rf .pub-cache/
           rm -f pubspec.lock
-          echo "✅ Clean completed!"
+          flutter clean
+          echo "✅ Hard clean done!"
 
-      # ✅ Dependencies install
-      - name: Get Dependencies
+      - name: Get Dependencies (No Cache)
         run: flutter pub get
 
-      # ✅ Dependencies verify
-      - name: Verify Dependencies
+      - name: Verify font_awesome_flutter version
         run: |
-          echo "📋 Checking font_awesome_flutter version:"
-          flutter pub deps | grep font_awesome_flutter || echo "Not found"
-          flutter doctor -v
+          echo "📋 Installed versions:"
+          flutter pub deps | grep font_awesome || echo "❌ Not found"
+          cat pubspec.yaml | grep font_awesome
+          flutter pub deps --style=compact | head -20
 
-      # ✅ Build APK
       - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release
 
-      # ✅ APK upload
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aladdin-app-release-${{ github.sha }}
+          name: aladdin-app-${{ github.sha }}
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
-      # ✅ Success message
-      - name: Build Success
-        run: |
-          echo "🎉 Build COMPLETED SUCCESSFULLY!"
-          echo "📱 APK: build/app/outputs/flutter-apk/app-release.apk"
-          ls -la build/app/outputs/flutter-apk/

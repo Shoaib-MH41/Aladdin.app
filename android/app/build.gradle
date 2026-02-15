@@ -24,20 +24,19 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
-// --- اہم تبدیلی: پرانا "apply" طریقہ استعمال کریں تاکہ settings.gradle سے میچ کرے ---
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
+// --- یہ حصہ الگ ہونا چاہیے ---
 flutter {
     source '../..'
+}
+// ----------------------------
 
 android {
     namespace 'com.example.aladdin.app'
     compileSdkVersion 34
-    // ... باقی کوڈ ...
-}
-
     ndkVersion "25.1.8937393"
 
     compileOptions {
@@ -63,12 +62,10 @@ android {
 
     signingConfigs {
         release {
-            // نوٹ: فی الحال یہ Debug Keystore استعمال کر رہا ہے تاکہ بلڈ فیل نہ ہو
             storeFile file('debug.keystore') 
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
-            // اگر آپ کے پاس اصلی release key ہے تو اوپر والی لائنز کو تبدیل کریں
         }
     }
 

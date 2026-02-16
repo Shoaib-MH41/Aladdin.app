@@ -7,7 +7,9 @@ class Project {
   String framework;
   List<String> platforms;
   Map<String, dynamic> assets;
-  Map<String, String> features;
+  
+  // ⚠️ **یہاں تبدیلی: Map<String, dynamic> کیا**
+  Map<String, dynamic> features;  // ✅ اب dynamic ہے، String نہیں
   
   // ✅ نیا: اشتہار مہموں کی فہرست
   List<AdCampaign>? adCampaigns;
@@ -24,8 +26,8 @@ class Project {
   String? generatedCode;
   String? apkLink;
   
-  // ⚠️ **یہاں دیکھیں - یہ githubRepoUrl ہے، repoUrl نہیں!**
-  String? githubRepoUrl;  // ✅ یہ درست ہے
+  // ⚠️ **githubRepoUrl - یہ درست ہے**
+  String? githubRepoUrl;  // ✅ یہ استعمال ہو رہا ہے
   
   String? geminiPrompt;
   String? status;
@@ -34,10 +36,10 @@ class Project {
 
   // ============= 📌 GETTERS =============
   
-  /// 🔥 **نیا: repoUrl getter - یہ وہ چیز تھی جو missing تھی!**
+  /// 🔥 **repoUrl getter - project_service.dart اسے استعمال کرتا ہے**
   String? get repoUrl => githubRepoUrl;
   
-  /// 🔥 **نیا: isOnGitHub چیک کریں**
+  /// 🔥 **isOnGitHub چیک کریں**
   bool get isOnGitHub => githubRepoUrl != null && githubRepoUrl!.isNotEmpty;
   
   bool get isGenerated => generatedCode != null && generatedCode!.isNotEmpty;
@@ -63,7 +65,7 @@ class Project {
     required this.framework,
     required this.platforms,
     required this.assets,
-    this.features = const {},
+    this.features = const {},  // ✅ اب Map<String, dynamic>
     
     // ✅ نیا: اشتہار سے متعلق پیرامیٹرز
     this.adCampaigns,
@@ -93,7 +95,7 @@ class Project {
       'framework': framework,
       'platforms': platforms,
       'assets': assets,
-      'features': features,
+      'features': features,  // ✅ اب Map<String, dynamic>
       
       // ✅ نیا: اشتہار ڈیٹا
       'adCampaigns': adCampaigns?.map((campaign) => campaign.toJson()).toList(),
@@ -124,7 +126,9 @@ class Project {
       framework: map['framework'],
       platforms: List<String>.from(map['platforms']),
       assets: Map<String, dynamic>.from(map['assets']),
-      features: Map<String, String>.from(map['features'] ?? {}),
+      
+      // ✅ **یہاں تبدیلی: Map<String, dynamic>.from**
+      features: Map<String, dynamic>.from(map['features'] ?? {}),
       
       // ✅ نیا: اشتہار ڈیٹا لوڈ کریں
       adCampaigns: map['adCampaigns'] != null
@@ -240,22 +244,40 @@ class Project {
     };
   }
 
+  // ============= 🎯 FEATURE METHODS =============
+  
+  /// ✅ نیا: features میں value ڈالنے کا طریقہ
+  void setFeature(String key, dynamic value) {
+    features[key] = value;
+    lastUpdated = DateTime.now();
+  }
+  
+  /// ✅ نیا: features سے value حاصل کرنے کا طریقہ
+  dynamic getFeature(String key, {dynamic defaultValue}) {
+    return features[key] ?? defaultValue;
+  }
+  
+  /// ✅ نیا: چیک کریں کہ feature موجود ہے یا نہیں
+  bool hasFeature(String key) {
+    return features.containsKey(key);
+  }
+
   // ============= 🛠️ UTILITY METHODS =============
   
-  /// 🔥 **نیا: GitHub repo URL سیٹ کرنے کا طریقہ**
+  /// 🔥 **GitHub repo URL سیٹ کرنے کا طریقہ**
   void setGitHubRepoUrl(String url) {
     githubRepoUrl = url;
     lastUpdated = DateTime.now();
   }
   
-  /// 🔥 **نیا: copyWith method**
+  /// 🔥 **copyWith method**
   Project copyWith({
     String? id,
     String? name,
     String? framework,
     List<String>? platforms,
     Map<String, dynamic>? assets,
-    Map<String, String>? features,
+    Map<String, dynamic>? features,  // ✅ اب Map<String, dynamic>
     List<AdCampaign>? adCampaigns,
     double? adBudget,
     bool? adEnabled,
@@ -276,7 +298,7 @@ class Project {
       framework: framework ?? this.framework,
       platforms: platforms ?? this.platforms,
       assets: assets ?? this.assets,
-      features: features ?? this.features,
+      features: features ?? this.features,  // ✅ اب Map<String, dynamic>
       adCampaigns: adCampaigns ?? this.adCampaigns,
       adBudget: adBudget ?? this.adBudget,
       adEnabled: adEnabled ?? this.adEnabled,

@@ -35,7 +35,7 @@ class ProjectService {
         framework: framework,
         platforms: platforms,
         assets: {},
-        features: features ?? {},
+        features: features ?? {},  // ✅ یہ ٹھیک ہے
         generatedCode: '',
         createdAt: DateTime.now(),
       );
@@ -46,7 +46,6 @@ class ProjectService {
         try {
           final isInitialized = await geminiService!.isInitialized();
           if (isInitialized) {
-            // 📌 framework کے حساب سے prompt بنائیں
             final enhancedPrompt = _buildFrameworkPrompt(
               prompt: prompt,
               framework: framework,
@@ -77,7 +76,7 @@ class ProjectService {
         framework: framework,
         platforms: platforms,
         assets: {},
-        features: features ?? {},
+        features: features ?? {},  // ✅ یہ ٹھیک ہے
         generatedCode: '// ❌ پروجیکٹ بنانے میں ناکامی: $e',
         createdAt: DateTime.now(),
       );
@@ -715,7 +714,21 @@ and place it in the ${platform == 'android' ? 'android/app/' : 'ios/Runner/'} di
     }
   }
 
+  // 📌 **درست شدہ _getStructure method**
   String _getStructure(String framework) {
     switch (framework.toLowerCase()) {
       case 'flutter':
-        return '''
+        return 'lib/\n├── main.dart\n├── screens/\n├── widgets/\n├── models/\n└── services/';
+      case 'react':
+        return 'src/\n├── App.js\n├── components/\n├── pages/\n└── styles/';
+      case 'vue':
+        return 'src/\n├── App.vue\n├── components/\n├── views/\n└── assets/';
+      case 'android native':
+        return 'app/\n├── src/main/java/\n├── src/main/res/\n└── build.gradle';
+      case 'html/css/js':
+        return 'root/\n├── index.html\n├── style.css\n└── script.js';
+      default:
+        return 'Standard project structure';
+    }
+  }
+}

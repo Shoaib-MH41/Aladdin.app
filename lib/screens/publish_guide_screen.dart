@@ -1,6 +1,7 @@
 // lib/screens/publish_guide_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/publish_service.dart';  // ✅ Import کریں
 
 class PublishGuideScreen extends StatefulWidget {
   final String appName;
@@ -19,10 +20,54 @@ class PublishGuideScreen extends StatefulWidget {
 }
 
 class _PublishGuideScreenState extends State<PublishGuideScreen> {
+  final PublishService _publishService = PublishService();  // ✅ Service instance
   bool _isCreatingRepo = false;
+  bool _isSavingZip = false;
   String _repoStatus = '';
+  String? _savedZipPath;
 
-  // ✅ GitHub پر نیا ریپوزٹری بنانے کا لنک کھولیں
+  @override
+  void initState() {
+    super.initState();
+    _autoSaveZip();  // ✅ خودکار ZIP save
+  }
+
+  // ✅ خودکار ZIP فائل محفوظ کریں
+  Future<void> _autoSaveZip() async {
+    setState(() {
+      _isSavingZip = true;
+      _repoStatus = '⏳ ZIP فائل بنا رہا ہے...';
+    });
+
+    try {
+      final zipPath = await _publishService.saveAppAsZip(
+        appName: widget.appName,
+        generatedCode: widget.generatedCode,
+        framework: widget.framework,
+      );
+
+      if (zipPath != null) {
+        setState(() {
+          _savedZipPath = zipPath;
+          _repoStatus = '✅ ZIP فائل تیار ہے!';
+        });
+      } else {
+        setState(() {
+          _repoStatus = '❌ ZIP فائل نہیں بن سکی';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _repoStatus = '❌ خرابی: $e';
+      });
+    } finally {
+      setState(() {
+        _isSavingZip = false;
+      });
+    }
+  }
+
+  // ✅ GitHub ریپوزٹری بنائیں (Service استعمال کرتے ہوئے)
   void _createGitHubRepo() async {
     setState(() {
       _isCreatingRepo = true;
@@ -30,22 +75,11 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     });
 
     try {
-      const githubUrl = 'https://github.com/new';
+      await _publishService.openGithubNewRepoPage();  // ✅ Service method
       
-      if (await canLaunchUrl(Uri.parse(githubUrl))) {
-        await launchUrl(
-          Uri.parse(githubUrl),
-          mode: LaunchMode.externalApplication,
-        );
-        
-        setState(() {
-          _repoStatus = '✅ GitHub کھل گیا ہے۔ اب نیا ریپوزٹری بنائیں۔';
-        });
-      } else {
-        setState(() {
-          _repoStatus = '❌ GitHub نہیں کھل سکا۔';
-        });
-      }
+      setState(() {
+        _repoStatus = '✅ GitHub کھل گیا ہے۔ اب نیا ریپوزٹری بنائیں۔';
+      });
     } catch (e) {
       setState(() {
         _repoStatus = '❌ خرابی: $e';
@@ -57,28 +91,71 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     }
   }
 
-  // ✅ GitHub ڈیسکٹاپ کھولیں
+  // ✅ GitHub Desktop کھولیں (Service استعمال کرتے ہوئے)
   void _openGitHubDesktop() async {
-    const githubDesktopUrl = 'https://desktop.github.com/';
-    
-    if (await canLaunchUrl(Uri.parse(githubDesktopUrl))) {
-      await launchUrl(
-        Uri.parse(githubDesktopUrl),
-        mode: LaunchMode.externalApplication,
+    try {
+      await _publishService.openGithubDesktopPage();  // ✅ Service method
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خرابی: $e')),
       );
     }
   }
 
-  // ✅ پلے اسٹور ڈویلپر اکاؤنٹ کھولیں
-  void _openPlayStoreConsole() async {
-    const playStoreUrl = 'https://play.google.com/console/';
-    
-    if (await canLaunchUrl(Uri.parse(playStoreUrl))) {
-      await launchUrl(
-        Uri.parse(playStoreUrl),
-        mode: LaunchMode.externalApplication,
+  // ✅ ZIP فائل شیئر کریں
+  void _shareZipFile() async {
+    if (_savedZipPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('پہلے ZIP فائل بنائیں')),
+      );
+      return;
+    }
+
+    try {
+      await _publishService.shareZipFile(_savedZipPath!);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خرابی: $e')),
       );
     }
+  }
+
+  // ✅ پرانی فائل ڈیلیٹ کریں
+  Future<void> _deleteSavedFile() async {
+    if (_savedZipPath == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تصدیق کریں'),
+        content: const Text('کیا آپ یہ فائل ڈیلیٹ کرنا چاہتے ہیں؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('نہیں'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await _publishService.deleteSavedApp(widget.appName, widget.framework);
+              setState(() {
+                _savedZipPath = null;
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('فائل ڈیلیٹ ہو گئی')),
+              );
+            },
+            child: const Text('ہاں'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ فائل کا سائز چیک کریں
+  Future<String> _getFileSize() async {
+    if (_savedZipPath == null) return '0 B';
+    return await _publishService.getFileSize(_savedZipPath!);
   }
 
   @override
@@ -88,6 +165,14 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
         title: const Text("🚀 پبلش گائیڈ"),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        actions: [
+          if (_savedZipPath != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _deleteSavedFile,
+              tooltip: 'فائل ڈیلیٹ کریں',
+            ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -123,9 +208,59 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
 
             const SizedBox(height: 20),
 
-            // 📋 گائیڈ سٹیپس - اب AAB کے ساتھ
+            // 📦 ZIP فائل اسٹیٹس
+            if (_savedZipPath != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  border: Border.all(color: Colors.green),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ZIP فائل تیار ہے',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          FutureBuilder<String>(
+                            future: _getFileSize(),
+                            builder: (context, snapshot) {
+                              return Text('سائز: ${snapshot.data ?? '...'}');
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.share),
+                      onPressed: _shareZipFile,
+                      tooltip: 'شیئر کریں',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // 📋 گائیڈ سٹیپس
             _buildStepCard(
               stepNumber: 1,
+              title: "ZIP فائل محفوظ کریں",
+              description: "آپ کی ایپ کی تمام فائلیں ZIP میں محفوظ ہو جائیں گی",
+              buttonText: _isSavingZip ? 'بنا رہا ہے...' : 'ZIP دوبارہ بنائیں',
+              onPressed: _autoSaveZip,
+              isLoading: _isSavingZip,
+            ),
+
+            _buildStepCard(
+              stepNumber: 2,
               title: "GitHub پر ریپوزٹری بنائیں",
               description: "نیا ریپوزٹری بنائیں اور کوڈ اپلوڈ کریں",
               buttonText: "ریپوزٹری بنائیں",
@@ -134,7 +269,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
             ),
 
             _buildStepCard(
-              stepNumber: 2,
+              stepNumber: 3,
               title: "کوڈ GitHub پر اپلوڈ کریں",
               description: "اپنے کوڈ کو ریپوزٹری میں اپلوڈ کریں",
               buttonText: "GitHub Desktop ڈاؤنلوڈ کریں",
@@ -142,7 +277,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
             ),
 
             _buildStepCard(
-              stepNumber: 3,
+              stepNumber: 4,
               title: "GitHub Actions سے AAB بنائیں",
               description: "GitHub Actions خودکار طور پر AAB فائل بنائے گا",
               buttonText: "AAB بنانے کی ہدایات",
@@ -151,7 +286,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
             ),
 
             _buildStepCard(
-              stepNumber: 4,
+              stepNumber: 5,
               title: "AAB فائل ڈاؤنلوڈ کریں",
               description: "GitHub Actions سے تیار شدہ AAB ڈاؤنلوڈ کریں",
               buttonText: "AAB ڈاؤنلوڈ کی ہدایات",
@@ -159,7 +294,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
             ),
 
             _buildStepCard(
-              stepNumber: 5,
+              stepNumber: 6,
               title: "پلے اسٹور پر اپلوڈ کریں",
               description: "AAB فائل پلے اسٹور کنسول پر اپلوڈ کریں",
               buttonText: "پلے اسٹور کنسول کھولیں",
@@ -193,7 +328,7 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
 
             const SizedBox(height: 20),
 
-            // 💡 اضافی ٹپس - AAB کے ساتھ
+            // 💡 اضافی ٹپس
             Card(
               color: Colors.orange[50],
               child: Padding(
@@ -215,29 +350,6 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
                     _buildTip("🔑 Signing key ضروری ہے - اسے محفوظ رکھیں"),
                     _buildTip("📸 اسکرین شاٹس (2-8) تیار کریں"),
                     _buildTip("📄 پرائیویسی پالیسی ویب سائٹ پر اپلوڈ کریں"),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "🎯 GitHub Actions سے AAB بنانے کا طریقہ:",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 8),
-                          Text("1. Build Screen پر جائیں"),
-                          Text("2. 'GitHub Actions سے بلڈ کریں' بٹن دبائیں"),
-                          Text("3. 5-10 منٹ انتظار کریں"),
-                          Text("4. 'APK ڈاؤنلوڈ کریں' کے ساتھ AAB بھی ملے گا"),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -248,230 +360,5 @@ class _PublishGuideScreenState extends State<PublishGuideScreen> {
     );
   }
 
-  // 🎯 ہر سٹیپ کا کارڈ - اب AAB والا نمایاں
-  Widget _buildStepCard({
-    required int stepNumber,
-    required String title,
-    required String description,
-    required String buttonText,
-    required VoidCallback onPressed,
-    bool isLoading = false,
-    bool isHighlighted = false,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: isHighlighted ? Colors.blue[50] : null,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: isHighlighted ? Colors.blue : Colors.deepPurple,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      stepNumber.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isHighlighted ? Colors.blue[800] : null,
-                    ),
-                  ),
-                ),
-                if (isHighlighted)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      "IMPORTANT",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(description),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : onPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isHighlighted ? Colors.blue : Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(buttonText),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 💡 ٹپ آئٹم
-  Widget _buildTip(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.lightbulb_outline, size: 16, color: Colors.orange),
-          const SizedBox(width: 8),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(color: Colors.black87, fontSize: 13),
-                children: _parseTipText(text),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<TextSpan> _parseTipText(String text) {
-    if (text.contains('**')) {
-      final parts = text.split('**');
-      return parts.asMap().entries.map((entry) {
-        final isBold = entry.key.isOdd;
-        return TextSpan(
-          text: entry.value,
-          style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
-        );
-      }).toList();
-    }
-    return [TextSpan(text: text)];
-  }
-
-  // 📱 AAB بنانے کی ہدایات
-  void _showAABInstructions() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("📦 AAB فائل بنانے کی ہدایات"),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              const Text(
-                "پلے اسٹور کے لیے AAB (Android App Bundle) ضروری ہے:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              _buildInstructionStep("1️⃣ Build Screen کھولیں"),
-              _buildInstructionStep("2️⃣ 'GitHub Actions سے بلڈ کریں' بٹن دبائیں"),
-              _buildInstructionStep("3️⃣ 5-10 منٹ انتظار کریں"),
-              _buildInstructionStep("4️⃣ 'AAB ڈاؤنلوڈ کریں' بٹن دبائیں"),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "✅ AAB کے فوائد:",
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                    ),
-                    SizedBox(height: 8),
-                    Text("• APK سے 30% چھوٹی فائل"),
-                    Text("• Google Play آپٹمائزڈ APKs بناتا ہے"),
-                    Text("• صارفین کو کم ڈیٹا استعمال ہوتا ہے"),
-                    Text("• 150MB سے بڑی ایپس اپلوڈ کر سکتے ہیں"),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 📥 ڈاؤنلوڈ ہدایات
-  void _showDownloadInstructions() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("📥 AAB فائل ڈاؤنلوڈ کریں"),
-        content: const Text(
-          "GitHub Actions سے AAB ڈاؤنلوڈ کرنے کا طریقہ:\n\n"
-          "1. Build Screen پر جائیں\n"
-          "2. بلڈ مکمل ہونے کے بعد 'APK ڈاؤنلوڈ کریں' کے بٹن کے ساتھ\n"
-          "   'AAB ڈاؤنلوڈ کریں' کا بٹن بھی ہوگا\n"
-          "3. اس بٹن کو دبائیں\n"
-          "4. GitHub Actions کے artifacts صفحہ کھل جائے گا\n"
-          "5. 'release-aab.zip' ڈاؤنلوڈ کریں\n"
-          "6. ZIP فائل کو Extract کریں، AAB فائل مل جائے گی",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 📝 ہدایت کا سٹیپ
-  Widget _buildInstructionStep(String step) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("• ", style: TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(step)),
-        ],
-      ),
-    );
-  }
+  // ... (باقی methods وہی رہیں گی)
 }

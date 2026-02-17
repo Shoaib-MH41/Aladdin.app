@@ -76,6 +76,11 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
         _controller.textController.text = prompt;
       },
     );
+
+    // ✅ نیا: Resume check (ایک بار)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkResume();
+    });
   }
 
   void _onControllerUpdate() {
@@ -89,6 +94,132 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
     super.dispose();
   }
 
+  /// ✅ نیا: Resume dialog دکھائیں
+  void _checkResume() {
+    if (widget.project.hasIncompleteSession) {
+      _showResumeDialog();
+    } else if (_controller.showFileUpdateBanner) {
+      // Pending files ہیں لیکن session complete ہے
+      _controller.notifyListeners();
+    }
+  }
+
+  /// ✅ نیا: Resume Dialog UI
+  void _showResumeDialog() {
+    final lastTime = widget.project.lastSessionTime;
+    final messageCount = widget.project.draftMessages?.length ?? 0;
+    
+    String timeText = '';
+    if (lastTime != null) {
+      final diff = DateTime.now().difference(lastTime);
+      if (diff.inMinutes < 60) {
+        timeText = '${diff.inMinutes} منٹ پہلے';
+      } else {
+        timeText = '${diff.inHours} گھنٹے پہلے';
+      }
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.pause_circle, color: Color(0xFFF59E0B), size: 28),
+            const SizedBox(width: 12),
+            Text(
+              '⏸️ Incomplete Session',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'آپ کا پچھلا کام مکمل نہیں ہوا:',
+              style: GoogleFonts.poppins(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            _buildResumeInfoRow(Icons.access_time, 'Last active: $timeText'),
+            _buildResumeInfoRow(Icons.message, '$messageCount messages'),
+            if (widget.project.wasGenerating == true)
+              _buildResumeInfoRow(Icons.smart_toy, 'AI was generating...'),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF334155),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'کیا آپ کام جاری رکھنا چاہتے ہیں؟',
+                style: GoogleFonts.poppins(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _controller.discardSession();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🗑️ Session صاف ہو گیا'),
+                  backgroundColor: Colors.grey,
+                ),
+              );
+            },
+            child: Text(
+              'Discard',
+              style: GoogleFonts.poppins(color: Colors.red),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _controller.resumeSession(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(
+              '🔄 Continue',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResumeInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF8B5CF6), size: 18),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -99,6 +230,14 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
           appBar: _buildAppBar(),
           body: Column(
             children: [
+              // ✅ نیا: Resume Banner (اگر session incomplete ہو)
+              if (widget.project.hasIncompleteSession && _controller.messages.isEmpty)
+                _buildResumeBanner(),
+              
+              // ✅ نیا: File Update Banner (اگر pending files ہوں)
+              if (_controller.showFileUpdateBanner && _controller.pendingFileUpdates.isNotEmpty)
+                _buildFileUpdateBanner(),
+              
               // Project Info Header
               _buildProjectHeader(),
               
@@ -129,6 +268,227 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
                   final prompt = "فائل منسلک: $fileName\n${content ?? ''}";
                   _controller.textController.text = prompt;
                 },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// ✅ نیا: File Update Banner UI
+  Widget _buildFileUpdateBanner() {
+    final pendingCount = _controller.pendingFileUpdates.length;
+    final firstFile = _controller.pendingFileUpdates.first;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF59E0B).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.upload_file, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                '📝 File Updates Pending',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                onPressed: () => _controller.dismissFileUpdateBanner(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$pendingCount فائلیں اپڈیٹ کے لیے تیار ہیں',
+            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          if (pendingCount == 1)
+            Text(
+              '• ${firstFile['path']}',
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _controller.applyAllFileUpdates(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFFD97706),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Apply All',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => _showFileUpdatesList(),
+                child: Text(
+                  'View',
+                  style: GoogleFonts.poppins(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ نیا: Resume Banner (Manual resume کے لیے)
+  Widget _buildResumeBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.restore, color: Colors.white, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '⏸️ Session Paused',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'Tap to resume your work',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => _controller.resumeSession(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF8B5CF6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(
+              'Resume',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ نیا: File Updates List Dialog
+  void _showFileUpdatesList() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '📝 Pending File Updates',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListView.builder(
+                shrinkWrap: true,
+                itemCount: _controller.pendingFileUpdates.length,
+                itemBuilder: (context, index) {
+                  final update = _controller.pendingFileUpdates[index];
+                  return ListTile(
+                    leading: const Icon(Icons.insert_drive_file, color: Color(0xFFF59E0B)),
+                    title: Text(
+                      update['path'],
+                      style: GoogleFonts.poppins(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      update['reason'],
+                      style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.check, color: Colors.green),
+                          onPressed: () => _controller.applyFileUpdate(context, index),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          onPressed: () => _controller.skipFileUpdate(index),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF334155),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                child: Text('Close', style: GoogleFonts.poppins()),
               ),
             ],
           ),
@@ -449,6 +809,15 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
           case 'admob':  // ✅ نیا: AdMob option
             _openAdMobIntegration(context);
             break;
+          case 'save':  // ✅ نیا: Manual save option
+            _controller.manualSave();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('💾 Session manually saved'),
+                backgroundColor: Colors.blue,
+              ),
+            );
+            break;
         }
       },
       itemBuilder: (context) => [
@@ -502,6 +871,17 @@ class _ChatMainScreenState extends State<ChatMainScreen> {
               const Icon(Icons.monetization_on, color: Colors.orange, size: 20),
               const SizedBox(width: 8),
               Text('💰 AdMob سیٹ اپ', style: GoogleFonts.poppins(color: Colors.white)),
+            ],
+          ),
+        ),
+        // ✅ نیا: Manual save option
+        PopupMenuItem(
+          value: 'save',
+          child: Row(
+            children: [
+              const Icon(Icons.save, color: Color(0xFF0EA5E9), size: 20),
+              const SizedBox(width: 8),
+              Text('💾 Save Session', style: GoogleFonts.poppins(color: Colors.white)),
             ],
           ),
         ),

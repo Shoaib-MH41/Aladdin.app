@@ -946,3 +946,4 @@ ${_getPrerequisites(project.framework)}
    git clone $repoUrl
    cd $repoName
    flutter pub get
+   flutter run

@@ -40,8 +40,8 @@ class Project {
   String? get repoUrl => githubRepoUrl;
   
   /// 🔥 **isOnGitHub چیک کریں**
-  bool get isOnGitHub => githubRepoUrl != null && githubRepoUrl!.isNotEmpty;
-  
+  bool get isOnGitHub => githubRepoUrl?.isNotEmpty ?? false;
+
   bool get isGenerated => generatedCode != null && generatedCode!.isNotEmpty;
   bool get hasError => status == 'error';
   

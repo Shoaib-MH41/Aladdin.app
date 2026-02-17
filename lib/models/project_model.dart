@@ -266,9 +266,12 @@ class Project {
   
   /// 🔥 **GitHub repo URL سیٹ کرنے کا طریقہ**
   void setGitHubRepoUrl(String url) {
+  if (url.isNotEmpty && Uri.tryParse(url)?.hasAbsolutePath == true) {
     githubRepoUrl = url;
     lastUpdated = DateTime.now();
   }
+}
+
   
   /// 🔥 **copyWith method**
   Project copyWith({

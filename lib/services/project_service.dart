@@ -945,3 +945,4 @@ ${_getPrerequisites(project.framework)}
    ```bash
    git clone $repoUrl
    cd $repoName
+   flutter pub get

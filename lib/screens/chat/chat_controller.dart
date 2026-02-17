@@ -1,4 +1,5 @@
 // lib/screens/chat/chat_controller.dart
+import 'dart:async'; // ✅ نیا: Timer کے لیے
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/project_model.dart';
@@ -36,6 +37,13 @@ class ChatController extends ChangeNotifier {
   List<Map<String, dynamic>> uiKit = [];
   bool isGeneratingUI = false;
 
+  // ============= 🔄 Auto-Save Timer =============
+  Timer? _autoSaveTimer;
+  
+  // ============= 🔄 File Update State =============
+  List<Map<String, dynamic>> pendingFileUpdates = [];
+  bool showFileUpdateBanner = false;
+
   // ============= 🏗️ Constructor =============
   ChatController({
     required this.geminiService,
@@ -44,6 +52,8 @@ class ChatController extends ChangeNotifier {
   }) {
     aiApiFinder = AIApiFinder(geminiService: geminiService);
     _checkConnection();
+    _startAutoSave(); // ✅ نیا
+    _checkPendingFiles(); // ✅ نیا
   }
 
   // ============= 📌 Getters =============
@@ -88,6 +98,197 @@ class ChatController extends ChangeNotifier {
         );
       });
     }
+  }
+
+  // ============= 🔄 AUTO-SAVE & RESUME =============
+
+  /// ✅ نیا: Auto-save start کریں (ہر 30 سیکنڈ)
+  void _startAutoSave() {
+    _autoSaveTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _saveCurrentSession();
+    });
+  }
+
+  /// ✅ نیا: Current session save کریں
+  void _saveCurrentSession() {
+    if (messages.isEmpty) return;
+    
+    project.saveSession(
+      messages: messages.map((m) => m.toMap()).toList(),
+      generatedCode: generatedCode,
+      isGenerating: isAIThinking,
+      pendingFiles: pendingFileUpdates.isNotEmpty ? pendingFileUpdates : null,
+    );
+    
+    print('💾 Session auto-saved: ${messages.length} messages');
+  }
+
+  /// ✅ نیا: Pending files check کریں
+  void _checkPendingFiles() {
+    if (project.pendingFileUpdates != null && project.pendingFileUpdates!.isNotEmpty) {
+      pendingFileUpdates = List.from(project.pendingFileUpdates!);
+      showFileUpdateBanner = true;
+      notifyListeners();
+    }
+  }
+
+  /// ✅ نیا: Resume session
+  Future<void> resumeSession(BuildContext context) async {
+    if (!project.hasIncompleteSession) return;
+
+    try {
+      // Messages restore کریں
+      if (project.draftMessages != null) {
+        messages.clear();
+        for (final msgMap in project.draftMessages!) {
+          messages.add(ChatMessage.fromMap(msgMap));
+        }
+      }
+
+      // State restore کریں
+      if (project.wasGenerating == true) {
+        // اگر AI سوچ رہا تھا تو last message دوبارہ بھیجیں
+        final lastUserMsg = messages.lastWhere(
+          (m) => m.sender == 'user',
+          orElse: () => ChatMessage(
+            id: '0',
+            sender: 'user',
+            text: '',
+            timestamp: DateTime.now(),
+          ),
+        );
+        
+        if (lastUserMsg.text.isNotEmpty) {
+          messages.remove(lastUserMsg); // Duplicate سے بچنے کے لیے
+          await sendMessage(lastUserMsg.text);
+        }
+      }
+
+      notifyListeners();
+      scrollToBottom();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🔄 Session کامیابی سے بحال ہو گیا'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+    } catch (e) {
+      print('❌ Resume failed: $e');
+    }
+  }
+
+  /// ✅ نیا: Session discard کریں
+  void discardSession() {
+    project.clearSession();
+    messages.clear();
+    pendingFileUpdates.clear();
+    showFileUpdateBanner = false;
+    notifyListeners();
+    
+    print('🗑️ Session discarded');
+  }
+
+  // ============= 📁 FILE UPDATE FUNCTIONS =============
+
+  /// ✅ نیا: File update کے لیے queue میں ڈالیں
+  void queueFileUpdate(String filePath, String newContent, {String reason = 'modified'}) {
+    // پہلے سے موجود ہے؟
+    final existingIndex = pendingFileUpdates.indexWhere((f) => f['path'] == filePath);
+    
+    final update = {
+      'path': filePath,
+      'content': newContent,
+      'reason': reason,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    if (existingIndex >= 0) {
+      pendingFileUpdates[existingIndex] = update;
+    } else {
+      pendingFileUpdates.add(update);
+    }
+
+    showFileUpdateBanner = true;
+    _saveCurrentSession(); // فوری save
+    notifyListeners();
+  }
+
+  /// ✅ نیا: Pending file update کریں
+  Future<void> applyFileUpdate(BuildContext context, int index) async {
+    if (index < 0 || index >= pendingFileUpdates.length) return;
+
+    final update = pendingFileUpdates[index];
+    final filePath = update['path'] as String;
+    final content = update['content'] as String;
+
+    try {
+      // GitHub پر update کریں
+      await githubService.uploadFile(
+        repoName: project.name,
+        filePath: filePath,
+        content: content,
+        commitMessage: 'Update $filePath - ${update['reason']}',
+      );
+
+      // Queue سے ہٹائیں
+      pendingFileUpdates.removeAt(index);
+      
+      if (pendingFileUpdates.isEmpty) {
+        showFileUpdateBanner = false;
+      }
+
+      _saveCurrentSession();
+      notifyListeners();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ $filePath اپڈیٹ ہو گیا'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ اپڈیٹ ناکام: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// ✅ نیا: تمام pending files apply کریں
+  Future<void> applyAllFileUpdates(BuildContext context) async {
+    for (int i = pendingFileUpdates.length - 1; i >= 0; i--) {
+      await applyFileUpdate(context, i);
+    }
+  }
+
+  /// ✅ نیا: File update skip کریں
+  void skipFileUpdate(int index) {
+    if (index < 0 || index >= pendingFileUpdates.length) return;
+    
+    pendingFileUpdates.removeAt(index);
+    if (pendingFileUpdates.isEmpty) {
+      showFileUpdateBanner = false;
+    }
+    
+    _saveCurrentSession();
+    notifyListeners();
+  }
+
+  /// ✅ نیا: File update banner بند کریں
+  void dismissFileUpdateBanner() {
+    showFileUpdateBanner = false;
+    notifyListeners();
+  }
+
+  /// ✅ نیا: Manual save (user کے لیے)
+  void manualSave() {
+    _saveCurrentSession();
+    print('💾 Manual save triggered');
   }
 
   // ============= 💬 Message Functions =============
@@ -488,6 +689,8 @@ API URL: ${apiTemplate.url}
   // ============= 🧹 Dispose =============
   @override
   void dispose() {
+    _autoSaveTimer?.cancel(); // ✅ نیا
+    _saveCurrentSession(); // ✅ نیا: Last time save
     textController.dispose();
     scrollController.dispose();
     super.dispose();

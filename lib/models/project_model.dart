@@ -34,6 +34,33 @@ class Project {
   DateTime createdAt;
   DateTime? lastUpdated;
 
+  // ============= 🔄 RESUME/DRAFT STATE =============
+  
+  /// ✅ نیا: Chat messages کا draft
+  List<Map<String, dynamic>>? draftMessages;
+  
+  /// ✅ نیا: Last generated code
+  String? draftGeneratedCode;
+  
+  /// ✅ نیا: کیا AI سوچ رہا تھا؟
+  bool? wasGenerating;
+  
+  /// ✅ نیا: Last session time
+  DateTime? lastSessionTime;
+  
+  /// ✅ نیا: Pending file updates
+  List<Map<String, dynamic>>? pendingFileUpdates;
+  
+  /// ✅ نیا: کیا session incomplete ہے؟
+  bool get hasIncompleteSession {
+    if (draftMessages == null || draftMessages!.isEmpty) return false;
+    if (lastSessionTime == null) return false;
+    
+    // 24 گھنٹے پرانا session consider نہیں کریں گے
+    final difference = DateTime.now().difference(lastSessionTime!);
+    return difference.inHours < 24;
+  }
+
   // ============= 📌 GETTERS =============
   
   /// 🔥 **repoUrl getter - project_service.dart اسے استعمال کرتا ہے**
@@ -84,6 +111,13 @@ class Project {
     this.status = 'draft',
     required this.createdAt,
     this.lastUpdated,
+    
+    // ✅ نیا: Resume state پیرامیٹرز
+    this.draftMessages,
+    this.draftGeneratedCode,
+    this.wasGenerating,
+    this.lastSessionTime,
+    this.pendingFileUpdates,
   });
 
   // ============= 💾 TO MAP =============
@@ -114,6 +148,13 @@ class Project {
       'status': status,
       'createdAt': createdAt.toIso8601String(),
       'lastUpdated': lastUpdated?.toIso8601String(),
+      
+      // ✅ نیا: Resume state save کریں
+      'draftMessages': draftMessages,
+      'draftGeneratedCode': draftGeneratedCode,
+      'wasGenerating': wasGenerating,
+      'lastSessionTime': lastSessionTime?.toIso8601String(),
+      'pendingFileUpdates': pendingFileUpdates,
     };
   }
 
@@ -157,7 +198,45 @@ class Project {
       lastUpdated: map['lastUpdated'] != null
           ? DateTime.parse(map['lastUpdated'])
           : null,
+      
+      // ✅ نیا: Resume state لوڈ کریں
+      draftMessages: map['draftMessages'] != null 
+          ? List<Map<String, dynamic>>.from(map['draftMessages']) 
+          : null,
+      draftGeneratedCode: map['draftGeneratedCode'],
+      wasGenerating: map['wasGenerating'],
+      lastSessionTime: map['lastSessionTime'] != null
+          ? DateTime.parse(map['lastSessionTime'])
+          : null,
+      pendingFileUpdates: map['pendingFileUpdates'] != null
+          ? List<Map<String, dynamic>>.from(map['pendingFileUpdates'])
+          : null,
     );
+  }
+
+  // ============= 🔄 RESUME METHODS =============
+  
+  /// ✅ نیا: Session save کریں
+  void saveSession({
+    required List<Map<String, dynamic>> messages,
+    String? generatedCode,
+    bool? isGenerating,
+    List<Map<String, dynamic>>? pendingFiles,
+  }) {
+    draftMessages = messages;
+    draftGeneratedCode = generatedCode;
+    wasGenerating = isGenerating;
+    lastSessionTime = DateTime.now();
+    pendingFileUpdates = pendingFiles;
+  }
+  
+  /// ✅ نیا: Session clear کریں
+  void clearSession() {
+    draftMessages = null;
+    draftGeneratedCode = null;
+    wasGenerating = null;
+    lastSessionTime = null;
+    pendingFileUpdates = null;
   }
 
   // ============= 🎯 AD CAMPAIGN METHODS =============
@@ -266,12 +345,11 @@ class Project {
   
   /// 🔥 **GitHub repo URL سیٹ کرنے کا طریقہ**
   void setGitHubRepoUrl(String url) {
-  if (url.isNotEmpty && Uri.tryParse(url)?.hasAbsolutePath == true) {
-    githubRepoUrl = url;
-    lastUpdated = DateTime.now();
+    if (url.isNotEmpty && Uri.tryParse(url)?.hasAbsolutePath == true) {
+      githubRepoUrl = url;
+      lastUpdated = DateTime.now();
+    }
   }
-}
-
   
   /// 🔥 **copyWith method**
   Project copyWith({
@@ -294,6 +372,13 @@ class Project {
     String? status,
     DateTime? createdAt,
     DateTime? lastUpdated,
+    
+    // ✅ نیا: Resume state parameters
+    List<Map<String, dynamic>>? draftMessages,
+    String? draftGeneratedCode,
+    bool? wasGenerating,
+    DateTime? lastSessionTime,
+    List<Map<String, dynamic>>? pendingFileUpdates,
   }) {
     return Project(
       id: id ?? this.id,
@@ -315,6 +400,13 @@ class Project {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? DateTime.now(),
+      
+      // ✅ نیا: Resume state copy
+      draftMessages: draftMessages ?? this.draftMessages,
+      draftGeneratedCode: draftGeneratedCode ?? this.draftGeneratedCode,
+      wasGenerating: wasGenerating ?? this.wasGenerating,
+      lastSessionTime: lastSessionTime ?? this.lastSessionTime,
+      pendingFileUpdates: pendingFileUpdates ?? this.pendingFileUpdates,
     );
   }
 }

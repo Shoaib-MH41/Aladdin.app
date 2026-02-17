@@ -35,8 +35,7 @@ class ProjectService {
         framework: framework,
         platforms: platforms,
         assets: {},
-        features: features ?? {},  // ✅ یہ ٹھیک ہے
-        generatedCode: '',
+        features: features ?? {},
         createdAt: DateTime.now(),
       );
       
@@ -76,7 +75,7 @@ class ProjectService {
         framework: framework,
         platforms: platforms,
         assets: {},
-        features: features ?? {},  // ✅ یہ ٹھیک ہے
+        features: features ?? {},
         generatedCode: '// ❌ پروجیکٹ بنانے میں ناکامی: $e',
         createdAt: DateTime.now(),
       );
@@ -235,48 +234,81 @@ Requirements:
     try {
       print('🚀 Starting GitHub upload for ${project.framework} project: ${project.name}');
 
-      // ✅ مرحلہ 1: ریپوزٹری بنائیں
+      // ✅ مرحلہ 1: repoName safe بنائیں
+      final repoName = project.name
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^a-z0-9_\-]'), '-')
+          .replaceAll(RegExp(r'-+'), '-')
+          .replaceAll(RegExp(r'^\-|\-$'), '');
+
+      if (repoName.isEmpty) {
+        throw Exception('Invalid repository name');
+      }
+
+      // ✅ مرحلہ 2: ریپوزٹری بنائیں
       final repoUrl = await githubService!.createRepository(
-        project.name,
+        repoName,
         description: 'AI-generated ${project.framework} app created with Aladdin AI App Factory',
         private: false,
       );
 
-      // ✅ مرحلہ 2: فائلیں تیار کریں
-      final files = _prepareProjectFiles(project, repoUrl);
+      // ✅ مرحلہ 3: فائلیں تیار کریں
+      final files = _prepareProjectFiles(project, repoUrl, repoName);
       
-      // ✅ مرحلہ 3: تمام فائلیں اپ لوڈ کریں
+      // ✅ مرحلہ 4: تمام فائلیں اپ لوڈ کریں (ہر فائل کا try-catch)
+      int successCount = 0;
+      int failCount = 0;
+      List<String> failedFiles = [];
+      
       for (final entry in files.entries) {
-        print('⬆️ Uploading ${entry.key}...');
-        await githubService!.uploadFile(
-          repoName: project.name,
-          filePath: entry.key,
-          content: entry.value,
-          commitMessage: 'Add ${entry.key}',
-        );
+        try {
+          print('⬆️ Uploading ${entry.key}...');
+          await githubService!.uploadFile(
+            repoName: repoName,
+            filePath: entry.key,
+            content: entry.value,
+            commitMessage: 'Add ${entry.key}',
+          );
+          successCount++;
+          print('✅ ${entry.key} uploaded');
+        } catch (e) {
+          failCount++;
+          failedFiles.add(entry.key);
+          print('❌ ${entry.key} failed: $e');
+        }
+        
+        // Rate limit سے بچنے کے لیے وقفہ
+        await Future.delayed(const Duration(milliseconds: 500));
       }
 
-      // ✅ مرحلہ 4: GitHub Actions (صرف Flutter کے لیے)
+      // ✅ مرحلہ 5: GitHub Actions (صرف Flutter کے لیے)
       if (project.framework.toLowerCase() == 'flutter') {
         try {
+          print('🤖 Setting up GitHub Actions...');
           await githubService!.createBuildWorkflow(
-            repoName: project.name,
+            repoName: repoName,
             framework: project.framework,
           );
+          print('✅ GitHub Actions workflow added');
         } catch (e) {
           print('⚠️ GitHub Actions skipped: $e');
         }
       }
 
-      // ✅ مرحلہ 5: پروجیکٹ اپڈیٹ کریں
-      project.githubRepoUrl = repoUrl;
+      // ✅ مرحلہ 6: پروجیکٹ اپڈیٹ کریں
+      project.setGitHubRepoUrl(repoUrl);
       updateProject(project);
 
       return {
-        'success': true,
+        'success': failCount == 0,
         'repoUrl': repoUrl,
-        'message': '${project.framework} پروجیکٹ کامیابی سے اپ لوڈ ہو گیا',
+        'message': failCount == 0 
+            ? '${project.framework} پروجیکٹ کامیابی سے اپ لوڈ ہو گیا'
+            : '${project.framework} پروجیکٹ اپ لوڈ ہو گیا ($failCount فائلیں ناکام)',
         'files': files.length,
+        'successCount': successCount,
+        'failCount': failCount,
+        'failedFiles': failedFiles,
       };
 
     } catch (e) {
@@ -286,53 +318,63 @@ Requirements:
   }
 
   /// 🔹 Framework کے حساب سے فائلیں تیار کریں
-  Map<String, String> _prepareProjectFiles(Project project, String repoUrl) {
+  Map<String, String> _prepareProjectFiles(Project project, String repoUrl, String repoName) {
     final files = <String, String>{};
-    final cleanName = project.name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9_]'), '_')
-        .replaceAll(RegExp(r'_+'), '_');
 
     switch (project.framework.toLowerCase()) {
       case 'flutter':
-        files['lib/main.dart'] = project.generatedCode ?? _getFlutterPlaceholder(project);
-        files['pubspec.yaml'] = _getFlutterPubspec(cleanName, project);
-        files['README.md'] = _getReadme(project, repoUrl, cleanName);
+        files['lib/main.dart'] = _getSafeGeneratedCode(project, _getFlutterPlaceholder);
+        files['pubspec.yaml'] = _getSafeFlutterPubspec(repoName, project);
+        files['README.md'] = _getReadme(project, repoUrl, repoName);
         files['android/app/google-services.json'] = _getFirebasePlaceholder('android');
         files['ios/Runner/GoogleService-Info.plist'] = _getFirebasePlaceholder('ios');
+        files['.gitignore'] = _getFlutterGitignore();
+        files['analysis_options.yaml'] = _getFlutterAnalysisOptions();
         break;
 
       case 'react':
-        files['src/App.js'] = project.generatedCode ?? _getReactPlaceholder(project);
-        files['package.json'] = _getReactPackageJson(cleanName, project);
-        files['README.md'] = _getReadme(project, repoUrl, cleanName);
+        files['src/App.js'] = _getSafeGeneratedCode(project, _getReactPlaceholder);
+        files['package.json'] = _getReactPackageJson(repoName, project);
+        files['README.md'] = _getReadme(project, repoUrl, repoName);
         files['public/index.html'] = _getReactHtml(project);
+        files['.gitignore'] = _getReactGitignore();
         break;
 
       case 'vue':
-        files['src/App.vue'] = project.generatedCode ?? _getVuePlaceholder(project);
-        files['package.json'] = _getVuePackageJson(cleanName, project);
-        files['README.md'] = _getReadme(project, repoUrl, cleanName);
+        files['src/App.vue'] = _getSafeGeneratedCode(project, _getVuePlaceholder);
+        files['package.json'] = _getVuePackageJson(repoName, project);
+        files['README.md'] = _getReadme(project, repoUrl, repoName);
         files['public/index.html'] = _getVueHtml(project);
+        files['.gitignore'] = _getVueGitignore();
         break;
 
       case 'android native':
-        files['app/src/main/java/com/example/app/MainActivity.kt'] = 
-            project.generatedCode ?? _getAndroidPlaceholder(project);
-        files['app/build.gradle'] = _getAndroidGradle(cleanName, project);
-        files['README.md'] = _getReadme(project, repoUrl, cleanName);
+        files['app/src/main/java/com/example/app/MainActivity.kt'] = _getSafeGeneratedCode(project, _getAndroidPlaceholder);
+        files['app/build.gradle'] = _getAndroidGradle(repoName, project);
+        files['README.md'] = _getReadme(project, repoUrl, repoName);
         files['app/google-services.json'] = _getFirebasePlaceholder('android');
+        files['.gitignore'] = _getAndroidGitignore();
         break;
 
       case 'html/css/js':
-        files['index.html'] = project.generatedCode ?? _getHtmlPlaceholder(project);
+        files['index.html'] = _getSafeGeneratedCode(project, _getHtmlPlaceholder);
         files['style.css'] = _getCssPlaceholder(project);
         files['script.js'] = _getJsPlaceholder(project);
-        files['README.md'] = _getReadme(project, repoUrl, cleanName);
+        files['README.md'] = _getReadme(project, repoUrl, repoName);
+        files['.gitignore'] = _getWebGitignore();
         break;
     }
 
     return files;
+  }
+
+  /// 🔹 Safe generated code getter
+  String _getSafeGeneratedCode(Project project, String Function(Project) placeholder) {
+    final code = project.generatedCode;
+    if (code != null && code.trim().isNotEmpty) {
+      return code;
+    }
+    return placeholder(project);
   }
 
   // ============= 📝 PLACEHOLDER GENERATORS =============
@@ -362,8 +404,11 @@ class MyApp extends StatelessWidget {
 }
 ''';
 
-  String _getFlutterPubspec(String cleanName, Project project) => '''
-name: $cleanName
+  String _getSafeFlutterPubspec(String repoName, Project project) {
+    final featureDeps = _getFeatures(project);
+    
+    return '''
+name: $repoName
 description: AI Generated Flutter app
 version: 1.0.0
 
@@ -373,7 +418,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  ${_getFeatures(project)}
+${featureDeps.isNotEmpty ? '  $featureDeps' : ''}
 
 dev_dependencies:
   flutter_test:
@@ -381,6 +426,26 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+''';
+  }
+
+  String _getFlutterGitignore() => '''
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+ios/Flutter/.last_build_id
+flutter_*.log
+pubspec.lock
+''';
+
+  String _getFlutterAnalysisOptions() => '''
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    unused_import: warning
+    deprecated_member_use: info
 ''';
 
   String _getReactPlaceholder(Project project) => '''
@@ -401,10 +466,11 @@ function App() {
 export default App;
 ''';
 
-  String _getReactPackageJson(String cleanName, Project project) => '''
+  String _getReactPackageJson(String repoName, Project project) => '''
 {
-  "name": "$cleanName",
+  "name": "$repoName",
   "version": "1.0.0",
+  "private": true,
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -412,9 +478,51 @@ export default App;
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build"
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": ["react-app"]
+  },
+  "browserslist": {
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
   }
 }
+''';
+
+  String _getReactGitignore() => '''
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build
+build/
+dist/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+''';
+
+  String _getReactHtml(Project project) => '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${project.name}</title>
+</head>
+<body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+</body>
+</html>
 ''';
 
   String _getVuePlaceholder(Project project) => '''
@@ -441,22 +549,62 @@ export default {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   text-align: center;
   color: #2c3e50;
+  margin-top: 60px;
 }
 </style>
 ''';
 
-  String _getVuePackageJson(String cleanName, Project project) => '''
+  String _getVuePackageJson(String repoName, Project project) => '''
 {
-  "name": "$cleanName",
+  "name": "$repoName",
   "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
   "dependencies": {
     "vue": "^3.3.0"
   },
-  "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build"
+  "devDependencies": {
+    "@vue/cli-service": "^5.0.0"
   }
 }
+''';
+
+  String _getVueGitignore() => '''
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build
+dist/
+dist-ssr/
+
+# Environment
+.env
+.env.local
+.env.*.local
+''';
+
+  String _getVueHtml(Project project) => '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>${project.name}</title>
+</head>
+<body>
+    <noscript>
+        <strong>We're sorry but ${project.name} doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app"></div>
+</body>
+</html>
 ''';
 
   String _getAndroidPlaceholder(Project project) => '''
@@ -477,30 +625,53 @@ class MainActivity : AppCompatActivity() {
 }
 ''';
 
-  String _getAndroidGradle(String cleanName, Project project) => '''
+  String _getAndroidGradle(String repoName, Project project) => '''
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
 }
 
 android {
-    namespace 'com.example.$cleanName'
+    namespace 'com.example.$repoName'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.$cleanName"
+        applicationId "com.example.$repoName"
         minSdk 24
         targetSdk 34
         versionCode 1
         versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
     }
 }
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.10.0'
     ${_getAndroidFeatures(project)}
 }
+''';
+
+  String _getAndroidGitignore() => '''
+# Android
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild
+.cxx/
+*.apk
+*.aab
 ''';
 
   String _getHtmlPlaceholder(Project project) => '''
@@ -544,15 +715,19 @@ body {
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     text-align: center;
+    max-width: 400px;
+    width: 90%;
 }
 
 h1 {
     color: #333;
     margin-bottom: 1rem;
+    font-size: 1.8rem;
 }
 
 p {
     color: #666;
+    line-height: 1.6;
 }
 ''';
 
@@ -560,46 +735,33 @@ p {
 // Main JavaScript file for ${project.name}
 console.log('${project.name} loaded!');
 
-// Add your JavaScript code here
+// Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize app
+    console.log('App initialized');
+    
+    // Add any interactive features here
+    const container = document.querySelector('.container');
+    if (container) {
+        container.style.transition = 'all 0.3s ease';
+    }
 });
 ''';
 
-  String _getReactHtml(Project project) => '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${project.name}</title>
-</head>
-<body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-</body>
-</html>
+  String _getWebGitignore() => '''
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build
+dist/
+build/
+
+# Environment
+.env
+.env.local
 ''';
 
-  String _getVueHtml(Project project) => '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>${project.name}</title>
-</head>
-<body>
-    <noscript>
-        <strong>We're sorry but ${project.name} doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <div id="app"></div>
-</body>
-</html>
-''';
-
-  String _getReadme(Project project, String repoUrl, String cleanName) => '''
+  String _getReadme(Project project, String repoUrl, String repoName) => '''
 # ${project.name}
 
 🤖 **AI-Generated ${project.framework} App** using **Aladdin AI App Factory**
@@ -620,115 +782,6 @@ This app was automatically generated by AI based on your requirements.
 ### Installation
 
 1. **Clone the repository**
-   
+   ```bash
    git clone $repoUrl
-   cd $cleanName
-   
-
-2. **Install dependencies**
-   
-   ${_getInstallCommand(project.framework)}
-   
-
-3. **Run the app**
-   
-   ${_getRunCommand(project.framework)}
-   
-
-## 📂 Project Structure
-${_getStructure(project.framework)}
-
-## 📦 Build
-${_getBuildCommand(project.framework)}
-
----
-⭐ Created with [Aladdin AI App Factory](https://github.com)
-''';
-
-  String _getFirebasePlaceholder(String platform) => '''
-⚠️ IMPORTANT: Download ${platform == 'android' ? 'google-services.json' : 'GoogleService-Info.plist'} from Firebase Console
-and place it in the ${platform == 'android' ? 'android/app/' : 'ios/Runner/'} directory
-''';
-
-  String _getFeatures(Project project) {
-    final features = [];
-    if (project.features?['api'] == 'firebase') {
-      features.add('firebase_core: ^2.24.2');
-      features.add('firebase_auth: ^4.16.0');
-    }
-    if (project.features?['adMob'] != 'none') {
-      features.add('google_mobile_ads: ^3.1.0');
-    }
-    return features.join('\n  ');
-  }
-
-  String _getAndroidFeatures(Project project) {
-    final features = [];
-    if (project.features?['api'] == 'firebase') {
-      features.add("implementation 'com.google.firebase:firebase-auth-ktx:22.3.0'");
-    }
-    return features.join('\n    ');
-  }
-
-  String _getPrerequisites(String framework) {
-    switch (framework.toLowerCase()) {
-      case 'flutter': return 'Flutter SDK (latest version)';
-      case 'react': return 'Node.js and npm';
-      case 'vue': return 'Node.js and npm';
-      case 'android native': return 'Android Studio and JDK';
-      case 'html/css/js': return 'Any web browser';
-      default: return 'Development environment';
-    }
-  }
-
-  String _getInstallCommand(String framework) {
-    switch (framework.toLowerCase()) {
-      case 'flutter': return 'flutter pub get';
-      case 'react': return 'npm install';
-      case 'vue': return 'npm install';
-      case 'android native': return 'Build with Android Studio';
-      case 'html/css/js': return 'No dependencies';
-      default: return 'Install dependencies';
-    }
-  }
-
-  String _getRunCommand(String framework) {
-    switch (framework.toLowerCase()) {
-      case 'flutter': return 'flutter run';
-      case 'react': return 'npm start';
-      case 'vue': return 'npm run serve';
-      case 'android native': return 'Run from Android Studio';
-      case 'html/css/js': return 'Open index.html in browser';
-      default: return 'Run the app';
-    }
-  }
-
-  String _getBuildCommand(String framework) {
-    switch (framework.toLowerCase()) {
-      case 'flutter': return 'flutter build apk';
-      case 'react': return 'npm run build';
-      case 'vue': return 'npm run build';
-      case 'android native': return './gradlew assembleRelease';
-      case 'html/css/js': return 'Ready to deploy';
-      default: return 'Build the app';
-    }
-  }
-
-  // 📌 **درست شدہ _getStructure method**
-  String _getStructure(String framework) {
-    switch (framework.toLowerCase()) {
-      case 'flutter':
-        return 'lib/\n├── main.dart\n├── screens/\n├── widgets/\n├── models/\n└── services/';
-      case 'react':
-        return 'src/\n├── App.js\n├── components/\n├── pages/\n└── styles/';
-      case 'vue':
-        return 'src/\n├── App.vue\n├── components/\n├── views/\n└── assets/';
-      case 'android native':
-        return 'app/\n├── src/main/java/\n├── src/main/res/\n└── build.gradle';
-      case 'html/css/js':
-        return 'root/\n├── index.html\n├── style.css\n└── script.js';
-      default:
-        return 'Standard project structure';
-    }
-  }
-}
+   cd $repoName

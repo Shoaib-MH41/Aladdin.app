@@ -328,7 +328,7 @@ class GitHubService {
 
   // ============= 🚀 GitHub Actions Workflow Functions =============
 
-  /// 🔹 GitHub Actions Workflow بنائیں
+  /// 🔹 GitHub Actions Workflow بنائیں (Framework کے حساب سے)
   Future<void> createBuildWorkflow({
     required String repoName,
     required String framework,
@@ -339,7 +339,48 @@ class GitHubService {
     final username = await _getUsername(token);
     final sanitizedRepoName = _sanitizeRepoName(repoName);
 
-    String workflowContent = '''
+    // ✅ Framework کے حساب سے workflow منتخب کریں
+    String workflowContent;
+    String workflowFileName;
+    
+    switch (framework.toLowerCase()) {
+      case 'flutter':
+        workflowContent = _getFlutterWorkflow();
+        workflowFileName = 'build-flutter.yml';
+        break;
+      case 'react':
+        workflowContent = _getReactWorkflow();
+        workflowFileName = 'build-react.yml';
+        break;
+      case 'vue':
+        workflowContent = _getVueWorkflow();
+        workflowFileName = 'build-vue.yml';
+        break;
+      case 'android native':
+        workflowContent = _getAndroidNativeWorkflow();
+        workflowFileName = 'build-android.yml';
+        break;
+      case 'html/css/js':
+        workflowContent = _getWebWorkflow();
+        workflowFileName = 'build-web.yml';
+        break;
+      default:
+        workflowContent = _getGenericWorkflow(framework);
+        workflowFileName = 'build.yml';
+    }
+
+    await uploadFile(
+      repoName: sanitizedRepoName,
+      filePath: '.github/workflows/$workflowFileName',
+      content: workflowContent,
+      commitMessage: 'Add GitHub Actions build workflow for $framework 🤖',
+    );
+
+    print('✅ GitHub Actions workflow push ہو گئی ($framework)');
+  }
+
+  /// 🔹 Flutter Workflow
+  String _getFlutterWorkflow() => '''
 name: Build Flutter APK
 
 on:
@@ -363,6 +404,12 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
     
+    - name: Analyze code
+      run: flutter analyze
+    
+    - name: Run tests
+      run: flutter test
+    
     - name: Build APK
       run: flutter build apk --release
     
@@ -382,15 +429,219 @@ jobs:
         path: build/app/outputs/bundle/release/app-release.aab
 ''';
 
-    await uploadFile(
-      repoName: sanitizedRepoName,
-      filePath: '.github/workflows/build.yml',
-      content: workflowContent,
-      commitMessage: 'Add GitHub Actions build workflow 🤖',
-    );
+  /// 🔹 React Workflow
+  String _getReactWorkflow() => '''
+name: Build React App
 
-    print('✅ GitHub Actions workflow push ہو گئی');
-  }
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linter
+      run: npm run lint --if-present
+    
+    - name: Run tests
+      run: npm test --if-present
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Upload build
+      uses: actions/upload-artifact@v3
+      with:
+        name: react-build
+        path: build/
+''';
+
+  /// 🔹 Vue Workflow
+  String _getVueWorkflow() => '''
+name: Build Vue App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linter
+      run: npm run lint --if-present
+    
+    - name: Run tests
+      run: npm test --if-present
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Upload dist
+      uses: actions/upload-artifact@v3
+      with:
+        name: vue-dist
+        path: dist/
+''';
+
+  /// 🔹 Android Native Workflow
+  String _getAndroidNativeWorkflow() => '''
+name: Build Android Native
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Cache Gradle
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: \${{ runner.os }}-gradle-\${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    
+    - name: Run tests
+      run: ./gradlew test
+    
+    - name: Build APK
+      run: ./gradlew assembleRelease
+    
+    - name: Build AAB
+      run: ./gradlew bundleRelease
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: android-apk
+        path: app/build/outputs/apk/release/*.apk
+    
+    - name: Upload AAB
+      uses: actions/upload-artifact@v3
+      with:
+        name: android-aab
+        path: app/build/outputs/bundle/release/*.aab
+''';
+
+  /// 🔹 HTML/CSS/JS Workflow
+  String _getWebWorkflow() => '''
+name: Build Web App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies (if package.json exists)
+      run: |
+        if [ -f package.json ]; then
+          npm ci
+        fi
+    
+    - name: Run tests (if available)
+      run: |
+        if [ -f package.json ]; then
+          npm test --if-present
+        fi
+    
+    - name: Build (if build script exists)
+      run: |
+        if [ -f package.json ]; then
+          npm run build --if-present
+        fi
+    
+    - name: Upload static files
+      uses: actions/upload-artifact@v3
+      with:
+        name: web-files
+        path: |
+          index.html
+          style.css
+          script.js
+          assets/
+''';
+
+  /// 🔹 Generic Workflow (کسی اور framework کے لیے)
+  String _getGenericWorkflow(String framework) => '''
+name: Build $framework Project
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup environment
+      run: echo "Setting up $framework environment"
+    
+    - name: Build project
+      run: echo "Building $framework project"
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: $framework-build
+        path: ./
+''';
 
   /// 🔹 بلڈ اسٹیٹس چیک کریں
   Future<Map<String, dynamic>> checkBuildStatus({

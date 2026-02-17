@@ -947,4 +947,4 @@ ${_getPrerequisites(project.framework)}
    cd $repoName
    flutter pub get
    flutter run
-''';
+''';}
